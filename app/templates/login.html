@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in - ETD Report Scheduler</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="login-wrap">
+  <form class="login-card" method="post" action="/login">
+    <h1>ETD Report Scheduler</h1>
+    <p>Sign in with the admin account from your environment configuration.</p>
+    {% if err %}<div class="flash error" style="margin-bottom:12px">{{ err }}</div>{% endif %}
+    <input type="hidden" name="next" value="{{ request.query_params.get('next', '/') }}">
+    <div class="field-row"><label class="field" for="username">Username</label><input id="username" name="username" type="text" autocomplete="username" required autofocus></div>
+    <div class="field-row"><label class="field" for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required></div>
+    <button type="submit">Sign in</button>
+  </form>
+</div>
+</body>
+</html>

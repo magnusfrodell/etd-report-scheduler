@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Report archive - ETD Report Scheduler{% endblock %}
+{% block heading %}Report archive{% endblock %}
+{% block head_extra %}{% if running_count %}<meta http-equiv="refresh" content="10">{% endif %}{% endblock %}
+{% block content %}
+<section class="panel">
+  <h2>Run a report now
+    {% if selected_tenant %}– per-tenant reports run for {{ selected_tenant.name }}{% else %}– per-tenant reports run for every enabled tenant{% endif %}</h2>
+  <table>
+    <tr><th>Report</th><th>Scope</th><th>Period</th><th>Send to (optional)</th><th>Format</th><th></th></tr>
+    {% for key, r in reports.items() %}
+    <tr>
+      <td><strong>{{ r.name }}</strong><div class="muted">{{ r.description }}</div></td>
+      <td>{{ 'all tenants' if r.scope == 'all' else 'per tenant' }}</td>
+      <form method="post" action="/reports/{{ key }}/run">
+      <td>
+        <select name="period_kind" aria-label="Period for {{ r.name }}">
+          <option value="daily" {{ 'selected' if r.period_kind == 'daily' else '' }}>yesterday</option>
+          <option value="weekly" {{ 'selected' if r.period_kind == 'weekly' else '' }}>last week</option>
+          <option value="monthly" {{ 'selected' if r.period_kind == 'monthly' else '' }}>last month</option>
+        </select>
+      </td>
+      <td><input type="text" name="recipients" placeholder="empty = archive only" aria-label="Recipients for {{ r.name }}"></td>
+      <td>
+        <select name="output_format" aria-label="Format for {{ r.name }}">
+          <option value="pdf">PDF + HTML</option><option value="html">HTML</option>
+        </select>
+      </td>
+      <td><button type="submit" class="small">Run now</button></td>
+      </form>
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="muted">Use the tenant switcher in the header to pick which tenant a per-tenant report runs for. Every run lands in the archive below whether or not it is e-mailed.</p>
+</section>
+<section class="panel">
+  <h2>Generated reports{% if selected_tenant %} – {{ selected_tenant.name }} and cross-tenant{% endif %}
+    {% if running_count %}<span class="chip running">{{ running_count }} running – refreshing every 10 s</span>{% endif %}</h2>
+  {% if runs %}
+  <table>
+    <tr><th>Started (UTC)</th><th>Report</th><th>Tenant</th><th>Period</th><th>Status</th><th>Delivered to</th><th>Files</th></tr>
+    {% for r in runs %}
+    <tr>
+      <td>{{ r.started_at.strftime('%Y-%m-%d %H:%M') }}</td>
+      <td>{{ reports[r.report_key].name if r.report_key in reports else r.report_key }}</td>
+      <td>{{ tenant_names.get(r.tenant_id, 'All tenants') }}</td>
+      <td>{% if r.period_start %}{{ r.period_start.strftime('%Y-%m-%d') }} → {{ r.period_end.strftime('%Y-%m-%d') }}{% else %}–{% endif %}</td>
+      <td><span class="chip {{ r.status }}">{{ r.status }}</span>{% if r.error %}<div class="muted" style="max-width:320px">{{ r.error }}</div>{% endif %}</td>
+      <td>{{ r.delivered_to or '–' }}</td>
+      <td class="actions">{% if r.html_path %}<a class="btn small secondary" href="/reports/{{ r.id }}/html" target="_blank">HTML</a>{% endif %}{% if r.pdf_path %}<a class="btn small secondary" href="/reports/{{ r.id }}/pdf">PDF</a>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="empty">Nothing generated yet.</p>{% endif %}
+</section>
+{% endblock %}

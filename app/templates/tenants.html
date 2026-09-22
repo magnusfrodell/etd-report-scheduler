@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Tenants - ETD Report Scheduler{% endblock %}
+{% block heading %}Tenants{% endblock %}
+{% block content %}
+<section class="panel">
+  <h2>Connected tenants</h2>
+  {% if tenants %}
+  <table>
+    <tr><th>Name</th><th>Region</th><th>Client ID</th><th>Status</th><th>Last collected (UTC)</th><th>History</th><th>API calls today</th><th>Actions</th></tr>
+    {% for t in tenants %}
+    <tr>
+      <td><strong>{{ t.name }}</strong></td>
+      <td>{{ REGIONS[t.region].label }} <span class="muted">({{ REGIONS[t.region].base_url }})</span></td>
+      <td><code>{{ t.client_id }}</code></td>
+      <td>
+        {% if not t.enabled %}<span class="chip warning">disabled</span>
+        {% elif t.last_error %}<span class="chip critical">error</span>
+        {% else %}<span class="chip ok">enabled</span>{% endif %}
+        {% if t.last_error %}<div class="muted" style="max-width:320px">{{ t.last_error }}</div>{% endif %}
+      </td>
+      <td>{{ t.stats_collected_at.strftime('%Y-%m-%d %H:%M') if t.stats_collected_at else 'never' }}</td>
+      <td>{% if t.backfill_done_at %}<span class="chip ok">90 days</span>{% elif t.backfill_cursor %}<span class="chip running">{{ history[t.id] }}</span>{% else %}<span class="chip neutral">{{ history[t.id] }}</span>{% endif %}</td>
+      <td class="num">{{ api_today[t.id] }} / {{ budget }}</td>
+      <td class="actions">
+        <form method="post" action="/tenants/{{ t.id }}/test"><button class="small secondary">Test connection</button></form>
+        <form method="post" action="/tenants/{{ t.id }}/collect"><button class="small secondary">Collect now</button></form>
+        <form method="post" action="/tenants/{{ t.id }}/toggle"><button class="small secondary">{{ 'Disable' if t.enabled else 'Enable' }}</button></form>
+        <form method="post" action="/tenants/{{ t.id }}/delete" onsubmit="return confirm('Delete tenant {{ t.name }} and all stored data?')"><button class="small danger">Delete</button></form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="empty">No tenants yet. Add one below.</p>{% endif %}
+</section>
+
+<section class="panel">
+  <h2>Add tenant</h2>
+  <form method="post" action="/tenants" class="form-grid" autocomplete="off">
+    <div><label class="field" for="name">Display name</label><input id="name" name="name" type="text" required placeholder="Acme AB"></div>
+    <div><label class="field" for="region">Region</label>
+      <select id="region" name="region">
+        {% for key, r in REGIONS.items() %}<option value="{{ key }}" {{ 'selected' if key == 'de' else '' }}>{{ r.label }} – {{ r.base_url }}</option>{% endfor %}
+      </select></div>
+    <div><label class="field" for="client_id">Client ID</label><input id="client_id" name="client_id" type="text" required></div>
+    <div><label class="field" for="client_secret">Client secret</label><input id="client_secret" name="client_secret" type="password" required></div>
+    <div><label class="field" for="api_key">API key</label><input id="api_key" name="api_key" type="password" required></div>
+    <div class="wide"><button type="submit">Add tenant</button>
+      <span class="muted">Credentials are encrypted with <code>ENCRYPTION_KEY</code> before they are stored. Create them in ETD under Administration &gt; API Clients (admin or super-admin). The connection is tested on save; collection of the full 90-day history then starts automatically, throttled to 2 requests/s and capped by the daily API budget in Settings.</span></div>
+  </form>
+</section>
+{% endblock %}

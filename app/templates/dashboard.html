@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - ETD Report Scheduler{% endblock %}
+{% block heading %}Dashboard{% endblock %}
+{% block content %}
+{% if not tenants %}
+<section class="panel">
+  <h2>Get started</h2>
+  <p>No ETD tenants yet. Add the first one under <a href="/tenants">Tenants</a>: you need the client ID, client secret and API key generated in ETD under <em>Administration &gt; API Clients</em>.</p>
+</section>
+{% endif %}
+
+<section class="grid cols-2">
+{% for c in cards %}
+  <div class="panel">
+    <h2>{{ c.tenant.name }} <span class="chip neutral">{{ REGIONS[c.tenant.region].label }}</span>
+      {% if not c.tenant.enabled %}<span class="chip warning">disabled</span>{% endif %}
+      {% if c.tenant.last_error %}<span class="chip critical">error</span>{% endif %}</h2>
+    <div class="kpis">
+      <div class="kpi"><div class="value">{{ "{:,}".format(c.total).replace(",", " ") }}</div><div class="label">Messages, last 7 days</div></div>
+      <div class="kpi"><div class="value">{{ c.threats }}</div><div class="label">Threats, last 7 days</div></div>
+      <div class="kpi"><div class="value">{{ c.unwanted }}</div><div class="label">Spam + graymail</div></div>
+      <div class="kpi"><div class="value">{{ c.retro }}</div><div class="label">Retrospective verdicts</div></div>
+      <div class="kpi"><div class="value">{{ c.convictions }}</div><div class="label">Stored convictions</div></div>
+    </div>
+    <p class="muted" style="margin:10px 0 0">
+      Statistics collected: {{ c.tenant.stats_collected_at.strftime('%Y-%m-%d %H:%M') if c.tenant.stats_collected_at else 'never' }} UTC ·
+      Convictions collected: {{ c.tenant.convictions_collected_at.strftime('%Y-%m-%d %H:%M') if c.tenant.convictions_collected_at else 'never' }} UTC ·
+      History: {% if c.tenant.backfill_done_at %}90 days{% elif c.tenant.backfill_cursor %}backfilling{% else %}pending{% endif %}
+    </p>
+    {% if c.tenant.last_error %}<p class="muted" style="color:var(--crit)">{{ c.tenant.last_error }}</p>{% endif %}
+  </div>
+{% endfor %}
+</section>
+
+<section class="grid cols-2">
+  <div class="panel">
+    <h2>Recent report runs</h2>
+    {% if recent_runs %}
+    <table>
+      <tr><th>Report</th><th>Tenant</th><th>Started (UTC)</th><th>Status</th></tr>
+      {% for r in recent_runs %}
+      <tr>
+        <td>{{ reports[r.report_key].name if r.report_key in reports else r.report_key }}</td>
+        <td>{{ tenant_names.get(r.tenant_id, 'All tenants') }}</td>
+        <td>{{ r.started_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td><span class="chip {{ r.status }}">{{ r.status }}</span></td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}<p class="empty">No reports generated yet. Create a schedule or generate one manually from the archive page.</p>{% endif %}
+  </div>
+  <div class="panel">
+    <h2>Scheduler</h2>
+    {% if scheduler_running %}
+    <table>
+      <tr><th>Job</th><th>Next run</th></tr>
+      {% for job, nrt in next_runs.items() %}
+      <tr><td><code>{{ job }}</code></td><td>{{ nrt or '–' }}</td></tr>
+      {% endfor %}
+    </table>
+    {% else %}<p class="empty">The scheduler is disabled (<code>SCHEDULER_ENABLED=false</code>). Nothing runs automatically.</p>{% endif %}
+  </div>
+</section>
+{% endblock %}

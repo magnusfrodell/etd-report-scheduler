@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ report.name }} – {{ ctx.tenant_name }} – {{ ctx.period.label }}</title>
+<style>
+  body { margin:0; padding:0; background:#f4f6f9; font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:#1d2733; }
+  .wrap { max-width:860px; margin:0 auto; padding:24px 16px; }
+  .head { background:linear-gradient(180deg,#0f2a43,#0a1f33); color:#fff; border-radius:12px 12px 0 0; padding:20px 24px; }
+  .head h1 { margin:0 0 4px; font-size:20px; font-weight:600; }
+  .head .meta { color:#b7c7d8; font-size:13px; }
+  .body { background:#fff; border:1px solid #dde3ea; border-top:0; border-radius:0 0 12px 12px; padding:20px 24px; }
+  h2 { font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:#6b7a8c; margin:22px 0 8px; }
+  h2:first-child { margin-top:0; }
+  table { width:100%; border-collapse:collapse; margin-bottom:6px; }
+  th, td { text-align:left; padding:7px 8px; border-bottom:1px solid #e6ebf1; vertical-align:top; font-size:13px; }
+  th { color:#6b7a8c; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
+  td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .kpis { width:100%; border-collapse:separate; border-spacing:8px 0; margin:0 -8px 8px; }
+  .kpi { background:#f3f7fb; border:1px solid #dde3ea; border-radius:8px; padding:10px 12px; width:25%; }
+  .kpi .v { font-size:22px; font-weight:600; }
+  .kpi .l { color:#6b7a8c; font-size:12px; }
+  .kpi .d { font-size:12px; }
+  .up { color:#c0392b; } .down { color:#2e8b57; } .flat { color:#6b7a8c; }
+  .chip { display:inline-block; padding:1px 9px; border-radius:999px; font-size:11px; font-weight:600; }
+  .ok { background:#e3f4ea; color:#2e8b57; } .warning { background:#fdefe1; color:#d9822b; } .critical { background:#fbe6e3; color:#c0392b; }
+  .bar { background:#e4effa; height:10px; border-radius:5px; overflow:hidden; }
+  .bar span { display:block; height:10px; background:#1f77b4; }
+  .note { color:#6b7a8c; font-size:12px; }
+  .foot { color:#8fa6bd; font-size:11px; text-align:center; padding:14px 0 0; }
+  .subj { max-width:360px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  @media print { body { background:#fff; } .wrap { padding:0; } .head { border-radius:0; } .body { border:0; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1>{{ report.name }}</h1>
+    <div class="meta">{{ ctx.tenant_name }} · {{ ctx.period.kind }} report for {{ ctx.period.label }} · generated {{ generated_at|fmt_dt(tz) }} ({{ tz }})</div>
+  </div>
+  <div class="body">
+    {% block body %}{% endblock %}
+  </div>
+  <div class="foot">ETD Report Scheduler v{{ app_version }} · Cisco Secure Email Threat Defense · data covers UTC days as aggregated by ETD</div>
+</div>
+</body>
+</html>

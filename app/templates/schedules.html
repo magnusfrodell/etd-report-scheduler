@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Schedules - ETD Report Scheduler{% endblock %}
+{% block heading %}Schedules{% endblock %}
+{% block content %}
+<section class="panel">
+  <h2>Scheduled reports{% if selected_tenant %} – {{ selected_tenant.name }} and cross-tenant{% endif %}</h2>
+  {% if schedules %}
+  <table>
+    <tr><th>Report</th><th>Tenant</th><th>Cron ({{ settings.timezone }})</th><th>Recipients</th><th>Format</th><th>Last run</th><th>Next run</th><th>Actions</th></tr>
+    {% for s in schedules %}
+    <tr>
+      <td>{{ reports[s.report_key].name if s.report_key in reports else s.report_key }}</td>
+      <td>{{ s.tenant.name if s.tenant else 'All tenants' }}</td>
+      <td><code>{{ s.cron }}</code></td>
+      <td>{{ s.recipients or ('partner recipients' if not s.tenant else '–') }}</td>
+      <td>{{ s.output_format }}</td>
+      <td>{% if s.last_run_at %}{{ s.last_run_at.strftime('%Y-%m-%d %H:%M') }} <span class="chip {{ s.last_status }}">{{ s.last_status }}</span>{% else %}–{% endif %}</td>
+      <td>{{ next_runs.get('report:' ~ s.id, '–') if s.enabled else 'disabled' }}</td>
+      <td class="actions">
+        <form method="post" action="/schedules/{{ s.id }}/run"><button class="small secondary">Run now</button></form>
+        <form method="post" action="/schedules/{{ s.id }}/toggle"><button class="small secondary">{{ 'Disable' if s.enabled else 'Enable' }}</button></form>
+        <form method="post" action="/schedules/{{ s.id }}/delete" onsubmit="return confirm('Delete this schedule?')"><button class="small danger">Delete</button></form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="empty">No schedules yet. Add one below - defaults are sensible for each report.</p>{% endif %}
+</section>
+
+<section class="panel">
+  <h2>Add schedule</h2>
+  <form method="post" action="/schedules" class="form-grid">
+    <div><label class="field" for="report_key">Report</label>
+      <select id="report_key" name="report_key">
+        {% for key, r in reports.items() %}<option value="{{ key }}">{{ r.name }} ({{ r.period_kind }}{% if r.scope == 'all' %}, all tenants{% endif %})</option>{% endfor %}
+      </select></div>
+    <div><label class="field" for="tenant_id">Tenant (per-tenant reports)</label>
+      <select id="tenant_id" name="tenant_id">
+        <option value="">– choose –</option>
+        {% for t in tenants %}<option value="{{ t.id }}" {{ 'selected' if selected_tenant and selected_tenant.id == t.id else '' }}>{{ t.name }}</option>{% endfor %}
+      </select></div>
+    <div><label class="field" for="cron">Cron expression (blank = report default)</label><input id="cron" name="cron" type="text" placeholder="0 7 1 * *"></div>
+    <div><label class="field" for="output_format">Format</label>
+      <select id="output_format" name="output_format"><option value="pdf">PDF attachment + HTML body</option><option value="html">HTML body only</option></select></div>
+    <div class="wide"><label class="field" for="recipients">Recipients (comma separated; cross-tenant reports fall back to the partner recipients in Settings)</label><input id="recipients" name="recipients" type="text" placeholder="soc@example.com, ciso@example.com"></div>
+    <div class="wide"><button type="submit">Add schedule</button></div>
+  </form>
+  <table style="margin-top:14px">
+    <tr><th>Report</th><th>Scope</th><th>Period</th><th>Default cron</th><th>What it adds beyond the ETD UI</th></tr>
+    {% for key, r in reports.items() %}
+    <tr><td>{{ r.name }}</td><td>{{ 'all tenants' if r.scope == 'all' else 'per tenant' }}</td><td>{{ r.period_kind }}</td><td><code>{{ r.default_cron }}</code></td><td class="muted">{{ r.description }}</td></tr>
+    {% endfor %}
+  </table>
+</section>
+{% endblock %}

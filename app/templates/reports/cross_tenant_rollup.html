@@ -1,0 +1,34 @@
+{% extends "email/base_report.html" %}
+{% block body %}
+<h2>All tenants · {{ ctx.period.label }}</h2>
+<table class="kpis"><tr>
+  <td class="kpi"><div class="v">{{ data.tenant_count }}</div><div class="l">Tenants</div></td>
+  <td class="kpi"><div class="v">{{ data.grand.total_messages|fmt_int }}</div><div class="l">Messages scanned</div></td>
+  <td class="kpi"><div class="v">{{ data.grand.threats|fmt_int }}</div><div class="l">Threats caught</div></td>
+  <td class="kpi"><div class="v">{{ data.grand.unwanted|fmt_int }}</div><div class="l">Spam + graymail</div></td>
+</tr></table>
+{% if data.spikes %}
+<h2>Threat spikes</h2>
+<p>{% for r in data.spikes %}<span class="chip warning">{{ r.tenant }}: {{ r.threats }} vs {{ r.previous_threats }}</span> {% endfor %}</p>
+{% endif %}
+{% if data.errors %}
+<h2>Collector errors</h2>
+<table><tr><th>Tenant</th><th>Error</th></tr>{% for r in data.errors %}<tr><td>{{ r.tenant }}</td><td>{{ r.last_error }}</td></tr>{% endfor %}</table>
+{% endif %}
+<h2>Ranking by threats</h2>
+<table>
+  <tr><th>#</th><th>Tenant</th><th>Region</th><th class="num">Scanned</th><th class="num">Threats</th><th class="num">Change</th><th class="num">Threat rate</th><th class="num">BEC</th><th class="num">Scam</th><th class="num">Phishing</th><th class="num">Malicious</th><th class="num">Unwanted</th><th class="num">Retro</th></tr>
+  {% for r in data.rows %}
+  <tr>
+    <td>{{ r.rank }}</td><td>{{ r.tenant }}{% if r.spike %} <span class="chip warning">spike</span>{% endif %}{% if r.days_with_data < ctx.period.days %} <span class="chip critical">{{ r.days_with_data }}/{{ ctx.period.days }} days</span>{% endif %}</td>
+    <td>{{ r.region }}</td>
+    <td class="num">{{ r.total|fmt_int }}</td><td class="num">{{ r.threats|fmt_int }}</td>
+    <td class="num">{% if r.threat_pct is none %}new{% else %}{{ r.threat_pct|fmt_pct }}{% endif %}</td>
+    <td class="num">{{ r.threat_rate_pct }} %</td>
+    <td class="num">{{ r.bec }}</td><td class="num">{{ r.scam }}</td><td class="num">{{ r.phishing }}</td><td class="num">{{ r.malicious }}</td>
+    <td class="num">{{ r.unwanted|fmt_int }}</td><td class="num">{{ r.retro }}</td>
+  </tr>
+  {% endfor %}
+</table>
+<p class="note">Change compares threats with {{ ctx.period.previous_label }}. A spike is flagged at ≥2× the previous period and at least 10 threats.</p>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Settings - ETD Report Scheduler{% endblock %}
+{% block heading %}Settings{% endblock %}
+{% block content %}
+<form method="post" action="/settings" class="grid">
+<section class="panel">
+  <h2>General</h2>
+  <div class="form-grid">
+    <div><label class="field" for="timezone">Timezone (IANA, used for schedules and report periods)</label><input id="timezone" name="timezone" type="text" value="{{ settings.timezone }}" placeholder="Europe/Stockholm"></div>
+    <div><label class="field" for="retention_days">Retention of collected data (days, min 30)</label><input id="retention_days" name="retention_days" type="number" min="30" value="{{ settings.retention_days }}"></div>
+    <div><label class="field" for="base_url">Public URL of this tool (optional, used in e-mails)</label><input id="base_url" name="base_url" type="text" value="{{ settings.base_url }}" placeholder="https://etd-reports.example.com"></div>
+    <div><label class="field" for="api_daily_budget">API requests per tenant and day that collectors may use (ETD quota 10 000)</label><input id="api_daily_budget" name="api_daily_budget" type="number" min="100" max="10000" value="{{ settings.api_daily_budget }}"></div>
+    <div><label class="field" for="backfill_window_days">History backfill window (days per step, 1–31)</label><input id="backfill_window_days" name="backfill_window_days" type="number" min="1" max="31" value="{{ settings.backfill_window_days }}"></div>
+    <div class="wide"><label class="field">Verdicts to store per message (threats are enough for the bundled reports; spam/graymail increase volume a lot)</label>
+      <div class="checks">{% for v in all_verdicts %}<label><input type="checkbox" name="convictions_verdicts" value="{{ v }}" {{ 'checked' if v in settings.convictions_verdicts else '' }}> {{ v }}</label>{% endfor %}</div></div>
+  </div>
+</section>
+<section class="panel">
+  <h2>E-mail (SMTP)</h2>
+  <div class="form-grid">
+    <div><label class="field" for="smtp_host">SMTP host</label><input id="smtp_host" name="smtp_host" type="text" value="{{ settings.smtp_host }}" placeholder="smtp.example.com"></div>
+    <div><label class="field" for="smtp_port">Port</label><input id="smtp_port" name="smtp_port" type="number" value="{{ settings.smtp_port }}"></div>
+    <div><label class="field" for="smtp_username">Username (optional)</label><input id="smtp_username" name="smtp_username" type="text" value="{{ settings.smtp_username }}"></div>
+    <div><label class="field" for="smtp_password">Password (leave blank to keep)</label><input id="smtp_password" name="smtp_password" type="password" autocomplete="new-password"></div>
+    <div><label class="field" for="smtp_from">Sender address</label><input id="smtp_from" name="smtp_from" type="email" value="{{ settings.smtp_from }}" placeholder="etd-reports@example.com"></div>
+    <div><label class="field">&nbsp;</label><label class="checks"><input type="checkbox" name="smtp_starttls" {{ 'checked' if settings.smtp_starttls else '' }}> Use STARTTLS</label></div>
+    <div class="wide"><label class="field" for="partner_recipients">Partner recipients (default for cross-tenant reports)</label><input id="partner_recipients" name="partner_recipients" type="text" value="{{ settings.partner_recipients }}" placeholder="soc@partner.example"></div>
+  </div>
+  <p class="muted">PDF rendering: {% if pdf_available %}<span class="chip ok">available</span>{% else %}<span class="chip warning">unavailable</span> reports are delivered as HTML (WeasyPrint system libraries missing).{% endif %}</p>
+</section>
+<div><button type="submit">Save settings</button></div>
+</form>
+<section class="panel">
+  <h2>Send a test e-mail</h2>
+  <form method="post" action="/settings/test-email" class="form-grid">
+    <div><label class="field" for="to">Recipient</label><input id="to" name="to" type="email" required></div>
+    <div class="wide"><button type="submit" class="secondary">Send test</button></div>
+  </form>
+</section>
+{% endblock %}

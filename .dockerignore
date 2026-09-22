@@ -1,0 +1,15 @@
+# Never bake secrets, data or dev clutter into the image
+.env
+.env.*
+!.env.example
+data/
+.git/
+.github/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+*.pyc
+tests/
+docs/
+*.tar.gz
+*.patch

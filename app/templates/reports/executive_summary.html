@@ -1,0 +1,58 @@
+{% extends "email/base_report.html" %}
+{% import "reports/_macros.html" as m %}
+{% block body %}
+<h2>Headline · {{ ctx.period.label }} vs {{ ctx.period.previous_label }}</h2>
+<table class="kpis"><tr>
+{% for h in data.headline %}
+  <td class="kpi"><div class="v">{{ h.current|fmt_int }}</div><div class="l">{{ h.label }}</div><div class="d">{{ m.delta(h) }} <span class="note">({{ h.previous|fmt_int }} before)</span></div></td>
+{% endfor %}
+</tr></table>
+{% if data.coverage_note %}<p class="note">{{ data.coverage_note }}</p>{% endif %}
+
+<h2>Threats and unwanted mail by verdict</h2>
+<table>
+  <tr><th>Verdict</th><th class="num">This period</th><th class="num">Previous</th><th class="num">Change</th></tr>
+  {% for r in data.verdict_rows %}
+  <tr><td>{{ r.label }}</td><td class="num">{{ r.current|fmt_int }}</td><td class="num">{{ r.previous|fmt_int }}</td><td class="num">{{ m.delta(r) }}</td></tr>
+  {% endfor %}
+</table>
+<p class="note">Threat rate {{ data.current.threat_rate_pct }} % of scanned mail. At this pace ETD would catch about {{ data.projections.threats_per_year|fmt_int }} threats and {{ data.projections.unwanted_per_year|fmt_int }} unwanted messages per year (daily average × 365, same method as the Impact Report).</p>
+
+<h2>Traffic by direction</h2>
+<table>
+  <tr><th>Direction</th><th class="num">This period</th><th class="num">Previous</th><th class="num">Change</th></tr>
+  {% for r in data.direction_rows %}
+  <tr><td>{{ r.label }}</td><td class="num">{{ r.current|fmt_int }}</td><td class="num">{{ r.previous|fmt_int }}</td><td class="num">{{ m.delta(r) }}</td></tr>
+  {% endfor %}
+</table>
+
+<h2>Daily threats</h2>
+{% if data.daily %}
+<table>
+  <tr><th>Day</th><th class="num">Scanned</th><th class="num">Threats</th><th style="width:40%"></th><th class="num">Unwanted</th></tr>
+  {% for d in data.daily %}
+  <tr><td>{{ d.day }}</td><td class="num">{{ d.total|fmt_int }}</td><td class="num">{{ d.threats }}</td><td><div class="bar"><span style="width:{{ d.bar_pct }}%"></span></div></td><td class="num">{{ d.unwanted|fmt_int }}</td></tr>
+  {% endfor %}
+</table>
+{% else %}<p class="note">No daily statistics stored for this period yet.</p>{% endif %}
+
+<h2>Top targets{% if data.top_period %} ({{ data.top_period }}){% endif %}</h2>
+{% if data.top_targets %}
+<table>
+  <tr><th>#</th><th>Recipient</th><th class="num">Malicious</th><th class="num">Phishing</th><th class="num">BEC</th><th class="num">Scam</th><th class="num">Total</th></tr>
+  {% for t in data.top_targets %}
+  <tr><td>{{ t.rank }}</td><td>{{ t.email_address }}</td><td class="num">{{ t.malicious }}</td><td class="num">{{ t.phishing }}</td><td class="num">{{ t.bec }}</td><td class="num">{{ t.scam }}</td><td class="num">{{ t.total }}</td></tr>
+  {% endfor %}
+</table>
+{% else %}<p class="note">No top-target data collected yet.</p>{% endif %}
+
+<h2>Top external threat senders{% if data.top_period %} ({{ data.top_period }}){% endif %}</h2>
+{% if data.top_senders %}
+<table>
+  <tr><th>#</th><th>Sender</th><th class="num">Threat messages</th></tr>
+  {% for t in data.top_senders %}
+  <tr><td>{{ t.rank }}</td><td>{{ t.email_address }}</td><td class="num">{{ t.total }}</td></tr>
+  {% endfor %}
+</table>
+{% else %}<p class="note">No threat-sender data collected yet.</p>{% endif %}
+{% endblock %}
