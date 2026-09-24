@@ -7,6 +7,7 @@ license = { file = "LICENSE" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]  # the app package lives at the repository root and is not installed
 addopts = "-q"
 filterwarnings = ["ignore::DeprecationWarning"]
 
