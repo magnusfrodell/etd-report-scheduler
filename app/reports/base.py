@@ -68,6 +68,8 @@ class ReportDefinition:
     category: str = "other"  # key in CATEGORIES - groups the cards on the Reports page
     icon: str = "file"  # name in app.web.icons
     summary: str = ""  # one line for the card; the description is shown on hover and in the archive
+    # When set, a schedule can skip e-mailing reports without findings (they are still archived).
+    has_findings: Callable[[dict[str, Any]], bool] | None = None
 
     @property
     def is_cross_tenant(self) -> bool:

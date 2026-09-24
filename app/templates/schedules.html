@@ -3,24 +3,24 @@
 {% block heading %}Schedules{% endblock %}
 {% block content %}
 <section class="panel">
-  <h2>Scheduled reports{% if selected_tenant %} – {{ selected_tenant.name }} and cross-tenant{% endif %}</h2>
-  {% if schedules %}
+  <h2>Scheduled reports{% if selected_tenant %} - {{ selected_tenant.name }}, groups and all tenants{% endif %}</h2>
+  {% if rows %}
   <table>
-    <tr><th>Report</th><th>Tenant</th><th>Cron ({{ settings.timezone }})</th><th>Recipients</th><th>Format</th><th>Last run</th><th>Next run</th><th>Actions</th></tr>
-    {% for s in schedules %}
+    <tr><th>Report</th><th>For</th><th>Cron ({{ settings.timezone }})</th><th>Recipients</th><th>Format</th><th>Last run</th><th>Next run</th><th>Actions</th></tr>
+    {% for row in rows %}{% set s = row.schedule %}
     <tr>
-      <td>{{ reports[s.report_key].name if s.report_key in reports else s.report_key }}</td>
-      <td>{{ s.tenant.name if s.tenant else 'All tenants' }}</td>
+      <td>{{ reports[s.report_key].name if s.report_key in reports else s.report_key }}{% if s.only_with_findings %}<div class="muted small">only when there are findings</div>{% endif %}</td>
+      <td>{{ row.target }}</td>
       <td><code>{{ s.cron }}</code></td>
-      <td>{{ s.recipients or ('partner recipients' if not s.tenant else '–') }}</td>
+      <td>{{ row.recipients }}{% if row.without_recipients %}<div class="warn-text">{{ row.without_recipients }} tenant(s) have no report recipients and get archive-only reports</div>{% endif %}</td>
       <td>{{ s.output_format }}</td>
-      <td>{% if s.last_run_at %}{{ s.last_run_at.strftime('%Y-%m-%d %H:%M') }} <span class="chip {{ s.last_status }}">{{ s.last_status }}</span>{% else %}–{% endif %}</td>
-      <td>{{ next_runs.get('report:' ~ s.id, '–') if s.enabled else 'disabled' }}</td>
+      <td>{% if s.last_run_at %}{{ s.last_run_at.strftime('%Y-%m-%d %H:%M') }} <span class="chip {{ s.last_status }}">{{ s.last_status }}</span>{% else %}-{% endif %}</td>
+      <td>{{ next_runs.get('report:' ~ s.id, '-') if s.enabled else 'disabled' }}</td>
       <td class="actions">
-        {% if (s.tenant_id is none and principal.can_cross_tenant) or (s.tenant_id is not none and principal.can(s.tenant_id, 'operator')) %}
+        {% if row.can_manage %}
         <form method="post" action="/schedules/{{ s.id }}/run"><button class="small secondary">Run now</button></form>
         <form method="post" action="/schedules/{{ s.id }}/toggle"><button class="small secondary">{{ 'Disable' if s.enabled else 'Enable' }}</button></form>
-        <form method="post" action="/schedules/{{ s.id }}/delete" data-confirm="Delete this schedule?"><button class="small danger">Delete</button></form>
+        <form method="post" action="/schedules/{{ s.id }}/delete" data-confirm="Delete this schedule? Its archived reports are kept."><button class="small danger">Delete</button></form>
         {% else %}<span class="muted">view only</span>{% endif %}
       </td>
     </tr>
@@ -30,22 +30,33 @@
 </section>
 
 {% if operator_tenants or principal.can_cross_tenant %}
-<section class="panel">
+<section class="panel" id="add-schedule">
   <h2>Add schedule</h2>
   <form method="post" action="/schedules" class="form-grid">
     <div><label class="field" for="report_key">Report</label>
       <select id="report_key" name="report_key">
-        {% for key, r in reports.items() %}{% if r.scope != 'all' or principal.can_cross_tenant %}<option value="{{ key }}">{{ r.name }} ({{ r.period_kind }}{% if r.scope == 'all' %}, all tenants{% endif %})</option>{% endif %}{% endfor %}
+        {% for key, r in reports.items() %}{% if r.scope != 'all' or principal.can_cross_tenant %}<option value="{{ key }}" {{ 'selected' if key == pre_report else '' }}>{{ r.name }} ({{ r.period_kind }}{% if r.scope == 'all' %}, one report across all tenants{% endif %})</option>{% endif %}{% endfor %}
       </select></div>
-    <div><label class="field" for="tenant_id">Tenant (per-tenant reports)</label>
-      <select id="tenant_id" name="tenant_id">
-        <option value="">– choose –</option>
-        {% for t in operator_tenants %}<option value="{{ t.id }}" {{ 'selected' if selected_tenant and selected_tenant.id == t.id else '' }}>{{ t.name }}</option>{% endfor %}
+    <div><label class="field" for="target">For (per-tenant reports)</label>
+      <select id="target" name="target">
+        {% if principal.can_cross_tenant %}
+        <option value="all" {{ 'selected' if pre_target == 'all' else '' }}>All tenants - including tenants added later</option>
+        {% for g in groups %}<option value="group:{{ g }}">Group: {{ g }}</option>{% endfor %}
+        {% endif %}
+        {% for t in operator_tenants %}<option value="{{ t.id }}" {{ 'selected' if pre_target == t.id|string else '' }}>{{ t.name }}</option>{% endfor %}
       </select></div>
     <div><label class="field" for="cron">Cron expression (blank = report default)</label><input id="cron" name="cron" type="text" placeholder="0 7 1 * *"></div>
     <div><label class="field" for="output_format">Format</label>
       <select id="output_format" name="output_format"><option value="pdf">PDF attachment + HTML body</option><option value="html">HTML body only</option></select></div>
-    <div class="wide"><label class="field" for="recipients">Recipients (comma separated; cross-tenant reports fall back to the partner recipients in Settings)</label><input id="recipients" name="recipients" type="text" placeholder="soc@example.com, ciso@example.com"></div>
+    <div><label class="field" for="recipient_mode">Send to</label>
+      <select id="recipient_mode" name="recipient_mode">
+        <option value="fixed">The recipients below</option>
+        <option value="tenant">Each tenant's report recipients</option>
+        <option value="both">Both</option>
+      </select></div>
+    <div><label class="field">&nbsp;</label><label class="checks"><input type="checkbox" name="only_with_findings"> Only send when there are findings</label></div>
+    <div class="wide"><label class="field" for="recipients">Recipients (comma separated; reports across all tenants fall back to the partner recipients in Settings)</label><input id="recipients" name="recipients" type="text" placeholder="soc@example.com, ciso@example.com"></div>
+    <p class="wide muted small">A tenant's group and report recipients are set in its reporting profile on the Tenants page. "Only when there are findings" applies to {{ findings_reports|join(', ') }}; the report is still generated and archived.</p>
     <div class="wide"><button type="submit">Add schedule</button></div>
   </form>
   <table style="margin-top:14px">

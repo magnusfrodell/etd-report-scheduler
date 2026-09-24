@@ -6,7 +6,7 @@ The application is multi-tenant by construction. Every ETD tenant is a row with 
 
 What it adds on top of the built-in ETD console:
 
-* **Scheduling and delivery** – cron-based schedules per report and tenant, HTML e-mail with optional PDF attachment, archive of every generated report.
+* **Scheduling and delivery** – cron-based schedules per tenant, for a group of tenants or for all tenants (including tenants added later), sent to fixed recipients and/or each customer's own contacts, optionally only when a report has findings; HTML e-mail with optional PDF attachment and an archive of every generated report.
 * **History and comparison** – daily statistics are kept as long as you like (retention is configurable, ETD keeps 90 days), so every report compares the period with the previous one.
 * **Reports built on message data** – threat-convicted messages are collected through the Message Search API, which enables reports ETD does not offer: compromise indicators on outgoing/internal mail, a Very Attacked People index, campaign clustering and dwell-time/exposure analysis.
 * **Posture, risk and compliance** – with ETD's Log Export and DNS: authentication posture of own domains, vendor and look-alike risk, technique and attachment trends, an audit trail kept beyond ETD's 30 days, and a quarterly posture score for management.
@@ -32,7 +32,7 @@ Bundled reports:
 
 **Technology stack:** Python 3.12, FastAPI, SQLAlchemy 2 + Alembic (SQLite by default, PostgreSQL optional), APScheduler, Jinja2, WeasyPrint for PDF, httpx for the ETD API. Standalone application, delivered as a Docker image; no external services other than the ETD API and an SMTP relay.
 
-**Status:** 0.6.0, alpha. The collectors (including Log Export), scheduler, twelve reports and the admin UI work end to end against a fake ETD API in the test-suite (`pytest`, 96 tests) and have been smoke-tested as a running application. Validation against production ETD tenants in all five regions is the next step - please open an issue with what you find. This is community sample code, not a Cisco product, and is not supported by Cisco TAC.
+**Status:** 0.7.0, alpha. The collectors (including Log Export), scheduler, twelve reports and the admin UI work end to end against a fake ETD API in the test-suite (`pytest`, 115 tests) and have been smoke-tested as a running application. Validation against production ETD tenants in all five regions is the next step - please open an issue with what you find. This is community sample code, not a Cisco product, and is not supported by Cisco TAC.
 
 <!-- Add a screenshot of the dashboard here once you run it against a real tenant: ![Dashboard](docs/dashboard.png) -->
 
@@ -62,7 +62,7 @@ Prerequisites: Docker 24+ with Compose, network access from the container to `ap
 A pre-built multi-arch image (amd64/arm64) is published for every release tag:
 
 ```bash
-docker pull ghcr.io/magnusfrodell/etd-report-scheduler:0.6.0
+docker pull ghcr.io/magnusfrodell/etd-report-scheduler:0.7.0
 ```
 
 To use it, set `image:` instead of `build:` in `docker-compose.yml` (the line is there, commented out). To build yourself instead:
@@ -142,7 +142,8 @@ pytest
 ### In the UI (stored in the database)
 
 * **Tenants** – display name, region (`Beta` for accounts in the ETD beta programme), client ID, client secret and API key. Create these in ETD under *Administration > API Clients* (admin or super-admin role) and *API Key > Generate New Key*; the API key is sent as the `x-api-key` header on every call. The connection is tested when you save; on success the initial collection starts in the background and the *History* column shows the backfill progress (`recent only` → `n of 90 days, backfilling` → `90 days`). *API calls today* shows quota use per tenant.
-* **Schedules** – report, tenant (or all tenants for the roll-up), cron expression in the configured timezone, recipients, HTML or PDF. Each report has a sensible default cron.
+* **Schedules** – report; one tenant, a group of tenants or all tenants; a cron expression in the configured timezone; who gets it (the recipients in the schedule, each tenant's report recipients, or both); HTML or PDF; and optionally *only when there are findings* for compromise indicators, health check, campaigns, exposure and vendor risk. Each report has a sensible default cron. Cron expressions follow standard cron: `minute hour day month day-of-week`, where day-of-week 0 or 7 is Sunday and 1 is Monday.
+* **Tenant reporting profile** – besides domains, vendors, VIPs and user labels: an optional *group* (for schedules that cover a group, such as a service tier) and the customer's *report recipients*.
 * **Reporting profile per tenant** (Tenants page, manager role) – own domains (blank = detected from outgoing mail and recipients), vendor and partner domains to watch, VIP mailboxes (added to the global list) and names for ETD user ids, because ETD's audit log records users by UUID only.
 * **Settings** – timezone (IANA name, e.g. `Europe/Stockholm`), SMTP relay, partner recipients (default for cross-tenant reports), retention in days, which verdicts to store per message (threats only by default: `bec`, `scam`, `phishing`, `malicious`; adding `spam`/`graymail` multiplies the volume), the daily API budget per tenant (default 8 000 of ETD's 10 000), the backfill window size, the global VIP mailboxes, Log Export collection on/off and how long the audit trail is kept (default 730 days).
 
@@ -206,7 +207,7 @@ Sign in as the bootstrap admin, add a tenant, then add users:
 1. **Tenants > Add tenant** – name, region, client ID, client secret, API key. The connection is tested on save and the 90-day history collection starts in the background.
 1. **Users > Add user** – username, role and an initial password; then open the tenant's *Edit credentials and access* section on the Tenants page and grant viewer, operator or manager.
 2. **Settings** – set your timezone and SMTP relay, send a test e-mail. The relay's certificate is verified; for a relay with an internal CA, paste the CA certificate in the e-mail settings.
-3. **Schedules > Add schedule** – pick a report and tenant, leave the cron blank to use the default, add recipients. **Run now** generates and sends it immediately.
+3. **Schedules > Add schedule** – pick a report and who it is for (a tenant, a group or all tenants), leave the cron blank to use the default and choose the recipients. **Run now** generates and sends it immediately for every tenant it covers. The **+ Schedule** link on a report card opens the form with that report chosen. A schedule that covers many tenants reports its problems in one alert.
 4. **Reports** – one card per report, grouped into *Overview*, *Threats*, *Exposure and risk* and *Operations and compliance*. Each card shows the default period, whether it is scheduled, the latest run and how many runs are archived. **Run now** generates it for the tenant in the header switcher ("All tenants" runs a per-tenant report for every enabled tenant you operate); **Options** picks another period, recipients (empty = archive only) and the format.
 5. **Archive** – every generated report, filtered by report, tenant and status and grouped by month. The selected report is previewed next to the list (scaled to fit), with **Open** for full size and **PDF** to download; step through runs with ↑/↓ or j/k. Failed runs show their error, and an empty filter offers **Run now** for that report and tenant. Links in the dashboard's recent runs open the run here. Each run shows whether it came from a schedule, was run manually or via the API, or was caught up after downtime, and which recipients the relay refused. Deleting a schedule keeps its archived reports.
 6. **Data quality** – per tenant and data stream (daily statistics, convicted messages, Log Export, history backfill): the last successful collection, whether it is late or stalled, each collector's own last error, days with statistics, unreadable log files and API requests used today, with **Collect now**.
@@ -239,7 +240,7 @@ Generated files are stored under `/data/reports/<tenant>/<report>/<timestamp>-ru
 `.github/workflows/ci.yml` runs ruff, the test-suite and an Alembic consistency check on every push and pull request. `.github/workflows/docker.yml` builds and publishes the container image to GitHub Container Registry when a `v*` tag is pushed:
 
 ```bash
-git tag v0.6.0 && git push origin v0.6.0
+git tag v0.7.0 && git push origin v0.7.0
 ```
 
 ### Architecture

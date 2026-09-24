@@ -115,6 +115,8 @@ def run_view(run: ReportRun, *, definitions: dict[str, Any], tenant_names: dict[
     meta.append(TRIGGERS.get(trigger, "run manually"))
     if run.delivered_to:
         meta.append(f"sent to {run.delivered_to}")  # handed to the relay - not proof of mailbox delivery
+    elif run.delivery_note:
+        meta.append(run.delivery_note[0].lower() + run.delivery_note[1:].rstrip("."))
     elif not run.delivery_error:
         meta.append("archive only")
     return {

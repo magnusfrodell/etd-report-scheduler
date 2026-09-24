@@ -36,6 +36,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    false,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.types import TypeDecorator
@@ -286,6 +287,12 @@ class ReportSchedule(Base):
     recipients: Mapped[str] = mapped_column(Text, nullable=False, default="")
     output_format: Mapped[str] = mapped_column(String(10), nullable=False, default="pdf")  # html | pdf
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # tenant: the one tenant in tenant_id | all: every enabled tenant | group: every enabled tenant in target_group.
+    # Resolved when the schedule runs, so tenants added later are included.
+    target: Mapped[str] = mapped_column(String(16), nullable=False, default="tenant", server_default="tenant")
+    target_group: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    recipient_mode: Mapped[str] = mapped_column(String(16), nullable=False, default="fixed", server_default="fixed")  # fixed | tenant | both
+    only_with_findings: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=utcnow)
     last_run_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     last_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
@@ -318,6 +325,7 @@ class ReportRun(Base):
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     triggered_by: Mapped[str | None] = mapped_column(String(16), nullable=True)  # schedule | manual | catchup | api
     delivery_error: Mapped[str | None] = mapped_column(Text, nullable=True)  # recipients the relay refused
+    delivery_note: Mapped[str | None] = mapped_column(String(300), nullable=True)  # why nothing was sent: no findings, no recipients
 
     schedule: Mapped[ReportSchedule | None] = relationship(back_populates="runs")
 

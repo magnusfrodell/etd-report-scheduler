@@ -1,6 +1,6 @@
 [project]
 name = "etd-report-scheduler"
-version = "0.6.0"
+version = "0.7.0"
 description = "Scheduled, multi-tenant reporting for Cisco Secure Email Threat Defense"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }

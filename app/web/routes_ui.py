@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import logging
 import ssl
+from collections import Counter
 from datetime import timedelta
 from functools import partial
 from pathlib import Path
@@ -59,7 +60,7 @@ from app.reports.base import CATEGORIES, CATEGORY_KEYS, SCOPE_ALL, ReportDefinit
 from app.reports.periods import PERIOD_KINDS
 from app.reports.registry import REPORTS, get_report
 from app.scheduler import scheduler, validate_cron
-from app.services import run_report
+from app.services import run_report, run_schedule, schedule_targets
 from app.settings_store import ALL_VERDICTS, load_settings, save_settings
 from app.tenant_profile import get_profile, parse_addresses, parse_domains, parse_labels
 from app.web.auth import (
@@ -316,6 +317,8 @@ def tenant_profile(
     vendor_domains: str = Form(""),
     vip_addresses: str = Form(""),
     user_labels: str = Form(""),
+    group: str = Form(""),
+    report_recipients: str = Form(""),
     db: Session = Depends(get_db),
     p: Principal = Depends(get_principal),
 ) -> Response:
@@ -323,9 +326,11 @@ def tenant_profile(
     own, bad_own = parse_domains(own_domains)
     vendors, bad_vendors = parse_domains(vendor_domains)
     vips, bad_vips = parse_addresses(vip_addresses)
-    tenant.profile = {"own_domains": own, "vendor_domains": vendors, "vip_addresses": vips, "user_labels": parse_labels(user_labels)}
+    contacts, bad_contacts = parse_addresses(report_recipients)
+    tenant.profile = {"own_domains": own, "vendor_domains": vendors, "vip_addresses": vips, "user_labels": parse_labels(user_labels),
+                      "group": " ".join(group.split())[:60], "report_recipients": contacts}
     db.commit()
-    ignored = bad_own + bad_vendors + bad_vips
+    ignored = bad_own + bad_vendors + bad_vips + bad_contacts
     if ignored:
         return _redirect("/tenants", f"Profile for '{tenant.name}' saved. Ignored invalid entries: {', '.join(ignored[:10])}", error=True)
     return _redirect("/tenants", f"Reporting profile for '{tenant.name}' saved.")
@@ -421,8 +426,40 @@ def _schedule_or_403(db: Session, schedule_id: int, p: Principal) -> ReportSched
     return schedule
 
 
+def _schedule_rows(db: Session, p: Principal, schedules: list[ReportSchedule]) -> list[dict[str, Any]]:
+    """What each schedule covers and who gets it, including tenants that would get no e-mail."""
+    rows = []
+    for s in schedules:
+        definition = REPORTS.get(s.report_key)
+        cross = definition is not None and definition.scope == SCOPE_ALL
+        if cross:
+            target = "All tenants (one combined report)"
+        elif s.target == "all":
+            target = "All tenants"
+        elif s.target == "group":
+            target = f"Group: {s.target_group}"
+        else:
+            target = s.tenant.name if s.tenant else "-"
+        fixed = s.recipients or ""
+        mode = s.recipient_mode or "fixed"
+        if cross:
+            recipients = fixed or "partner recipients (Settings)"
+        elif mode == "tenant":
+            recipients = "each tenant's report recipients"
+        elif mode == "both":
+            recipients = f"{fixed} + each tenant's report recipients" if fixed else "each tenant's report recipients"
+        else:
+            recipients = fixed or "- (archive only)"
+        without = 0
+        if definition is not None and not cross and (mode == "tenant" or (mode == "both" and not fixed)):
+            without = sum(1 for t in schedule_targets(db, s, definition) if t is not None and not get_profile(t)["report_recipients"])
+        can_manage = p.can_cross_tenant if s.tenant_id is None else p.can(s.tenant_id, "operator")
+        rows.append({"schedule": s, "target": target, "recipients": recipients, "without_recipients": without, "can_manage": can_manage})
+    return rows
+
+
 @router.get("/schedules", response_class=HTMLResponse)
-def schedules_page(request: Request, db: Session = Depends(get_db), p: Principal = Depends(get_principal)) -> Response:
+def schedules_page(request: Request, report: str = "", db: Session = Depends(get_db), p: Principal = Depends(get_principal)) -> Response:
     selected = _selected_tenant(request, db, p)
     visible_ids = p.visible_tenant_ids(db)
     stmt = select(ReportSchedule).order_by(ReportSchedule.tenant_id.nulls_first(), ReportSchedule.report_key)
@@ -431,20 +468,28 @@ def schedules_page(request: Request, db: Session = Depends(get_db), p: Principal
         cond = cond | ReportSchedule.tenant_id.is_(None)
     schedules = list(db.execute(stmt.where(cond)).scalars())
     settings = load_settings(db)
+    groups = sorted({g for t in p.visible_tenants(db) if (g := get_profile(t)["group"])}, key=str.lower)
+    pre_target = str(selected.id) if selected else ("all" if p.can_cross_tenant else "")
     return templates.TemplateResponse(
         request,
         "schedules.html",
-        _base_ctx(request, db, p, schedules=schedules, settings=settings, operator_tenants=p.tenants_where(db, "operator"), next_runs=scheduler.next_run_times() if (scheduler.running and p.is_tenant_admin) else {}),
+        _base_ctx(request, db, p, rows=_schedule_rows(db, p, schedules), settings=settings, operator_tenants=p.tenants_where(db, "operator"),
+                  groups=groups, pre_report=report if report in REPORTS else "", pre_target=pre_target,
+                  findings_reports=[r.name for r in REPORTS.values() if r.has_findings],
+                  next_runs=scheduler.next_run_times() if (scheduler.running and p.is_tenant_admin) else {}),
     )
 
 
 @router.post("/schedules")
 def schedule_create(
     report_key: str = Form(...),
-    tenant_id: str = Form(""),
+    target: str = Form(""),
+    tenant_id: str = Form(""),  # the form field before 0.7.0
     cron: str = Form(""),
     recipients: str = Form(""),
     output_format: str = Form("pdf"),
+    recipient_mode: str = Form("fixed"),
+    only_with_findings: str = Form(""),
     db: Session = Depends(get_db),
     p: Principal = Depends(get_principal),
 ) -> Response:
@@ -458,30 +503,44 @@ def schedule_create(
         validate_cron(cron, settings.timezone)
     except ValueError as exc:
         return _redirect("/schedules", str(exc), error=True)
+    target = (target or tenant_id).strip()
     tid: int | None = None
+    kind, group = "tenant", None
     if definition.scope == SCOPE_ALL:
         if not p.can_cross_tenant:
             raise forbid("Cross-tenant schedules need the tenant administrator role.")
+        who = "all tenants"
+    elif target == "all" or target.startswith("group:"):
+        if not p.can_cross_tenant:
+            raise forbid("Schedules for all tenants or a group need the tenant administrator role.")
+        kind = "all" if target == "all" else "group"
+        group = " ".join(target.removeprefix("group:").split())[:60] or None
+        if kind == "group" and not group:
+            return _redirect("/schedules", "Choose a group.", error=True)
+        who = "all tenants" if kind == "all" else f"group {group}"
     else:
-        if not tenant_id.isdigit() or db.get(Tenant, int(tenant_id)) is None:
-            return _redirect("/schedules", f"'{definition.name}' is a per-tenant report - choose a tenant.", error=True)
-        tid = int(tenant_id)
+        if not target.isdigit() or db.get(Tenant, int(target)) is None:
+            return _redirect("/schedules", f"'{definition.name}' is a per-tenant report - choose a tenant, a group or all tenants.", error=True)
+        tid = int(target)
         ensure(p, tid, "operator")
-    schedule = ReportSchedule(tenant_id=tid, report_key=report_key, cron=cron, recipients=recipients.strip(), output_format="html" if output_format == "html" else "pdf", enabled=True)
+        who = db.get(Tenant, tid).name
+    schedule = ReportSchedule(
+        tenant_id=tid, report_key=report_key, cron=cron, recipients=recipients.strip(), output_format="html" if output_format == "html" else "pdf",
+        enabled=True, target=kind, target_group=group, recipient_mode=recipient_mode if recipient_mode in ("fixed", "tenant", "both") else "fixed",
+        only_with_findings=only_with_findings == "on" and definition.has_findings is not None,
+    )
     db.add(schedule)
     db.commit()
     if scheduler.running:
         scheduler.reload_report_jobs()
-    return _redirect("/schedules", f"Schedule for '{definition.name}' created ({cron}, {settings.timezone}).")
+    return _redirect("/schedules", f"Schedule for '{definition.name}' ({who}) created ({cron}, {settings.timezone}).")
 
 
 @router.post("/schedules/{schedule_id}/run")
 def schedule_run(schedule_id: int, background: BackgroundTasks, db: Session = Depends(get_db), p: Principal = Depends(get_principal)) -> Response:
     schedule = _schedule_or_403(db, schedule_id, p)
-    settings = load_settings(db)
     definition = get_report(schedule.report_key)
-    recipients = schedule.recipient_list or (settings.partner_recipient_list if definition.scope == SCOPE_ALL else [])
-    background.add_task(run_report, schedule.report_key, tenant_id=schedule.tenant_id, schedule_id=schedule.id, recipients=recipients, output_format=schedule.output_format, triggered_by="manual")
+    background.add_task(run_schedule, schedule.id, triggered_by="manual", force=True)  # every tenant it covers
     return _redirect("/reports", f"'{definition.name}' is being generated - it appears in the archive shortly.")
 
 
@@ -532,6 +591,26 @@ def _runs_scope(p: Principal, visible_ids: list[int], tenant_id: int | None = No
     return (cond | ReportRun.tenant_id.is_(None)) if p.can_cross_tenant else cond
 
 
+def _schedule_counts(db: Session, p: Principal, selected: Tenant | None, visible_ids: list[int]) -> Counter[str]:
+    """Active schedules per report that cover the tenant in the header (or any visible tenant),
+    counting schedules for all tenants and for the tenant's group too."""
+    group = get_profile(selected)["group"].lower() if selected else None
+    visible = set(visible_ids)
+    counts: Counter[str] = Counter()
+    for s in db.execute(select(ReportSchedule).where(ReportSchedule.enabled.is_(True))).scalars():
+        if s.tenant_id is not None:
+            applies = s.tenant_id == selected.id if selected else s.tenant_id in visible
+        elif s.target == "all":
+            applies = True
+        elif s.target == "group":
+            applies = selected is None or (s.target_group or "").lower() == group
+        else:  # one cross-tenant report
+            applies = p.can_cross_tenant
+        if applies:
+            counts[s.report_key] += 1
+    return counts
+
+
 def _can_view_run(run: ReportRun, p: Principal, visible: dict[int, str]) -> bool:
     return p.can_cross_tenant if run.tenant_id is None else run.tenant_id in visible
 
@@ -557,14 +636,7 @@ def reports_page(request: Request, db: Session = Depends(get_db), p: Principal =
         r.report_key: r
         for r in db.execute(select(ReportRun).join(ranked, ReportRun.id == ranked.c.id).where(ranked.c.rn == 1)).scalars()
     }
-    sched = (ReportSchedule.tenant_id == selected.id) if selected else ReportSchedule.tenant_id.in_(visible_ids)
-    if p.can_cross_tenant:
-        sched = sched | ReportSchedule.tenant_id.is_(None)
-    schedules = dict(
-        db.execute(
-            select(ReportSchedule.report_key, func.count()).where(sched, ReportSchedule.enabled.is_(True)).group_by(ReportSchedule.report_key)
-        ).all()
-    )
+    schedules = _schedule_counts(db, p, selected, visible_ids)
     running_count = db.execute(select(func.count()).select_from(ReportRun).where(cond, ReportRun.status == "running")).scalar_one()
     can_run_tenant = p.can(selected.id, "operator") if selected else any(t.enabled for t in p.tenants_where(db, "operator"))
     now = utcnow()

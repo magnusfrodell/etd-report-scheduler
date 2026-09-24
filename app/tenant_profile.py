@@ -77,6 +77,8 @@ def get_profile(tenant: Tenant | None) -> dict[str, Any]:
         "vendor_domains": list(raw.get("vendor_domains") or []),
         "vip_addresses": list(raw.get("vip_addresses") or []),
         "user_labels": dict(raw.get("user_labels") or {}),
+        "group": str(raw.get("group") or "").strip(),  # schedules can cover every tenant in a group
+        "report_recipients": list(raw.get("report_recipients") or []),  # the customer's contacts for scheduled reports
     }
 
 

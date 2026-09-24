@@ -24,7 +24,7 @@ from sqlalchemy import select
 
 from app.db import session_scope
 from app.delivery.email import send_email
-from app.models import AlertState, ReportRun, Tenant, utcnow
+from app.models import AlertState, ReportRun, ReportSchedule, Tenant, utcnow
 from app.quality import tenant_health
 from app.reports.registry import REPORTS
 from app.settings_store import RuntimeSettings, load_settings
@@ -62,6 +62,27 @@ def alert_run_problem(run_id: int) -> bool:
         detail = run.error if run.status == "failed" else run.delivery_error
         link = f"{settings.base_url.rstrip('/')}/archive?report={run.report_key}&tenant={run.tenant_id or 'all'}&run={run.id}" if settings.base_url else ""
     return _send(settings, f"[ETD] Scheduled report {what}: {name} - {who}", [f"{name} for {who} {what}.", detail or ""], link)
+
+
+def alert_schedule_problems(schedule_id: int, run_ids: list[int], triggered_by: str) -> bool:
+    """One alert for a schedule that covers many tenants, listing the tenants whose report failed or
+    was only partly delivered - not one e-mail per tenant."""
+    if triggered_by not in ("schedule", "catchup") or not run_ids:
+        return False
+    with session_scope() as session:
+        runs = list(session.execute(select(ReportRun).where(ReportRun.id.in_(run_ids))).scalars())
+        problems = [r for r in runs if r.status == "failed" or r.delivery_error]
+        if not problems:
+            return False
+        settings = load_settings(session)
+        schedule = session.get(ReportSchedule, schedule_id)
+        key = schedule.report_key if schedule else problems[0].report_key
+        name = REPORTS[key].name if key in REPORTS else key
+        tenants = {t.id: t.name for t in session.execute(select(Tenant)).scalars()}
+        lines = [f"{tenants.get(r.tenant_id, 'unknown tenant')}: " + (f"failed - {r.error}" if r.status == "failed" else f"partly delivered - {r.delivery_error}")
+                 for r in problems]
+        link = f"{settings.base_url.rstrip('/')}/archive?report={key}&tenant=all" if settings.base_url else ""
+    return _send(settings, f"[ETD] Scheduled report: {len(problems)} of {len(runs)} tenant(s) need attention - {name}", lines, link)
 
 
 def check_collection(now: datetime | None = None) -> int:

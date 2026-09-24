@@ -12,7 +12,7 @@ python3 -m venv venv && source venv/bin/activate
 pip install --require-hashes -r requirements.txt   # the locked runtime, as in the image
 pip install -r requirements-dev.txt
 cp .env.example .env            # fill in SECRET_KEY, ENCRYPTION_KEY, ADMIN_PASSWORD
-pytest                          # 96 tests, fake ETD API and fake DNS, no network needed
+pytest                          # 115 tests, fake ETD API and fake DNS, no network needed
 uvicorn app.main:app --reload --port 8080
 ```
 

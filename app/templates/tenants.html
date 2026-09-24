@@ -66,12 +66,14 @@
           </div>
         </div>
         <form method="post" action="/tenants/{{ t.id }}/profile" class="form-grid" style="margin-top:16px">
-          <div class="wide"><strong>Reporting profile</strong> <span class="muted">- used by the authentication posture, vendor risk, VAP and audit reports</span></div>
+          <div class="wide"><strong>Reporting profile</strong> <span class="muted">- used by the authentication posture, vendor risk, VAP and audit reports, and by schedules</span></div>
           <div><label class="field" for="own-{{ t.id }}">Own domains (blank = auto-detect)</label><textarea id="own-{{ t.id }}" name="own_domains" rows="2" placeholder="corp.example, corp.se">{{ profiles[t.id].own_domains|join(', ') }}</textarea></div>
           <div><label class="field" for="vend-{{ t.id }}">Vendor and partner domains</label><textarea id="vend-{{ t.id }}" name="vendor_domains" rows="2" placeholder="supplier.example, bank.example">{{ profiles[t.id].vendor_domains|join(', ') }}</textarea></div>
           <div><label class="field" for="vip-{{ t.id }}">VIP mailboxes (in addition to the global list)</label><textarea id="vip-{{ t.id }}" name="vip_addresses" rows="2" placeholder="ceo@corp.example">{{ profiles[t.id].vip_addresses|join(', ') }}</textarea></div>
           <div><label class="field" for="lbl-{{ t.id }}">ETD user labels - one per line: user-id = name</label><textarea id="lbl-{{ t.id }}" name="user_labels" rows="2" placeholder="5f94fb97-742b-446a-90f8-d0c49a958e5b = Anna Analyst">{% for k, v in profiles[t.id].user_labels.items() %}{{ k }} = {{ v }}
 {% endfor %}</textarea></div>
+          <div><label class="field" for="grp-{{ t.id }}">Tenant group (optional - a schedule can cover every tenant in a group)</label><input id="grp-{{ t.id }}" name="group" type="text" value="{{ profiles[t.id].group }}" placeholder="Premium"></div>
+          <div><label class="field" for="rcpt-{{ t.id }}">Report recipients - the customer's contacts for scheduled reports</label><textarea id="rcpt-{{ t.id }}" name="report_recipients" rows="2" placeholder="ciso@corp.example, soc@corp.example">{{ profiles[t.id].report_recipients|join(', ') }}</textarea></div>
           <div class="wide"><button type="submit" class="small">Save profile</button></div>
         </form>
       </details>

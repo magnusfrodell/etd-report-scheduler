@@ -5,7 +5,7 @@
 services:
   etd-report-scheduler:
     build: .
-    # image: ghcr.io/magnusfrodell/etd-report-scheduler:0.6.0   # published for every release tag; use instead of build:
+    # image: ghcr.io/magnusfrodell/etd-report-scheduler:0.7.0   # published for every release tag; use instead of build:
     container_name: etd-report-scheduler
     restart: unless-stopped
     env_file: .env

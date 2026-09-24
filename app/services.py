@@ -20,6 +20,7 @@ import contextlib
 import logging
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from sqlalchemy import select
@@ -35,7 +36,8 @@ from app.reports import repo
 from app.reports.base import SCOPE_ALL, ReportContext, ReportDefinition
 from app.reports.periods import period_for
 from app.reports.registry import get_report
-from app.settings_store import load_settings
+from app.settings_store import RuntimeSettings, load_settings
+from app.tenant_profile import get_profile
 
 log = logging.getLogger(__name__)
 
@@ -79,8 +81,8 @@ def _fmt_pct(value: float | None) -> str:
     return f"{sign}{value:.1f} %"
 
 
-def render_report(session: Session, definition: ReportDefinition, ctx: ReportContext) -> str:
-    data = definition.build(session, ctx)
+def render_report(session: Session, definition: ReportDefinition, ctx: ReportContext, data: dict[str, Any] | None = None) -> str:
+    data = definition.build(session, ctx) if data is None else data
     template = template_env().get_template(definition.template)
     return template.render(report=definition, ctx=ctx, data=data, generated_at=ctx.generated_at, tz=ctx.timezone)
 
@@ -122,6 +124,9 @@ def run_report(
     now: datetime | None = None,
     reference: datetime | None = None,
     triggered_by: str | None = None,
+    only_with_findings: bool = False,
+    delivery_note: str | None = None,
+    alert: bool = True,
 ) -> int:
     """Generate one report. Returns the ``ReportRun`` id. Never raises - failures are recorded.
 
@@ -163,7 +168,9 @@ def run_report(
             settings = load_settings(session)
             tenant = session.get(Tenant, tenant_id) if tenant_id else None
             ctx = build_context(session, definition, tenant, now, settings.timezone, period_kind, reference)
-            html = render_report(session, definition, ctx)
+            data = definition.build(session, ctx)
+            html = render_report(session, definition, ctx, data)
+            findings = definition.has_findings(data) if definition.has_findings else True
             tenant_name = tenant.name if tenant else None
             subject = definition.subject.format(tenant=ctx.tenant_name, period=ctx.period.label)
             result["period_start"], result["period_end"] = ctx.period.start, ctx.period.end
@@ -174,7 +181,9 @@ def run_report(
         pdf_bytes = pdf.render_pdf(html) if output_format == "pdf" else None
         if pdf_bytes:
             result["pdf_path"] = archive.write_bytes(pdf_path, pdf_bytes)
-        if deliver and to:
+        if deliver and to and only_with_findings and not findings:
+            result["delivery_note"] = "Not sent: nothing to report - the schedule only sends reports with findings."
+        elif deliver and to:
             attachments = [(pdf_path.name, pdf_bytes, "application/pdf")] if pdf_bytes else []
             try:
                 refused = send_email(settings, to, subject, html, attachments)
@@ -186,6 +195,8 @@ def run_report(
                 result["delivery_error"] = "The relay refused " + "; ".join(f"{addr} ({_smtp_reply(reply)})" for addr, reply in refused.items())
         elif deliver and not to:
             log.info("Report %s run %d generated without recipients (archived only)", report_key, run_id)
+            if delivery_note:
+                result["delivery_note"] = delivery_note
     except Exception as exc:  # noqa: BLE001
         log.exception("Report %s run %d failed", report_key, run_id)
         result["status"] = "failed"
@@ -193,7 +204,7 @@ def run_report(
 
     # Phase 4 - finalize (retried, so a transient 'database is locked' cannot leave a run 'running' forever).
     _finalize_run(run_id, schedule_id, result)
-    if trigger in ("schedule", "catchup") and (result["status"] == "failed" or result.get("delivery_error")):
+    if alert and trigger in ("schedule", "catchup") and (result["status"] == "failed" or result.get("delivery_error")):
         from app.alerts import (
             alert_run_problem,  # late import: alerts uses the mailer and the report registry
         )
@@ -211,7 +222,7 @@ def _finalize_run(run_id: int, schedule_id: int | None, result: dict[str, object
                 run = session.get(ReportRun, run_id)
                 if run is None:
                     return
-                for key in ("period_start", "period_end", "html_path", "pdf_path", "delivered_to", "error", "delivery_error"):
+                for key in ("period_start", "period_end", "html_path", "pdf_path", "delivered_to", "error", "delivery_error", "delivery_note"):
                     if key in result:
                         setattr(run, key, result[key])
                 run.status = str(result["status"])
@@ -229,23 +240,71 @@ def _finalize_run(run_id: int, schedule_id: int | None, result: dict[str, object
             time.sleep(0.5 * attempt)
 
 
-def run_schedule(schedule_id: int, *, reference: datetime | None = None, triggered_by: str = "schedule") -> int | None:
-    """Entry point used by the scheduler. ``reference`` is the time the run fell due (catch-up after an outage)."""
+def schedule_targets(session: Session, schedule: ReportSchedule, definition: ReportDefinition) -> list[Tenant | None]:
+    """The tenants one run of a schedule covers: ``[None]`` for a cross-tenant report, the tenant of a
+    single-tenant schedule, or every enabled tenant (in the group) at the moment it runs - so tenants
+    added later are included without touching the schedule."""
+    if definition.scope == SCOPE_ALL:
+        return [None]
+    if schedule.target not in ("all", "group"):
+        tenant = session.get(Tenant, schedule.tenant_id) if schedule.tenant_id else None
+        return [tenant] if tenant is not None else []
+    tenants = list(session.execute(select(Tenant).where(Tenant.enabled.is_(True)).order_by(Tenant.name)).scalars())
+    if schedule.target == "group":
+        wanted = (schedule.target_group or "").strip().lower()
+        tenants = [t for t in tenants if get_profile(t)["group"].lower() == wanted]
+    return tenants
+
+
+def schedule_recipients(schedule: ReportSchedule, definition: ReportDefinition, tenant: Tenant | None,
+                        settings: RuntimeSettings) -> tuple[list[str], str | None]:
+    """Recipients of one tenant's run, and a note when the tenant's own contacts were expected but missing."""
+    fixed = schedule.recipient_list
+    if definition.scope == SCOPE_ALL:
+        return fixed or settings.partner_recipient_list, None
+    contacts = get_profile(tenant)["report_recipients"] if tenant is not None else []
+    mode = schedule.recipient_mode or "fixed"
+    to = contacts if mode == "tenant" else list(dict.fromkeys(fixed + contacts)) if mode == "both" else fixed
+    note = "Not sent: the tenant profile has no report recipients." if not to and mode in ("tenant", "both") else None
+    return to, note
+
+
+def run_schedule(schedule_id: int, *, reference: datetime | None = None, triggered_by: str = "schedule",
+                 only_missing: bool = False, force: bool = False) -> int | None:
+    """Run a schedule for every tenant it covers. ``reference`` is when it fell due (catch-up), and
+    ``only_missing`` skips tenants that already have a run for that period. Returns the last run id."""
+    from zoneinfo import ZoneInfo
+
     with session_scope() as session:
         schedule = session.get(ReportSchedule, schedule_id)
-        if schedule is None or not schedule.enabled:
+        if schedule is None or (not schedule.enabled and not force):
             log.info("Schedule %s missing or disabled - skipping", schedule_id)
             return None
         settings = load_settings(session)
         definition = get_report(schedule.report_key)
-        recipients = schedule.recipient_list or (settings.partner_recipient_list if definition.scope == SCOPE_ALL else [])
-        params = dict(
-            tenant_id=schedule.tenant_id,
-            schedule_id=schedule.id,
-            recipients=recipients,
-            output_format=schedule.output_format,
-        )
-    return run_report(schedule.report_key, reference=reference, triggered_by=triggered_by, **params)
+        targets = schedule_targets(session, schedule, definition)
+        if only_missing and reference is not None:
+            period = period_for(definition.period_kind, reference, ZoneInfo(settings.timezone))
+            done = set(session.execute(
+                select(ReportRun.tenant_id).where(ReportRun.schedule_id == schedule.id, ReportRun.period_start == period.start)
+            ).scalars())
+            targets = [t for t in targets if (t.id if t is not None else None) not in done]
+        jobs = [(t.id if t is not None else None, *schedule_recipients(schedule, definition, t, settings)) for t in targets]
+        fan_out = schedule.target in ("all", "group") and definition.scope != SCOPE_ALL
+        output_format, only_findings = schedule.output_format, schedule.only_with_findings
+    run_ids = [
+        run_report(definition.key, tenant_id=tid, schedule_id=schedule_id, recipients=to, output_format=output_format,
+                   reference=reference, triggered_by=triggered_by, only_with_findings=only_findings, delivery_note=note,
+                   alert=not fan_out)
+        for tid, to, note in jobs
+    ]
+    if fan_out:
+        log.info("Schedule %s covered %d tenant(s)", schedule_id, len(run_ids))
+        if run_ids:
+            from app.alerts import alert_schedule_problems  # late import, as in run_report
+
+            alert_schedule_problems(schedule_id, run_ids, triggered_by)
+    return run_ids[-1] if run_ids else None
 
 
 def recover_interrupted_runs() -> int:

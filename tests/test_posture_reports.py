@@ -311,6 +311,6 @@ def test_tenant_profile_form(logged_in):
     with session_scope() as s:
         profile = s.get(Tenant, tid).profile
     assert profile == {"own_domains": ["corp.example"], "vendor_domains": ["supplier.example", "bank.example"],
-                       "vip_addresses": ["ceo@corp.example"], "user_labels": {"uuid-1": "Anna Analyst"}}
+                       "vip_addresses": ["ceo@corp.example"], "user_labels": {"uuid-1": "Anna Analyst"}, "group": "", "report_recipients": []}
     page = logged_in.get("/tenants").text
     assert "Reporting profile" in page and "supplier.example, bank.example" in page and "Log export" in page

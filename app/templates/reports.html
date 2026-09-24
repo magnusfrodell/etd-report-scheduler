@@ -28,7 +28,7 @@
           <div class="badges">
             <span class="badge">{{ period_names.get(r.period_kind, r.period_kind) }}</span>
             <span class="badge">{{ 'All tenants' if r.scope == 'all' else 'Per tenant' }}</span>
-            {% if c.schedules %}<span class="badge scheduled" title="{{ c.schedules }} active schedule(s)">{{ icon('calendar', 12) }} Scheduled{% if c.schedules > 1 %} ×{{ c.schedules }}{% endif %}</span>{% endif %}
+            {% if c.schedules %}<a class="badge scheduled" href="/schedules?report={{ r.key }}" title="{{ c.schedules }} active schedule(s)">{{ icon('calendar', 12) }} Scheduled{% if c.schedules > 1 %} ×{{ c.schedules }}{% endif %}</a>{% elif c.can_run %}<a class="badge add-schedule" href="/schedules?report={{ r.key }}#add-schedule" title="Schedule this report">+ Schedule</a>{% endif %}
           </div>
         </div>
       </header>

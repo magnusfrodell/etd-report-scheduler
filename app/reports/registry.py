@@ -78,6 +78,7 @@ register(
         category="threats",
         icon="alert",
         summary="Threats sent from your own accounts - the sign of a compromised mailbox.",
+        has_findings=lambda d: d["total"] > 0,
     )
 )
 
@@ -95,6 +96,7 @@ register(
         category="operations",
         icon="pulse",
         summary="Yesterday's volume against the baseline, threat spikes and collector errors.",
+        has_findings=lambda d: d["overall"] != "ok",
     )
 )
 
@@ -129,6 +131,7 @@ register(
         category="threats",
         icon="layers",
         summary="Related threats clustered into campaigns by sender, subject, URL and attachment.",
+        has_findings=lambda d: d["campaign_count"] > 0,
     )
 )
 
@@ -146,6 +149,7 @@ register(
         category="risk",
         icon="clock",
         summary="How long retro-convicted threats sat in inboxes, and what is still there.",
+        has_findings=lambda d: d["unremediated_count"] > 0,
     )
 )
 
@@ -180,6 +184,7 @@ register(
         category="risk",
         icon="briefcase",
         summary="Compromised suppliers, look-alike domains and new senders with payment lures.",
+        has_findings=lambda d: bool(d["compromised"] or d["lookalikes"] or d["rare"]),
     )
 )
 

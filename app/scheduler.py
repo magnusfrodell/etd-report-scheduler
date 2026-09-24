@@ -38,9 +38,10 @@ from app.collectors import runner
 from app.config import get_config
 from app.db import session_scope
 from app.models import ReportRun, ReportSchedule, utcnow
+from app.reports.base import SCOPE_ALL
 from app.reports.periods import period_for
 from app.reports.registry import get_report
-from app.services import run_schedule
+from app.services import run_schedule, schedule_targets
 from app.settings_store import load_settings
 
 log = logging.getLogger(__name__)
@@ -48,10 +49,62 @@ log = logging.getLogger(__name__)
 REPORT_JOB_PREFIX = "report:"
 
 
+_CRON_DAYS = ("sun", "mon", "tue", "wed", "thu", "fri", "sat")  # standard cron: 0 (or 7) = Sunday, 1 = Monday
+
+
+def _cron_day(token: str, *, upper: bool = False) -> int:
+    token = token.strip().lower()
+    if token[:3] in _CRON_DAYS and token.isalpha():
+        day = _CRON_DAYS.index(token[:3])
+        return 7 if upper and day == 0 else day  # "fri-sun" ends on Sunday = 7
+    value = int(token)
+    if not 0 <= value <= 7:
+        raise ValueError(f"day of week {value} is outside 0-7")
+    return value
+
+
+def cron_days(field: str) -> str:
+    """A standard cron day-of-week field (0 or 7 = Sunday, 1 = Monday ... 6 = Saturday; names, ranges,
+    lists and steps allowed) as the day names APScheduler understands.
+
+    APScheduler 3 numbers the days from Monday = 0, so passing the field through unchanged - as
+    ``CronTrigger.from_crontab`` does - would run "1" on Tuesday and reject "7"."""
+    if field.strip() in ("*", "?"):
+        return "*"
+    days: set[int] = set()
+    for part in field.split(","):
+        span, _, step_text = part.partition("/")
+        step = int(step_text) if step_text else 1
+        if step < 1:
+            raise ValueError("a step must be at least 1")
+        if span in ("*", ""):
+            low, high = 0, 6
+        elif "-" in span:
+            first, last = span.split("-", 1)
+            low, high = _cron_day(first), _cron_day(last, upper=True)
+        else:
+            low = _cron_day(span)
+            high = 7 if step_text else low  # "1/2" runs from Monday to the end of the week
+        if high < low:
+            raise ValueError(f"the day range {span!r} runs backwards")
+        days.update(day % 7 for day in range(low, high + 1, step))
+    return ",".join(_CRON_DAYS[day] for day in sorted(days))
+
+
+def cron_trigger(expression: str, tz: str | ZoneInfo = "UTC") -> CronTrigger:
+    """A trigger for a standard 5-field cron expression (minute hour day month day-of-week)."""
+    fields = expression.split()
+    if len(fields) != 5:
+        raise ValueError(f"expected 5 fields, got {len(fields)}")
+    minute, hour, day, month, day_of_week = fields
+    return CronTrigger(minute=minute, hour=hour, day=day, month=month, day_of_week=cron_days(day_of_week),
+                       timezone=tz if isinstance(tz, ZoneInfo) else ZoneInfo(tz))
+
+
 def validate_cron(expression: str, tz: str = "UTC") -> CronTrigger:
     """Raise ValueError for an invalid 5-field cron expression."""
     try:
-        return CronTrigger.from_crontab(expression, timezone=ZoneInfo(tz))
+        return cron_trigger(expression, tz)
     except Exception as exc:  # noqa: BLE001
         raise ValueError(f"Invalid cron expression {expression!r}: {exc}") from exc
 
@@ -90,7 +143,7 @@ def missed_runs(session: Session, since: datetime, now: datetime, tz: str) -> li
     out: list[tuple[int, datetime]] = []
     for schedule in session.execute(select(ReportSchedule).where(ReportSchedule.enabled.is_(True)).order_by(ReportSchedule.id)).scalars():
         try:
-            trigger = CronTrigger.from_crontab(schedule.cron, timezone=zone)
+            trigger = cron_trigger(schedule.cron, zone)
             definition = get_report(schedule.report_key)
         except (ValueError, KeyError):
             continue
@@ -101,10 +154,15 @@ def missed_runs(session: Session, since: datetime, now: datetime, tz: str) -> li
             fire = trigger.get_next_fire_time(fire, fire + timedelta(seconds=1))
         for fire in due[-CATCH_UP_LIMIT:]:
             period = period_for(definition.period_kind, fire, zone)
-            done = session.execute(
-                select(ReportRun.id).where(ReportRun.schedule_id == schedule.id, ReportRun.period_start == period.start).limit(1)
-            ).first()
-            if done is None:
+            done = set(session.execute(
+                select(ReportRun.tenant_id).where(ReportRun.schedule_id == schedule.id, ReportRun.period_start == period.start)
+            ).scalars())
+            if schedule.target in ("all", "group") and definition.scope != SCOPE_ALL:
+                # a schedule for many tenants is only done when every tenant it covers has its report
+                missing = bool({t.id for t in schedule_targets(session, schedule, definition)} - done)
+            else:
+                missing = not done
+            if missing:
                 out.append((schedule.id, fire))
     return out
 
@@ -146,7 +204,7 @@ class ReportScheduler:
         for i, (schedule_id, due) in enumerate(missed):
             self._scheduler.add_job(
                 run_schedule, "date", run_date=now + timedelta(seconds=30 + 15 * i), args=[schedule_id],
-                kwargs={"reference": due, "triggered_by": "catchup"}, id=f"catchup:{schedule_id}:{due.isoformat()}",
+                kwargs={"reference": due, "triggered_by": "catchup", "only_missing": True}, id=f"catchup:{schedule_id}:{due.isoformat()}",
                 name=f"Catch up schedule {schedule_id} due {due:%Y-%m-%d %H:%M}", replace_existing=True,
             )
         if missed:
@@ -161,7 +219,7 @@ class ReportScheduler:
 
     # ------------------------------------------------------------------ jobs
     def _cron(self, expression: str) -> CronTrigger:
-        return CronTrigger.from_crontab(expression, timezone=ZoneInfo(self.timezone))
+        return cron_trigger(expression, self.timezone)
 
     def _add_system_jobs(self) -> None:
         s = self._scheduler

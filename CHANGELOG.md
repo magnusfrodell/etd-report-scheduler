@@ -3,6 +3,26 @@
 Database migrations run automatically at start-up. Every version runs as a single container
 with its state in the `/data` volume.
 
+## 0.7.0 - Partner scale
+
+### Added
+- **Schedules for all tenants or a group** - which tenants a schedule covers is worked out when it runs, so tenants added later are included without touching the schedule. Groups come from a new *group* field in the tenant reporting profile.
+- **Recipients per tenant** - a *report recipients* field in the reporting profile; a schedule sends to its own recipients, each tenant's, or both. Tenants without recipients are flagged on the Schedules page and get archive-only reports.
+- **Only send when there are findings** - for compromise indicators, health check, campaigns, exposure and vendor risk. The report is still generated and archived, and the archive says why it was not sent.
+- **+ Schedule** and **Scheduled** links on the report cards; the schedule form opens with the report chosen.
+- One alert per schedule run that covers many tenants, listing the tenants that need attention.
+
+### Changed
+- **Run now** on a schedule runs it for every tenant it covers.
+- Catch-up after an outage completes a schedule tenant by tenant, without running a tenant twice.
+
+### Fixed
+- Cron day-of-week numbers were off by one: `1` ran on Tuesday and `7` was rejected, so weekly default schedules arrived a day late. Cron expressions now follow standard cron (0 or 7 = Sunday, 1 = Monday).
+
+### Upgrade notes
+- Migration 0007 runs automatically.
+- If you entered a day-of-week number to work around the off-by-one, check your schedules.
+
 ## 0.6.0 - Operations and data quality
 
 ### Added

@@ -286,3 +286,9 @@ button .ico, .btn .ico { vertical-align: -2px; margin-right: 2px; }
 .chip.neutral { background: #eef2f6; color: var(--muted); }
 .quality-actions { display: flex; align-items: center; gap: 12px; }
 .err-text { color: var(--crit); font-size: 12px; margin-top: 3px; overflow-wrap: anywhere; }
+
+/* Schedules */
+a.badge { text-decoration: none; }
+a.badge:hover { filter: brightness(0.96); }
+.badge.add-schedule { background: #fff; border: 1px dashed #c9d3de; color: var(--muted); }
+.warn-text { color: #8a5a00; font-size: 12px; margin-top: 3px; }
