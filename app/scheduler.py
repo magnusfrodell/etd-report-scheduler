@@ -23,15 +23,23 @@ container - no external queue needed.
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy import select
+from sqlalchemy.orm import Session
 
+from app.alerts import check_collection
+from app.backup import nightly_backup
 from app.collectors import runner
+from app.config import get_config
 from app.db import session_scope
-from app.models import ReportSchedule
+from app.models import ReportRun, ReportSchedule, utcnow
+from app.reports.periods import period_for
+from app.reports.registry import get_report
 from app.services import run_schedule
 from app.settings_store import load_settings
 
@@ -47,6 +55,58 @@ def validate_cron(expression: str, tz: str = "UTC") -> CronTrigger:
     except Exception as exc:  # noqa: BLE001
         raise ValueError(f"Invalid cron expression {expression!r}: {exc}") from exc
 
+
+
+CATCH_UP_LIMIT = 3  # per schedule: a long outage should not bury the recipients in old reports
+HEARTBEAT_MINUTES = 5
+
+
+def heartbeat_path() -> Path:
+    return Path(get_config().data_dir) / "heartbeat"
+
+
+def write_heartbeat(now: datetime | None = None) -> None:
+    """Record that the service is alive; at start-up this tells what fell due while it was down."""
+    try:
+        heartbeat_path().write_text((now or utcnow()).isoformat(), encoding="utf-8")
+    except OSError as exc:
+        log.warning("Could not write the heartbeat file: %s", exc)
+
+
+def read_heartbeat() -> datetime | None:
+    try:
+        value = datetime.fromisoformat(heartbeat_path().read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return None
+    return value if value.tzinfo else value.replace(tzinfo=UTC)
+
+
+def missed_runs(session: Session, since: datetime, now: datetime, tz: str) -> list[tuple[int, datetime]]:
+    """Scheduled runs that fell due in (since, now] - while the service was down - with no run for
+    their period yet, as (schedule id, due time): oldest first, at most CATCH_UP_LIMIT per schedule.
+
+    Only the outage counts: a schedule that was disabled, or a run that failed, is not caught up."""
+    zone = ZoneInfo(tz)
+    out: list[tuple[int, datetime]] = []
+    for schedule in session.execute(select(ReportSchedule).where(ReportSchedule.enabled.is_(True)).order_by(ReportSchedule.id)).scalars():
+        try:
+            trigger = CronTrigger.from_crontab(schedule.cron, timezone=zone)
+            definition = get_report(schedule.report_key)
+        except (ValueError, KeyError):
+            continue
+        due: list[datetime] = []
+        fire = trigger.get_next_fire_time(None, max(since, schedule.created_at) + timedelta(seconds=1))
+        while fire is not None and fire <= now and len(due) < 10_000:
+            due.append(fire)
+            fire = trigger.get_next_fire_time(fire, fire + timedelta(seconds=1))
+        for fire in due[-CATCH_UP_LIMIT:]:
+            period = period_for(definition.period_kind, fire, zone)
+            done = session.execute(
+                select(ReportRun.id).where(ReportRun.schedule_id == schedule.id, ReportRun.period_start == period.start).limit(1)
+            ).first()
+            if done is None:
+                out.append((schedule.id, fire))
+    return out
 
 class ReportScheduler:
     def __init__(self) -> None:
@@ -64,14 +124,34 @@ class ReportScheduler:
     def start(self) -> None:
         with session_scope() as session:
             self.timezone = load_settings(session).timezone
+        last_alive = read_heartbeat()
         self._add_system_jobs()
         self._scheduler.start()
         self.reload_report_jobs()
+        write_heartbeat()
+        if last_alive is not None:
+            self.catch_up(last_alive)
         log.info("Scheduler started (timezone %s)", self.timezone)
 
     def shutdown(self) -> None:
         if self._scheduler.running:
+            write_heartbeat()
             self._scheduler.shutdown(wait=False)
+
+    def catch_up(self, since: datetime, now: datetime | None = None) -> int:
+        """Queue the scheduled reports that fell due while the service was down (see ``missed_runs``)."""
+        now = now or utcnow()
+        with session_scope() as session:
+            missed = missed_runs(session, since, now, self.timezone)
+        for i, (schedule_id, due) in enumerate(missed):
+            self._scheduler.add_job(
+                run_schedule, "date", run_date=now + timedelta(seconds=30 + 15 * i), args=[schedule_id],
+                kwargs={"reference": due, "triggered_by": "catchup"}, id=f"catchup:{schedule_id}:{due.isoformat()}",
+                name=f"Catch up schedule {schedule_id} due {due:%Y-%m-%d %H:%M}", replace_existing=True,
+            )
+        if missed:
+            log.warning("The service was down since %s: queued %d missed scheduled report(s)", since.isoformat(), len(missed))
+        return len(missed)
 
     def set_timezone(self, tz: str) -> None:
         if tz != self.timezone:
@@ -88,7 +168,11 @@ class ReportScheduler:
         s.add_job(runner.collect_stats_all, self._cron("15 2 * * *"), id="collect:stats", name="Collect daily statistics", replace_existing=True)
         s.add_job(runner.collect_convictions_all, self._cron("20 * * * *"), id="collect:convictions", name="Collect convicted messages", replace_existing=True)
         s.add_job(runner.backfill_all, self._cron("40 * * * *"), id="collect:backfill", name="Backfill history within API budget", replace_existing=True)
+        s.add_job(runner.collect_logs_all, self._cron("50 * * * *"), id="collect:logs", name="Collect Log Export (audit + message events)", replace_existing=True)
         s.add_job(runner.purge_old_data, self._cron("30 3 * * *"), id="maintenance:retention", name="Retention purge", replace_existing=True)
+        s.add_job(nightly_backup, self._cron("45 3 * * *"), id="maintenance:backup", name="Nightly database backup", replace_existing=True)
+        s.add_job(check_collection, self._cron("55 * * * *"), id="alerts:collection", name="Alert on stalled collection", replace_existing=True)
+        s.add_job(write_heartbeat, "interval", minutes=HEARTBEAT_MINUTES, id="maintenance:heartbeat", name="Heartbeat", replace_existing=True)
 
     def reload_report_jobs(self) -> None:
         for job in list(self._scheduler.get_jobs()):

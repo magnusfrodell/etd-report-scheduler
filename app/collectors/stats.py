@@ -53,6 +53,15 @@ def collect_daily_stats(session: Session, tenant: Tenant, client: ETDClient, *, 
     backfill = not tenant.stats_backfilled
     if backfill:
         days_back = HISTORY_HORIZON_DAYS - 1
+    elif tenant.stats_collected_at is not None:
+        # After an outage longer than the trailing window, start from the day of the last successful
+        # collection so the days in between are filled - as far back as the Reporting API keeps history.
+        gap_days = (today - tenant.stats_collected_at.date()).days
+        if gap_days > days_back:
+            if gap_days > HISTORY_HORIZON_DAYS - 1:
+                log.warning("Tenant %s: statistics from before %s are older than the API keeps and cannot be recovered",
+                            tenant.name, today - timedelta(days=HISTORY_HORIZON_DAYS - 1))
+            days_back = min(HISTORY_HORIZON_DAYS - 1, gap_days)
     start = _day_start(today - timedelta(days=days_back))
     end = now
 

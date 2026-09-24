@@ -14,4 +14,4 @@
 # or implied.
 """ETD Report Scheduler - scheduled, multi-tenant reporting for Cisco Secure Email Threat Defense."""
 
-__version__ = "0.2.0"
+__version__ = "0.6.0"

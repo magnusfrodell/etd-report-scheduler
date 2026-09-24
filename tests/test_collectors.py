@@ -90,9 +90,12 @@ def test_backfill_walks_back_within_budget(tenant_id, mock_etd):
 
 def test_collect_all_runs_stats_convictions_and_backfill(tenant_id, mock_etd):
     from app.collectors.runner import collect_all_for_tenant
+    from app.settings_store import save_settings
 
+    with session_scope() as s:
+        save_settings(s, {"log_export_enabled": True})  # test_web may have switched it off via the settings form
     results = collect_all_for_tenant(tenant_id)
-    assert [r["status"] for r in results] == ["ok", "ok", "done"]
+    assert [r["status"] for r in results] == ["ok", "ok", "done", "ok"]
     with session_scope() as s:
         t = s.get(Tenant, tenant_id)
         assert t.stats_backfilled and t.backfill_done_at is not None and t.convictions_watermark is not None

@@ -75,7 +75,7 @@ def map_message(tenant_id: int, msg: dict[str, Any]) -> ConvictedMessage | None:
         is_retro_verdict=bool(verdict.get("isRetroVerdict")),
         verdict_timestamp=parse_ts(verdict.get("timestamp")),
         business_risk=verdict.get("businessRisk"),
-        techniques=verdict.get("techniques"),
+        techniques=verdict.get("techniques") or verdict.get("detections"),
         rule_type=_first(verdict.get("ruleType"), rule.get("type")),
         from_address=_first(msg.get("fromAddress"), msg.get("fromAddresses")),
         envelope_from=_first(msg.get("envelopeFrom"), msg.get("returnPath")),

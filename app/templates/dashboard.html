@@ -40,14 +40,14 @@
       <tr><th>Report</th><th>Tenant</th><th>Started (UTC)</th><th>Status</th></tr>
       {% for r in recent_runs %}
       <tr>
-        <td>{{ reports[r.report_key].name if r.report_key in reports else r.report_key }}</td>
+        <td><a href="/archive?report={{ r.report_key }}&amp;tenant={{ r.tenant_id or 'all' }}&amp;run={{ r.id }}">{{ reports[r.report_key].name if r.report_key in reports else r.report_key }}</a></td>
         <td>{{ tenant_names.get(r.tenant_id, 'All tenants') }}</td>
         <td>{{ r.started_at.strftime('%Y-%m-%d %H:%M') }}</td>
         <td><span class="chip {{ r.status }}">{{ r.status }}</span></td>
       </tr>
       {% endfor %}
     </table>
-    {% else %}<p class="empty">No reports generated yet. Create a schedule or generate one manually from the archive page.</p>{% endif %}
+    {% else %}<p class="empty">No reports generated yet. Create a schedule or use Run now on the Reports page.</p>{% endif %}
   </div>
   <div class="panel">
     <h2>Scheduler</h2>

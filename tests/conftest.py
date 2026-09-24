@@ -65,3 +65,29 @@ def make_tenant(name: str, region: str = "de") -> int:
 @pytest.fixture
 def tenant_id(client) -> int:
     return make_tenant(f"Tenant-{datetime.now(UTC).timestamp()}")
+
+
+FAKE_DNS = {
+    "corp.example": ["v=spf1 include:spf.protection.outlook.com -all"],
+    "_dmarc.corp.example": ["v=DMARC1; p=none; rua=mailto:dmarc@corp.example"],
+    "_dmarc.evil.example": ["v=DMARC1; p=reject"],
+    "_dmarc.bank-alerts.example": ["v=DMARC1; p=quarantine"],
+}
+
+
+@pytest.fixture(autouse=True)
+def fake_dns(monkeypatch):
+    """No real DNS in tests: answer TXT lookups from FAKE_DNS."""
+    from app.reports import domains
+
+    monkeypatch.setattr(domains, "resolve_txt", lambda name: list(FAKE_DNS.get(name, [])))
+    return FAKE_DNS
+
+
+@pytest.fixture(autouse=True)
+def reset_login_limiter():
+    """Sign-in throttling is per process; start every test with a clean slate."""
+    from app.web.security import login_limiter
+
+    login_limiter.reset()
+    yield

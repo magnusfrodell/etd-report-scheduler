@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-PERIOD_KINDS = ("daily", "weekly", "monthly")
+PERIOD_KINDS = ("daily", "weekly", "monthly", "quarterly")
 
 
 @dataclass(frozen=True)
@@ -61,6 +61,8 @@ class Period:
 
     @property
     def label(self) -> str:
+        if self.kind == "quarterly":
+            return f"Q{(self.start.month - 1) // 3 + 1} {self.start.year}"
         if self.kind == "daily":
             return self.start.strftime("%Y-%m-%d")
         if self.kind == "monthly":
@@ -69,6 +71,8 @@ class Period:
 
     @property
     def previous_label(self) -> str:
+        if self.kind == "quarterly":
+            return f"Q{(self.previous_start.month - 1) // 3 + 1} {self.previous_start.year}"
         if self.kind == "daily":
             return self.previous_start.strftime("%Y-%m-%d")
         if self.kind == "monthly":
@@ -89,6 +93,18 @@ def _prev_month_start(d: date) -> date:
     return _month_start(first - timedelta(days=1))
 
 
+def _quarter_start(d: date) -> date:
+    return date(d.year, ((d.month - 1) // 3) * 3 + 1, 1)
+
+
+def _prev_quarter_start(d: date) -> date:
+    start = _quarter_start(d)
+    month, year = start.month - 3, start.year
+    if month <= 0:
+        month, year = month + 12, year - 1
+    return date(year, month, 1)
+
+
 def period_for(kind: str, now: datetime, tz: ZoneInfo) -> Period:
     """Previous complete period of ``kind`` ending before ``now`` (in ``tz``)."""
     if kind not in PERIOD_KINDS:
@@ -107,6 +123,11 @@ def period_for(kind: str, now: datetime, tz: ZoneInfo) -> Period:
         end_d = this_monday
         prev_start_d = start_d - timedelta(days=7)
         prev_end_d = start_d
+    elif kind == "quarterly":
+        end_d = _quarter_start(today)
+        start_d = _prev_quarter_start(today)
+        prev_end_d = start_d
+        prev_start_d = _prev_quarter_start(start_d)
     else:  # monthly
         end_d = _month_start(today)
         start_d = _prev_month_start(today)

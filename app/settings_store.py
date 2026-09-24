@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+import logging
+import re
 from dataclasses import dataclass, field, fields
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -29,6 +31,8 @@ THREAT_VERDICTS = ("bec", "scam", "phishing", "malicious")
 ALL_VERDICTS = ("bec", "scam", "phishing", "malicious", "spam", "graymail")
 
 
+log = logging.getLogger(__name__)
+
 @dataclass
 class RuntimeSettings:
     timezone: str = "UTC"
@@ -38,6 +42,8 @@ class RuntimeSettings:
     smtp_password: str = ""  # decrypted in memory only
     smtp_from: str = ""
     smtp_starttls: bool = True
+    smtp_tls_verify: bool = True  # verify the relay's certificate and host name after STARTTLS
+    smtp_ca_pem: str = ""  # extra trusted CA (PEM) for relays with an internal CA
     partner_recipients: str = ""
     retention_days: int = 400
     convictions_verdicts: list[str] = field(default_factory=lambda: list(THREAT_VERDICTS))
@@ -46,6 +52,12 @@ class RuntimeSettings:
     convictions_rescan_days: int = 7
     api_daily_budget: int = 8000  # of ETD's 10 000/day per tenant; the rest is headroom for manual actions
     backfill_window_days: int = 7
+    vip_addresses: str = ""  # comma separated mailboxes flagged as VIP in the Very Attacked People report
+    log_export_enabled: bool = True  # collect ETD Log Export (audit + message events)
+    audit_retention_days: int = 730  # audit trail and verdict changes; ETD itself keeps 30 days
+    archive_retention_days: int = 400  # archived reports: rows and files
+    alert_recipients: str = ""  # failed scheduled reports and stalled collection; empty = no alerts
+    backup_keep: int = 7  # nightly database backups kept in DATA_DIR/backups; 0 = off
     base_url: str = ""
 
     SECRET_KEYS = ("smtp_password",)
@@ -61,6 +73,10 @@ class RuntimeSettings:
         return [r.strip() for r in self.partner_recipients.replace(";", ",").split(",") if r.strip()]
 
     @property
+    def alert_recipient_list(self) -> list[str]:
+        return [r for r in re.split(r"[,;\s]+", self.alert_recipients or "") if "@" in r]
+
+    @property
     def smtp_configured(self) -> bool:
         return bool(self.smtp_host and self.smtp_from)
 
@@ -72,7 +88,11 @@ def load_settings(session: Session) -> RuntimeSettings:
         if f.name in rows and rows[f.name] is not None:
             value = rows[f.name]
             if f.name in RuntimeSettings.SECRET_KEYS:
-                value = secret_box().decrypt(value) or ""
+                try:
+                    value = secret_box().decrypt(value) or ""
+                except ValueError:  # wrong ENCRYPTION_KEY: the Settings page and the key banner explain it
+                    log.error("The SMTP password cannot be decrypted with the current ENCRYPTION_KEY")
+                    value = ""
             setattr(result, f.name, value)
     if isinstance(result.convictions_verdicts, str):  # tolerate comma separated storage
         result.convictions_verdicts = [v.strip() for v in result.convictions_verdicts.split(",") if v.strip()]

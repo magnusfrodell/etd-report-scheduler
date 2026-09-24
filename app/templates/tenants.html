@@ -3,15 +3,15 @@
 {% block heading %}Tenants{% endblock %}
 {% block content %}
 <section class="panel">
-  <h2>Connected tenants</h2>
+  <h2>{{ 'Connected tenants' if principal.is_tenant_admin else 'Your tenants' }}</h2>
   {% if tenants %}
   <table>
-    <tr><th>Name</th><th>Region</th><th>Client ID</th><th>Status</th><th>Last collected (UTC)</th><th>History</th><th>API calls today</th><th>Actions</th></tr>
+    <tr><th>Name</th><th>Region</th><th>Your role</th><th>Status</th><th>Last collected (UTC)</th><th>History</th><th>Log export</th><th>API calls today</th><th>Actions</th></tr>
     {% for t in tenants %}
     <tr>
-      <td><strong>{{ t.name }}</strong></td>
-      <td>{{ REGIONS[t.region].label }} <span class="muted">({{ REGIONS[t.region].base_url }})</span></td>
-      <td><code>{{ t.client_id }}</code></td>
+      <td><strong>{{ t.name }}</strong><div class="muted"><code>{{ t.client_id }}</code></div></td>
+      <td>{{ REGIONS[t.region].label }}</td>
+      <td><span class="chip neutral">{{ principal.tenant_role(t.id) }}</span></td>
       <td>
         {% if not t.enabled %}<span class="chip warning">disabled</span>
         {% elif t.last_error %}<span class="chip critical">error</span>
@@ -20,19 +20,69 @@
       </td>
       <td>{{ t.stats_collected_at.strftime('%Y-%m-%d %H:%M') if t.stats_collected_at else 'never' }}</td>
       <td>{% if t.backfill_done_at %}<span class="chip ok">90 days</span>{% elif t.backfill_cursor %}<span class="chip running">{{ history[t.id] }}</span>{% else %}<span class="chip neutral">{{ history[t.id] }}</span>{% endif %}</td>
+      <td>{% set ls = t.logs_status %}{% if ls == 'ok' %}<span class="chip ok" title="{{ t.logs_note or '' }}">collecting</span>{% elif ls == 'paused' %}<span class="chip running" title="{{ t.logs_note or '' }}">catching up</span>{% elif ls == 'no_data' %}<span class="chip warning" title="{{ t.logs_note or '' }}">no data</span>{% elif ls == 'error' %}<span class="chip critical" title="{{ t.logs_note or '' }}">error</span>{% elif ls == 'disabled' %}<span class="chip neutral">off</span>{% else %}<span class="chip neutral">pending</span>{% endif %}{% if t.logs_cursor %}<div class="muted">to {{ t.logs_cursor.strftime('%Y-%m-%d %H:%M') }}</div>{% endif %}</td>
       <td class="num">{{ api_today[t.id] }} / {{ budget }}</td>
       <td class="actions">
+        {% if principal.can(t.id, 'operator') %}
         <form method="post" action="/tenants/{{ t.id }}/test"><button class="small secondary">Test connection</button></form>
         <form method="post" action="/tenants/{{ t.id }}/collect"><button class="small secondary">Collect now</button></form>
+        {% endif %}
+        {% if principal.can(t.id, 'manager') %}
         <form method="post" action="/tenants/{{ t.id }}/toggle"><button class="small secondary">{{ 'Disable' if t.enabled else 'Enable' }}</button></form>
-        <form method="post" action="/tenants/{{ t.id }}/delete" onsubmit="return confirm('Delete tenant {{ t.name }} and all stored data?')"><button class="small danger">Delete</button></form>
+        <form method="post" action="/tenants/{{ t.id }}/delete" data-confirm="Delete tenant {{ t.name }} and all stored data?"><button class="small danger">Delete</button></form>
+        {% endif %}
       </td>
     </tr>
+    {% if principal.can(t.id, 'manager') %}
+    <tr><td colspan="9" style="background:#fafcfe">
+      <details><summary class="muted" style="cursor:pointer">Edit credentials and access for {{ t.name }}</summary>
+        <div class="grid cols-2" style="margin-top:12px">
+          <form method="post" action="/tenants/{{ t.id }}/edit" class="form-grid" autocomplete="off">
+            <div class="wide"><strong>Edit tenant</strong></div>
+            <div><label class="field">Display name</label><input name="name" type="text" value="{{ t.name }}" required></div>
+            <div><label class="field">Region</label><select name="region">{% for key, r in REGIONS.items() %}<option value="{{ key }}" {{ 'selected' if key == t.region else '' }}>{{ r.label }}</option>{% endfor %}</select></div>
+            <div><label class="field">Client ID</label><input name="client_id" type="text" value="{{ t.client_id }}" required></div>
+            <div><label class="field">Client secret (blank = keep)</label><input name="client_secret" type="password" autocomplete="new-password"></div>
+            <div><label class="field">API key (blank = keep)</label><input name="api_key" type="password" autocomplete="new-password"></div>
+            <div class="wide"><button type="submit" class="small">Save changes</button></div>
+          </form>
+          <div>
+            <strong>Access</strong>
+            <table style="margin:8px 0">
+              <tr><th>User</th><th>Role</th><th></th></tr>
+              {% for g in grants.get(t.id, []) %}
+              <tr><td>{{ g.user.label }} <span class="muted">({{ g.user.username }})</span></td><td><span class="chip neutral">{{ g.role }}</span></td>
+                <td><form method="post" action="/tenants/{{ t.id }}/access/{{ g.user_id }}/revoke"><button class="small danger">Revoke</button></form></td></tr>
+              {% else %}
+              <tr><td colspan="3" class="muted">No per-tenant grants. Administrators and tenant administrators always have access.</td></tr>
+              {% endfor %}
+            </table>
+            <form method="post" action="/tenants/{{ t.id }}/access" class="form-grid">
+              <div><label class="field">User</label><select name="user_id">{% for u in users %}<option value="{{ u.id }}">{{ u.label }} ({{ u.username }}, {{ u.role.replace('_', ' ') }})</option>{% endfor %}</select></div>
+              <div><label class="field">Role</label><select name="role">{% for r in TENANT_ROLES %}<option value="{{ r }}">{{ r }}</option>{% endfor %}</select></div>
+              <div class="wide"><button type="submit" class="small secondary">Grant access</button>
+                <span class="muted">viewer: dashboard and archive · operator: + run reports, schedules, collect · manager: + edit, disable, delete, access</span></div>
+            </form>
+          </div>
+        </div>
+        <form method="post" action="/tenants/{{ t.id }}/profile" class="form-grid" style="margin-top:16px">
+          <div class="wide"><strong>Reporting profile</strong> <span class="muted">- used by the authentication posture, vendor risk, VAP and audit reports</span></div>
+          <div><label class="field" for="own-{{ t.id }}">Own domains (blank = auto-detect)</label><textarea id="own-{{ t.id }}" name="own_domains" rows="2" placeholder="corp.example, corp.se">{{ profiles[t.id].own_domains|join(', ') }}</textarea></div>
+          <div><label class="field" for="vend-{{ t.id }}">Vendor and partner domains</label><textarea id="vend-{{ t.id }}" name="vendor_domains" rows="2" placeholder="supplier.example, bank.example">{{ profiles[t.id].vendor_domains|join(', ') }}</textarea></div>
+          <div><label class="field" for="vip-{{ t.id }}">VIP mailboxes (in addition to the global list)</label><textarea id="vip-{{ t.id }}" name="vip_addresses" rows="2" placeholder="ceo@corp.example">{{ profiles[t.id].vip_addresses|join(', ') }}</textarea></div>
+          <div><label class="field" for="lbl-{{ t.id }}">ETD user labels - one per line: user-id = name</label><textarea id="lbl-{{ t.id }}" name="user_labels" rows="2" placeholder="5f94fb97-742b-446a-90f8-d0c49a958e5b = Anna Analyst">{% for k, v in profiles[t.id].user_labels.items() %}{{ k }} = {{ v }}
+{% endfor %}</textarea></div>
+          <div class="wide"><button type="submit" class="small">Save profile</button></div>
+        </form>
+      </details>
+    </td></tr>
+    {% endif %}
     {% endfor %}
   </table>
-  {% else %}<p class="empty">No tenants yet. Add one below.</p>{% endif %}
+  {% else %}<p class="empty">{{ 'No tenants yet. Add one below.' if principal.can_create_tenants else 'No tenant has been shared with you yet. Ask an administrator or a tenant manager for access.' }}</p>{% endif %}
 </section>
 
+{% if principal.can_create_tenants %}
 <section class="panel">
   <h2>Add tenant</h2>
   <form method="post" action="/tenants" class="form-grid" autocomplete="off">
@@ -48,4 +98,5 @@
       <span class="muted">Credentials are encrypted with <code>ENCRYPTION_KEY</code> before they are stored. Create them in ETD under Administration &gt; API Clients (admin or super-admin). The connection is tested on save; collection of the full 90-day history then starts automatically, throttled to 2 requests/s and capped by the daily API budget in Settings.</span></div>
   </form>
 </section>
+{% endif %}
 {% endblock %}

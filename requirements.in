@@ -1,0 +1,16 @@
+# Direct dependencies with the versions they need. The image installs requirements.txt,
+# generated from this file with hashes for every platform:
+#   pip-compile --generate-hashes --allow-unsafe --strip-extras --output-file=requirements.txt requirements.in
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30,<1.0
+jinja2>=3.1,<4.0
+python-multipart>=0.0.18
+sqlalchemy>=2.0,<3.0
+alembic>=1.13,<2.0
+httpx>=0.27,<1.0
+apscheduler>=3.10,<4.0
+cryptography>=42.0
+pydantic-settings>=2.3,<3.0
+itsdangerous>=2.2,<3.0
+dnspython>=2.6,<3.0
+weasyprint>=62.0 ; platform_system != "Windows"

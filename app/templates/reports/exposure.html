@@ -1,0 +1,46 @@
+{% extends "email/base_report.html" %}
+{% block body %}
+<h2>Summary · {{ ctx.period.label }} <span class="chip {{ data.overall }}">{{ data.overall }}</span></h2>
+<table class="kpis"><tr>
+  <td class="kpi"><div class="v">{{ data.retro_count }}</div><div class="l">Delivered before verdict (retro)</div><div class="d"><span class="note">{{ data.retro_share }} % of {{ data.total_threats }} threats · {{ data.previous_retro_count }} previous period</span></div></td>
+  <td class="kpi"><div class="v">{{ data.to_action.median }}</div><div class="l">Median time in inbox until remediation</div><div class="d"><span class="note">p90 {{ data.to_action.p90 }} · max {{ data.to_action.max }}</span></div></td>
+  <td class="kpi"><div class="v">{{ data.to_action.within_1h_pct if data.to_action.within_1h_pct is not none else '–' }}{% if data.to_action.within_1h_pct is not none %} %{% endif %}</div><div class="l">Retro threats remediated within 1 h</div></td>
+  <td class="kpi"><div class="v">{{ data.unremediated_count }}</div><div class="l">Threats still not remediated</div><div class="d"><span class="note">{{ data.previous_unremediated_count }} previous period</span></div></td>
+</tr></table>
+
+<h2>Dwell time distribution (retro threats, delivery → remediation)</h2>
+<table>
+  <tr>{% for label, n in data.buckets %}<th class="num">{{ label }}</th>{% endfor %}</tr>
+  <tr>{% for label, n in data.buckets %}<td class="num">{{ n }}</td>{% endfor %}</tr>
+</table>
+<p class="note">Time to verdict: median {{ data.to_verdict.median }}, p90 {{ data.to_verdict.p90 }}, max {{ data.to_verdict.max }} ({{ data.to_verdict.count }} messages). Remediation: {{ data.auto_count }} automatic, {{ data.manual_count }} manual.</p>
+{% if data.by_verdict %}
+<table>
+  <tr><th>Verdict</th><th class="num">Retro msgs</th><th class="num">Median</th><th class="num">p90</th><th class="num">Max</th><th class="num">≤ 1 h</th><th class="num">≤ 24 h</th></tr>
+  {% for v, s in data.by_verdict.items() %}
+  <tr><td>{{ v }}</td><td class="num">{{ s.count }}</td><td class="num">{{ s.median }}</td><td class="num">{{ s.p90 }}</td><td class="num">{{ s.max }}</td><td class="num">{{ s.within_1h_pct }} %</td><td class="num">{{ s.within_24h_pct }} %</td></tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+<h2>Still in inboxes - threats without remediation{% if data.truncated_exposed %} (first {{ data.exposed|length }}){% endif %}</h2>
+{% if data.exposed %}
+<table>
+  <tr><th>Delivered</th><th>Age</th><th>From</th><th>To</th><th>Subject</th><th>Verdict</th><th>Rule</th></tr>
+  {% for m in data.exposed %}
+  <tr class="{{ 'up' if m.age_hours > 168 else '' }}"><td>{{ m.timestamp|fmt_dt(tz) }}</td><td>{{ m.age }}</td><td>{{ m.from }}</td><td>{{ m.to|join(', ') }}</td><td class="subj" title="{{ m.subject }}">{{ m.subject }}</td><td>{{ m.verdict }}{% if m.retro %} (retro){% endif %}</td><td>{{ m.rule or '–' }}</td></tr>
+  {% endfor %}
+</table>
+<p class="note">A threat verdict with no action usually means the policy is in monitor mode for that verdict, a remediation error, or an allow-list rule ("Rule" column). Remediate manually and check the policy.</p>
+{% else %}<p class="note">Every threat in the period has been remediated.</p>{% endif %}
+
+<h2>Retro-convicted messages{% if data.truncated_retro %} (slowest {{ data.retro_rows|length }}){% endif %}</h2>
+{% if data.retro_rows %}
+<table>
+  <tr><th>Delivered</th><th>→ verdict</th><th>→ remediation</th><th>From</th><th class="num">Rcpts</th><th>Subject</th><th>Verdict</th><th>Action</th></tr>
+  {% for m in data.retro_rows %}
+  <tr><td>{{ m.timestamp|fmt_dt(tz) }}</td><td>{{ m.to_verdict }}</td><td>{{ m.to_action }}</td><td>{{ m.from }}</td><td class="num">{{ m.recipients }}</td><td class="subj" title="{{ m.subject }}">{{ m.subject }}</td><td>{{ m.original_verdict or '?' }} → {{ m.verdict }}</td><td>{{ m.action }}</td></tr>
+  {% endfor %}
+</table>
+{% else %}<p class="note">No retrospective verdicts in the period.</p>{% endif %}
+{% endblock %}

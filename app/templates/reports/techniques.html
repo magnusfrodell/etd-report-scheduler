@@ -1,0 +1,77 @@
+{% extends "email/base_report.html" %}
+{% block body %}
+<h2>Summary · {{ ctx.period.label }}</h2>
+<table class="kpis"><tr>
+  <td class="kpi"><div class="v">{{ data.total|fmt_int }}</div><div class="l">Threats</div><div class="d"><span class="note">{{ data.previous_total }} previous period</span></div></td>
+  <td class="kpi"><div class="v">{{ data.distinct_techniques }}</div><div class="l">Distinct techniques</div><div class="d"><span class="note">{{ data.new_techniques|length }} new vs previous period</span></div></td>
+  <td class="kpi"><div class="v">{{ data.qr_count }}</div><div class="l">Threats with QR codes</div><div class="d"><span class="note">{{ data.previous_qr }} previous period</span></div></td>
+  <td class="kpi"><div class="v">{{ data.callback_count }}</div><div class="l">Text-only lures (possible callback)</div><div class="d"><span class="note">+ {{ data.bec_nopayload_count }} BEC without payload</span></div></td>
+</tr></table>
+
+<h2>Technique families</h2>
+{% if data.family_rows %}
+<table>
+  <tr><th>Family</th><th class="num">Threats</th><th class="num">Share</th><th class="num">Recipients</th><th class="num">Previous</th><th>What it means</th></tr>
+  {% for r in data.family_rows %}<tr><td>{{ r.family }}</td><td class="num">{{ r.messages }}</td><td class="num">{{ r.share if r.share is not none else '–' }} %</td><td class="num">{{ r.recipients }}</td><td class="num">{{ r.previous }}</td><td><span class="note">{{ r.note }}</span></td></tr>{% endfor %}
+</table>
+{% else %}<p class="note">No technique data in this period{% if data.total %} - ETD returned the threats without techniques{% endif %}.</p>{% endif %}
+
+{% if data.technique_rows %}
+<h2>Top techniques</h2>
+<table>
+  <tr><th>Technique</th><th>Family</th><th class="num">Threats</th><th class="num">Recipients</th><th class="num">Previous</th><th class="num">Change</th></tr>
+  {% for r in data.technique_rows %}<tr><td>{{ r.name }}{% if r.new %} <span class="chip warning">new</span>{% endif %}</td><td>{{ r.family }}</td><td class="num">{{ r.messages }}</td><td class="num">{{ r.recipients }}</td><td class="num">{{ r.previous }}</td><td class="num">{% if r.delta > 0 %}<span class="up">+{{ r.delta }}</span>{% elif r.delta < 0 %}<span class="down">{{ r.delta }}</span>{% else %}<span class="flat">±0</span>{% endif %}</td></tr>{% endfor %}
+</table>
+{% endif %}
+
+<h2>Business risk</h2>
+{% if data.risk_rows %}
+<table>
+  <tr><th>Business risk</th><th class="num">Threats</th><th class="num">Share</th><th class="num">Previous</th></tr>
+  {% for r in data.risk_rows %}<tr><td>{{ r.risk }}</td><td class="num">{{ r.messages }}</td><td class="num">{{ r.share }} %</td><td class="num">{{ r.previous }}</td></tr>{% endfor %}
+</table>
+{% else %}<p class="note">ETD returned no business-risk values for this period.</p>{% endif %}
+
+<h2>How the payload was delivered</h2>
+<table>
+  <tr><th>Payload</th><th class="num">Threats</th><th class="num">Share</th><th class="num">Previous</th></tr>
+  {% for r in data.payload_rows %}<tr><td>{{ r.kind }}</td><td class="num">{{ r.messages }}</td><td class="num">{{ r.share if r.share is not none else '–' }} %</td><td class="num">{{ r.previous }}</td></tr>{% endfor %}
+</table>
+
+<h2>QR codes and text-only lures</h2>
+{% if data.qr_samples or data.lure_samples %}
+<table>
+  <tr><th>Kind</th><th>Received</th><th>From</th><th>Subject</th><th>Verdict</th></tr>
+  {% for m in data.qr_samples %}<tr><td>QR code</td><td>{{ m.timestamp|fmt_dt }}</td><td>{{ m.from or '' }}</td><td>{{ m.subject or '' }}</td><td>{{ m.verdict }}</td></tr>{% endfor %}
+  {% for m in data.lure_samples %}<tr><td>{{ 'BEC, no payload' if m.verdict == 'bec' else 'Possible callback' }}</td><td>{{ m.timestamp|fmt_dt }}</td><td>{{ m.from or '' }}</td><td>{{ m.subject or '' }}</td><td>{{ m.verdict }}</td></tr>{% endfor %}
+</table>
+{% else %}<p class="note">No QR-code threats or text-only lures in this period.</p>{% endif %}
+<p class="note">QR codes are counted from ETD's "QR code" technique and QR-origin URLs in urlMetadata. Text-only lures are scam, phishing or BEC messages with no link and at most PDF or image attachments - the shape of callback phishing (TOAD). ETD has no phone-number technique, so this is a heuristic.</p>
+
+<h2>Attachment types</h2>
+{% if data.attachment_rows %}
+<table>
+  <tr><th>Type</th><th class="num">Attachments</th><th>Risk</th></tr>
+  {% for r in data.attachment_rows %}<tr><td>{{ r['class'] }}</td><td class="num">{{ r.count }}</td><td>{% if r.risky %}<span class="chip critical">high-risk type</span>{% endif %}</td></tr>{% endfor %}
+</table>
+<p class="note">{{ data.messages_with_attachments }} threat(s) carried attachments. Top extensions: {% for e, n in data.top_extensions %}.{{ e }} ({{ n }}){% if not loop.last %}, {% endif %}{% endfor %}. ETD flagged {{ data.html_attachment }} malicious HTML attachment(s) and {{ data.masqueraded }} masqueraded extension(s).</p>
+{% if data.double_extensions %}
+<table>
+  <tr><th>Double extension</th><th>Received</th><th>From</th><th>Subject</th></tr>
+  {% for a in data.double_extensions %}<tr><td>{{ a.name }}</td><td>{{ a.timestamp|fmt_dt }}</td><td>{{ a.from or '' }}</td><td>{{ a.subject or '' }}</td></tr>{% endfor %}
+</table>
+{% endif %}
+{% else %}<p class="note">No attachments on threats in this period.</p>{% endif %}
+
+<h2>Link infrastructure</h2>
+{% if data.service_rows %}
+<table>
+  <tr><th>Abused legitimate service</th><th class="num">URLs</th><th>Examples</th></tr>
+  {% for r in data.service_rows %}<tr><td>{{ r.service }}</td><td class="num">{{ r.urls }}</td><td>{{ r.hosts|join(', ') }}</td></tr>{% endfor %}
+</table>
+{% endif %}
+<p class="note">{{ data.shortened }} threat(s) used shortened URLs and {{ data.low_rep_tld }} a low-reputation TLD. Most common TLDs: {% for t, n in data.top_tlds %}.{{ t }} ({{ n }}){% if not loop.last %}, {% endif %}{% else %}–{% endfor %}.</p>
+
+<h2>Recommendations</h2>
+{% if data.recommendations %}<ul>{% for r in data.recommendations %}<li>{{ r }}</li>{% endfor %}</ul>{% else %}<p class="note">No specific recommendations for this period.</p>{% endif %}
+{% endblock %}

@@ -28,7 +28,15 @@ from datetime import date, datetime
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import ConvictedMessage, DailyStat, Tenant, TopEntry
+from app.models import (
+    AuditEvent,
+    ConvictedMessage,
+    DailyStat,
+    MessageEvent,
+    SenderDomainDaily,
+    Tenant,
+    TopEntry,
+)
 
 STAT_FIELDS = ("total_messages", "incoming", "outgoing", "internal", "malicious", "phishing", "bec", "scam", "spam", "graymail", "retro_verdicts")
 
@@ -146,6 +154,33 @@ def convicted_messages(
     stmt = stmt.order_by(ConvictedMessage.timestamp.desc())
     if limit:
         stmt = stmt.limit(limit)
+    return list(session.execute(stmt).scalars())
+
+
+def sender_domain_rows(session: Session, tenant_id: int, start_day: date, end_day: date, direction: str | None = None) -> list[SenderDomainDaily]:
+    stmt = select(SenderDomainDaily).where(
+        SenderDomainDaily.tenant_id == tenant_id, SenderDomainDaily.day >= start_day, SenderDomainDaily.day <= end_day
+    )
+    if direction:
+        stmt = stmt.where(SenderDomainDaily.direction == direction)
+    return list(session.execute(stmt).scalars())
+
+
+def audit_events(session: Session, tenant_id: int, start: datetime, end: datetime) -> list[AuditEvent]:
+    stmt = (
+        select(AuditEvent)
+        .where(AuditEvent.tenant_id == tenant_id, AuditEvent.timestamp >= start, AuditEvent.timestamp < end)
+        .order_by(AuditEvent.timestamp)
+    )
+    return list(session.execute(stmt).scalars())
+
+
+def message_events(session: Session, tenant_id: int, start: datetime, end: datetime) -> list[MessageEvent]:
+    stmt = (
+        select(MessageEvent)
+        .where(MessageEvent.tenant_id == tenant_id, MessageEvent.timestamp >= start, MessageEvent.timestamp < end)
+        .order_by(MessageEvent.timestamp)
+    )
     return list(session.execute(stmt).scalars())
 
 

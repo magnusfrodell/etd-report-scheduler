@@ -19,6 +19,7 @@ from __future__ import annotations
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -28,10 +29,14 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app import __version__
 from app.config import get_config
 from app.crypto import init_secret_box
-from app.db import init_engine, run_migrations
+from app.db import init_engine, run_migrations, session_scope
 from app.logging_config import setup_logging
+from app.quality import encryption_key_problem
 from app.scheduler import scheduler
+from app.services import recover_interrupted_runs
 from app.web import routes_api, routes_ui
+from app.web.auth import bootstrap_admin
+from app.web.security import SecurityMiddleware
 
 log = logging.getLogger(__name__)
 
@@ -45,6 +50,14 @@ def create_app() -> FastAPI:
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         run_migrations(cfg.resolved_database_url)
+        with session_scope() as session:
+            bootstrap_admin(session, cfg)
+        _app.state.key_problem = encryption_key_problem()
+        if _app.state.key_problem:
+            log.error(_app.state.key_problem)
+        interrupted = recover_interrupted_runs()
+        if interrupted:
+            log.warning("Marked %d report run(s) interrupted by a restart as failed", interrupted)
         if cfg.scheduler_enabled:
             scheduler.start()
         else:
@@ -56,6 +69,7 @@ def create_app() -> FastAPI:
             scheduler.shutdown()
 
     app = FastAPI(title="ETD Report Scheduler", version=__version__, lifespan=lifespan, docs_url="/api/docs", redoc_url=None)
+    app.add_middleware(SecurityMiddleware, trusted_origins=cfg.trusted_origins)
     app.mount("/static", StaticFiles(directory=str(Path(__file__).resolve().parent / "static")), name="static")
     app.include_router(routes_api.router)
     app.include_router(routes_ui.router)
@@ -64,6 +78,9 @@ def create_app() -> FastAPI:
     async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         if exc.status_code == 303 and exc.headers and "Location" in exc.headers:
             return RedirectResponse(exc.headers["Location"], status_code=303)
+        if exc.status_code == 403 and not request.url.path.startswith("/api/"):
+            # Permission problems in the UI become a flash message, not a bare JSON error.
+            return RedirectResponse(f"/?err={quote(str(exc.detail))}", status_code=303)
         return JSONResponse({"detail": exc.detail}, status_code=exc.status_code, headers=exc.headers)
 
     return app

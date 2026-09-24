@@ -166,12 +166,15 @@ class ETDClient:
         self._token_expires_at: float = 0.0
         self._aggregate_by_alias: dict[str, str] = {}
         self._http = httpx.Client(base_url=self.base_url, timeout=timeout, transport=transport)
+        # Log Export files are pre-signed S3 URLs: plain GETs, never with API credentials.
+        self._download_http = httpx.Client(timeout=max(timeout, 60.0), transport=transport, follow_redirects=True)
         self._limiter = rate_limiter or limiter_for(f"{self.base_url}|{client_id}")
         self.request_count = 0
 
     # ------------------------------------------------------------------ auth
     def close(self) -> None:
         self._http.close()
+        self._download_http.close()
 
     def __enter__(self) -> ETDClient:
         return self
@@ -362,6 +365,14 @@ class ETDClient:
         body = {"timeRange": [start.astimezone(UTC).strftime(fmt), end.astimezone(UTC).strftime(fmt)], "logTypes": log_types}
         data = self._post("/v1/logs/downloadLinks", body).get("data") or {}
         return {k: list(v or []) for k, v in data.items()}
+
+    def download(self, url: str) -> bytes:
+        """Fetch one Log Export file. The URL carries its own signature; sending the bearer
+        token or API key as well would leak them to S3 and make S3 reject the request."""
+        resp = self._download_http.get(url)
+        if resp.status_code != 200:
+            raise ETDError(f"Log file download failed ({resp.status_code})", status=resp.status_code, body=resp.text[:300])
+        return resp.content
 
     # ---------------------------------------------------------------- helpers
     @staticmethod

@@ -102,13 +102,66 @@ class Tenant(Base):
     # API quota bookkeeping (ETD allows 10 000 requests per tenant and day).
     api_calls_day: Mapped[date | None] = mapped_column(Date, nullable=True)
     api_calls_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    # Log Export collector (audit and message events)
+    logs_cursor: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    logs_first_hour: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    logs_collected_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    logs_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    logs_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    logs_gaps: Mapped[Any] = mapped_column(JSON, nullable=True)
+    collector_errors: Mapped[Any] = mapped_column(JSON, nullable=True)  # {stream: {"error": str, "at": iso}}
+    # Reporting profile: own domains, vendor domains, VIP mailboxes, ETD user labels (see app.tenant_profile)
+    profile: Mapped[Any] = mapped_column(JSON, nullable=True)
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     last_error_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
     schedules: Mapped[list[ReportSchedule]] = relationship(back_populates="tenant", cascade="all, delete-orphan")
+    grants: Mapped[list[TenantGrant]] = relationship(back_populates="tenant", cascade="all, delete-orphan")
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Tenant {self.id} {self.name!r} {self.region}>"
+
+
+GLOBAL_ROLES = ("admin", "tenant_admin", "user")
+TENANT_ROLES = ("viewer", "operator", "manager")
+
+
+class User(Base):
+    """Application user. ``role`` is the global role; per-tenant access lives in ``tenant_grants``."""
+
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(80), unique=True, nullable=False)
+    display_name: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    password_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    role: Mapped[str] = mapped_column(String(20), nullable=False, default="user")  # admin | tenant_admin | user
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=utcnow)
+    last_login_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+
+    grants: Mapped[list[TenantGrant]] = relationship(back_populates="user", cascade="all, delete-orphan")
+
+    @property
+    def label(self) -> str:
+        return self.display_name or self.username
+
+
+class TenantGrant(Base):
+    """Per-tenant role for a user: viewer < operator < manager."""
+
+    __tablename__ = "tenant_grants"
+    __table_args__ = (UniqueConstraint("user_id", "tenant_id", name="uq_tenant_grants_user_tenant"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    role: Mapped[str] = mapped_column(String(20), nullable=False, default="viewer")
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=utcnow)
+
+    user: Mapped[User] = relationship(back_populates="grants")
+    tenant: Mapped[Tenant] = relationship(back_populates="grants")
 
 
 class Setting(Base):
@@ -238,7 +291,7 @@ class ReportSchedule(Base):
     last_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     tenant: Mapped[Tenant | None] = relationship(back_populates="schedules")
-    runs: Mapped[list[ReportRun]] = relationship(back_populates="schedule", cascade="all, delete-orphan")
+    runs: Mapped[list[ReportRun]] = relationship(back_populates="schedule", passive_deletes=True)  # deleting a schedule keeps its runs (FK SET NULL)
 
     @property
     def recipient_list(self) -> list[str]:
@@ -261,7 +314,122 @@ class ReportRun(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="running")  # running|ok|failed
     html_path: Mapped[str | None] = mapped_column(String(400), nullable=True)
     pdf_path: Mapped[str | None] = mapped_column(String(400), nullable=True)
-    delivered_to: Mapped[str | None] = mapped_column(Text, nullable=True)
+    delivered_to: Mapped[str | None] = mapped_column(Text, nullable=True)  # recipients the relay accepted
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    triggered_by: Mapped[str | None] = mapped_column(String(16), nullable=True)  # schedule | manual | catchup | api
+    delivery_error: Mapped[str | None] = mapped_column(Text, nullable=True)  # recipients the relay refused
 
     schedule: Mapped[ReportSchedule | None] = relationship(back_populates="runs")
+
+
+class AuditEvent(Base):
+    """ETD audit log entry (Log Export ``audit``). ETD keeps 30 days; this table keeps ``audit_retention_days``."""
+
+    __tablename__ = "audit_events"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "event_hash", name="uq_audit_events_tenant_hash"),
+        Index("ix_audit_events_tenant_ts", "tenant_id", "timestamp"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    event_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    category: Mapped[str] = mapped_column(String(40), nullable=False, default="")
+    action: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="")
+    user_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    user_ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(String(400), nullable=True)
+    comments: Mapped[str | None] = mapped_column(Text, nullable=True)
+    meta: Mapped[Any] = mapped_column(JSON, nullable=True)
+    collected_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=utcnow)
+
+
+class MessageEvent(Base):
+    """Reclassification or remediation of a message (Log Export ``message`` update events)."""
+
+    __tablename__ = "message_events"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "event_hash", name="uq_message_events_tenant_hash"),
+        Index("ix_message_events_tenant_ts", "tenant_id", "timestamp"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    event_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    message_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    internet_message_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    kind: Mapped[str] = mapped_column(String(20), nullable=False)  # reclassify | remediate
+    method: Mapped[str] = mapped_column(String(20), nullable=False, default="")  # automatic | manual | user | api
+    user_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    api_client_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    verdict: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    action: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    folder: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    collected_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=utcnow)
+
+
+class SenderDomainDaily(Base):
+    """Per sender domain, UTC day and direction, from Log Export create events (all mail, not only threats)."""
+
+    __tablename__ = "sender_domain_daily"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "day", "domain", "direction", name="uq_sender_domain_daily"),
+        Index("ix_sender_domain_daily_lookup", "tenant_id", "domain"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    day: Mapped[date] = mapped_column(Date, nullable=False)
+    domain: Mapped[str] = mapped_column(String(253), nullable=False)
+    direction: Mapped[str] = mapped_column(String(16), nullable=False)
+    messages: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    convicted: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    rp_mismatch: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    reply_to_mismatch: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    convicted_reply_to_mismatch: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class LogFile(Base):
+    """Every Log Export file already processed - deduplication across overlapping windows and re-runs."""
+
+    __tablename__ = "log_files"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "path_hash", name="uq_log_files_tenant_path"),
+        Index("ix_log_files_tenant_type_date", "tenant_id", "log_type", "log_date"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
+    log_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    path: Mapped[str] = mapped_column(Text, nullable=False)
+    path_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    log_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    log_hour: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    events: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    parse_errors: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    status: Mapped[str] = mapped_column(String(12), nullable=False, default="ok", server_default="ok")  # ok | partial
+    processed_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=utcnow)
+
+
+class DnsCache(Base):
+    """DNS posture results (SPF/DMARC/MTA-STS/TLS-RPT/BIMI), shared by all tenants, refreshed daily."""
+
+    __tablename__ = "dns_cache"
+
+    domain: Mapped[str] = mapped_column(String(253), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(10), primary_key=True)  # full | dmarc
+    checked_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=utcnow)
+    result: Mapped[Any] = mapped_column(JSON, nullable=True)
+
+
+class AlertState(Base):
+    """When an alert was last sent, so a lasting problem is reported once a day, not every hour."""
+
+    __tablename__ = "alert_state"
+
+    key: Mapped[str] = mapped_column(String(160), primary_key=True)
+    last_sent_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    detail: Mapped[str | None] = mapped_column(Text, nullable=True)

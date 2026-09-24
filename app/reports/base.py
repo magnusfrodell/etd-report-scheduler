@@ -65,7 +65,27 @@ class ReportDefinition:
     template: str
     build: BuildFn
     subject: str  # format string with {tenant} and {period}
+    category: str = "other"  # key in CATEGORIES - groups the cards on the Reports page
+    icon: str = "file"  # name in app.web.icons
+    summary: str = ""  # one line for the card; the description is shown on hover and in the archive
 
     @property
     def is_cross_tenant(self) -> bool:
         return self.scope == SCOPE_ALL
+
+
+@dataclass(frozen=True)
+class ReportCategory:
+    key: str
+    label: str
+    blurb: str
+
+
+CATEGORIES: tuple[ReportCategory, ...] = (
+    ReportCategory("overview", "Overview", "Summaries for management and the partner roll-up"),
+    ReportCategory("threats", "Threats", "Who is attacked, how, and by which campaigns"),
+    ReportCategory("risk", "Exposure and risk", "What got through, your suppliers and your own domains"),
+    ReportCategory("operations", "Operations and compliance", "Collector health and the audit trail"),
+    ReportCategory("other", "Other", ""),
+)
+CATEGORY_KEYS = {c.key for c in CATEGORIES}

@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Archive - ETD Report Scheduler{% endblock %}
+{% block heading %}Archive{% endblock %}
+{% block head_extra %}{% if refresh %}<meta http-equiv="refresh" content="10">{% endif %}{% endblock %}
+{% block content %}
+<form class="archive-toolbar" method="get" action="/archive">
+  <div class="field-group grow">
+    <label class="field" for="f-report">Report</label>
+    <select id="f-report" name="report" data-autosubmit>
+      <option value="" {{ 'selected' if not report else '' }}>All reports ({{ all_reports_count }})</option>
+      {% for label, options in report_options %}
+      <optgroup label="{{ label }}">
+        {% for o in options %}<option value="{{ o.key }}" {{ 'selected' if o.key == report else '' }}>{{ o.name }} ({{ o.count }})</option>{% endfor %}
+      </optgroup>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="field-group grow">
+    <label class="field" for="f-tenant">Tenant</label>
+    {% if tenant_filter_enabled %}
+    <select id="f-tenant" name="tenant" data-autosubmit>
+      {% for o in tenant_options %}<option value="{{ o.value }}" {{ 'selected' if o.value == tenant else '' }}>{{ o.label }} ({{ o.count }})</option>{% endfor %}
+    </select>
+    {% else %}
+    <input type="hidden" name="tenant" value="all"><div class="static-field">Runs across all tenants</div>
+    {% endif %}
+  </div>
+  <div class="field-group">
+    <span class="field">Status</span>
+    <div class="segmented" role="group" aria-label="Status">
+      {% for value, label, count in status_options %}<a href="{{ url_with(status=value) }}" class="{{ 'active' if status == value else '' }}">{{ label }} <small>{{ count }}</small></a>{% endfor %}
+    </div>
+  </div>
+  <input type="hidden" name="status" value="{{ status }}">
+  <noscript><button type="submit" class="small">Apply</button></noscript>
+</form>
+
+{% if definition %}
+<section class="report-hero cat-{{ definition.category }}">
+  <span class="report-icon">{{ icon(definition.icon, 22) }}</span>
+  <div class="hero-text">
+    <h2>{{ definition.name }}</h2>
+    <p>{{ definition.description }}</p>
+    <div class="badges">
+      <span class="badge">{{ period_names.get(definition.period_kind, definition.period_kind) }}</span>
+      <span class="badge">{{ 'All tenants' if definition.scope == 'all' else 'Per tenant' }}</span>
+      {% if definition.scope != 'all' %}<span class="badge">{{ tenant_label }}</span>{% endif %}
+    </div>
+  </div>
+  {% if can_run %}
+  <form method="post" action="/reports/{{ definition.key }}/run">
+    {% if definition.scope != 'all' %}<input type="hidden" name="tenant_id" value="{{ tenant }}">{% endif %}
+    <input type="hidden" name="output_format" value="pdf">
+    <input type="hidden" name="next" value="{{ url_with() }}">
+    <button type="submit" class="small">{{ icon('play', 12) }} Run now</button>
+  </form>
+  {% elif definition.scope != 'all' and tenant == 'all' %}
+  <span class="muted hero-hint">Pick a tenant to run it from here.</span>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if items %}
+<div class="archive-layout">
+  <nav class="run-list" id="run-list" aria-label="Generated reports">
+    {% if page > 1 %}<a class="pager-link" href="{{ url_with(page=page - 1) }}">↑ Newer runs</a>{% endif %}
+    {% for month, group in groups %}
+    <div class="run-group">{{ month }}</div>
+    {% for v in group %}
+    <a class="run-item{{ ' selected' if selected and v.id == selected.id else '' }}" href="{{ url_with(run=v.id, page=page if page > 1 else None) }}"
+       data-id="{{ v.id }}" data-title="{{ v.report_name }} · {{ v.tenant }}" data-period="{{ v.period }}" data-meta="{{ v.meta }}"
+       data-status="{{ v.status }}" data-html="{{ v.html }}" data-pdf="{{ v.pdf }}" data-error="{{ v.error }}" data-warning="{{ v.warning }}">
+      <span class="dot {{ v.status }}" aria-hidden="true"></span>
+      <span class="run-main">
+        <span class="run-title">{{ v.period }}</span>
+        <span class="run-sub">{% if not report %}{{ v.report_name }}{% if tenant == 'all' %} · {% endif %}{% endif %}{% if tenant == 'all' %}{{ v.tenant }}{% endif %}{% if report and tenant != 'all' %}{{ v.when }}{% endif %}</span>
+      </span>
+      <span class="run-meta">
+        <span>{% if v.status == 'failed' %}<span class="fail">failed</span> · {% elif v.status == 'running' %}generating · {% endif %}{{ v.ago }}</span>
+        <span class="run-flags">{% if v.scheduled %}<span title="From a schedule">{{ icon('calendar', 13) }}</span>{% endif %}{% if v.delivered_to %}<span title="Sent to {{ v.delivered_to }}">{{ icon('mail', 13) }}</span>{% endif %}{% if v.warning %}<span class="warn-flag" title="{{ v.warning }}">!</span>{% endif %}{% if v.pdf %}<span class="pdf-tag" title="PDF available">PDF</span>{% endif %}</span>
+      </span>
+    </a>
+    {% endfor %}
+    {% endfor %}
+    {% if has_more %}<a class="pager-link" href="{{ url_with(page=page + 1) }}">↓ Older runs</a>{% endif %}
+  </nav>
+  <section class="preview" aria-live="polite">
+    {% if selected %}
+    <div class="preview-head">
+      <div class="preview-text">
+        <div class="preview-title"><span id="pv-title">{{ selected.report_name }} · {{ selected.tenant }}</span> <span id="pv-status" class="chip {{ selected.status }}">{{ selected.status }}</span></div>
+        <div class="preview-period" id="pv-period">{{ selected.period }}</div>
+        <div class="muted small" id="pv-meta">{{ selected.meta }}</div>
+      </div>
+      <div class="actions">
+        <a id="pv-open" class="btn small secondary" href="{{ selected.html or '#' }}" target="_blank" rel="noopener"{% if not selected.html %} hidden{% endif %}>{{ icon('external', 13) }} Open</a>
+        <a id="pv-pdf" class="btn small" href="{{ selected.pdf or '#' }}"{% if not selected.pdf %} hidden{% endif %}>{{ icon('download', 13) }} PDF</a>
+      </div>
+    </div>
+    <div id="pv-warning" class="preview-warning"{% if not selected.warning %} hidden{% endif %}>{{ selected.warning }}</div>
+    <div id="pv-error" class="preview-error"{% if not selected.error %} hidden{% endif %}>{{ selected.error }}</div>
+    <div id="pv-running" class="preview-note"{% if selected.status != 'running' %} hidden{% endif %}>Generating - this page refreshes by itself.</div>
+    <div id="pv-stage" class="preview-stage"{% if not selected.html %} hidden{% endif %}>
+      <iframe id="pv-frame" class="preview-frame" title="Report preview" sandbox{% if selected.html %} src="{{ selected.html }}"{% endif %}></iframe>
+    </div>
+    {% endif %}
+  </section>
+</div>
+<p class="muted small kbd-hint">↑ ↓ or j k steps through the list · times in {{ tz_name }}</p>
+{% else %}
+<section class="panel empty-state">
+  <span class="big-icon">{{ icon('inbox', 28) }}</span>
+  {% if not any_runs %}
+  <h3>No reports generated yet</h3>
+  <p>Run one from the <a href="/reports">Reports</a> page or create a schedule - every run is kept here.</p>
+  {% else %}
+  <h3>{% if definition and not status %}No {{ definition.name }} reports{% if tenant != 'all' %} for {{ tenant_label }}{% endif %} yet{% else %}Nothing matches these filters{% endif %}</h3>
+  <p>{% if can_run %}Generate it now, or {% endif %}<a href="/archive?tenant=all">show everything</a>.</p>
+  {% endif %}
+  {% if can_run %}
+  <form method="post" action="/reports/{{ definition.key }}/run">
+    {% if definition.scope != 'all' %}<input type="hidden" name="tenant_id" value="{{ tenant }}">{% endif %}
+    <input type="hidden" name="output_format" value="pdf">
+    <input type="hidden" name="next" value="{{ url_with() }}">
+    <button type="submit">{{ icon('play', 13) }} Run {{ definition.name }} now</button>
+  </form>
+  {% endif %}
+</section>
+{% endif %}
+<script src="/static/archive.js"></script>
+{% endblock %}

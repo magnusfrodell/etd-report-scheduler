@@ -30,7 +30,11 @@
   .note { color:#6b7a8c; font-size:12px; }
   .foot { color:#8fa6bd; font-size:11px; text-align:center; padding:14px 0 0; }
   .subj { max-width:360px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  @media print { body { background:#fff; } .wrap { padding:0; } .head { border-radius:0; } .body { border:0; } }
+  td { overflow-wrap:break-word; }
+  .chip { white-space:nowrap; }
+  @page { size:A4; margin:12mm 10mm; }
+  @media print { body { background:#fff; } .wrap { padding:0; max-width:none; } .head { border-radius:0; } .body { border:0; padding:14px 16px; }
+    th, td { padding:5px 5px; } td { font-size:11px; } th { font-size:9px; letter-spacing:.03em; } .kpi .v { font-size:19px; } }
 </style>
 </head>
 <body>

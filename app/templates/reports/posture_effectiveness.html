@@ -1,0 +1,35 @@
+{% extends "email/base_report.html" %}
+{% block body %}
+<h2>Posture and effectiveness · {{ ctx.period.label }}</h2>
+<table class="kpis"><tr>
+  <td class="kpi"><div class="v">{% if data.insufficient or data.score is none %}–{% else %}{{ data.score }}{% endif %}</div><div class="l">{% if data.insufficient %}Insufficient evidence for a score{% else %}Posture score (0-100){% if data.grade %} · grade {{ data.grade }}{% if data.provisional %} (provisional){% endif %}{% endif %}{% endif %}</div><div class="d"><span class="note">{{ data.evidence }} % of the scoring weight could be assessed</span></div></td>
+  <td class="kpi"><div class="v">{{ data.kpis.threats|fmt_int }}</div><div class="l">Threats stopped</div><div class="d"><span class="note">{{ data.kpis.threats_prev|fmt_int }} previous period · {{ data.kpis.per_10k if data.kpis.per_10k is not none else '–' }} per 10,000 messages</span></div></td>
+  <td class="kpi"><div class="v">{{ data.kpis.remediated_pct if data.kpis.remediated_pct is not none else '–' }}{% if data.kpis.remediated_pct is not none %} %{% endif %}</div><div class="l">Threats remediated</div><div class="d"><span class="note">{{ data.kpis.auto_pct if data.kpis.auto_pct is not none else '–' }} % automatically</span></div></td>
+  <td class="kpi"><div class="v">{{ data.kpis.median_dwell }}</div><div class="l">Median dwell time (retro)</div><div class="d"><span class="note">{{ data.kpis.retro }} retro-convicted</span></div></td>
+</tr></table>
+
+<h2>Checks</h2>
+<table>
+  <tr><th>Check</th><th>Status</th><th class="num">Points</th><th>Detail</th></tr>
+  {% for c in data.checks %}<tr><td>{{ c.name }}</td><td><span class="chip {{ c.status if c.status not in ('unknown', 'na') else 'neutral' }}">{{ 'n/a' if c.status == 'na' else c.status }}</span></td><td class="num">{% if c.points is not none %}{{ '%g'|format(c.points) }} / {{ c.weight }}{% else %}–{% endif %}</td><td>{{ c.detail }}</td></tr>{% endfor %}
+</table>
+<p class="note">The score is the share of points earned on the checks that could be assessed. n/a means a check does not apply to the period (for example no threats); unknown means the data is missing and is never counted as a pass. With less than 80 % of the weight assessed, no score or grade is given.</p>
+
+<h2>Priorities</h2>
+{% if data.recommendations %}<ol>{% for r in data.recommendations %}<li>{{ r }}</li>{% endfor %}</ol>{% else %}<p class="note">No gaps found - keep it that way.</p>{% endif %}
+
+<h2>Six-month trend</h2>
+<table>
+  <tr><th>Month</th><th class="num">Messages</th><th class="num">Threats</th><th class="num">Per 10,000</th><th class="num">Spam + graymail</th><th class="num">Days with data</th></tr>
+  {% for t in data.trend %}<tr><td>{{ t.month }}</td><td class="num">{{ t.total|fmt_int }}</td><td class="num">{{ t.threats|fmt_int }}</td><td class="num">{{ t.per_10k if t.per_10k is not none else '–' }}</td><td class="num">{{ t.unwanted|fmt_int }}</td><td class="num">{{ t.days }}</td></tr>{% endfor %}
+</table>
+
+<h2>Threat landscape in brief</h2>
+<ul>
+  {% for f in data.landscape.families %}<li>{{ f.family }}: {{ f.messages }} threat(s){% if f.share is not none %} ({{ f.share }} %){% endif %}</li>{% endfor %}
+  <li>{{ data.landscape.campaigns }} campaign(s), {{ data.landscape.qr }} QR-code threat(s), {{ data.landscape.callback }} possible callback lure(s)</li>
+  <li>{{ data.landscape.compromised }} possibly compromised counterpart(ies), {{ data.landscape.lookalikes }} look-alike domain(s), {{ data.landscape.spoofed }} spoof(s) of own domains</li>
+  <li>{{ data.landscape.privileged_changes }} privileged change(s) in ETD</li>
+</ul>
+<p class="note">Details: Techniques and business risk, Vendor risk, Authentication posture and Audit and compliance reports.</p>
+{% endblock %}

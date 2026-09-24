@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Data quality - ETD Report Scheduler{% endblock %}
+{% block heading %}Data quality{% endblock %}
+{% block content %}
+<div class="scope-bar">
+  <div>{{ rows|length - attention }} of {{ rows|length }} tenant(s) collecting normally{% if attention %} · <strong>{{ attention }} need attention</strong>{% endif %}.
+    <span class="muted">{% if alerts_on %}Stalled collection is also e-mailed to the alert recipients.{% else %}Set alert recipients in Settings to be e-mailed when collection stalls.{% endif %}</span></div>
+</div>
+{% for row in rows %}
+<section class="panel quality-card">
+  <div class="quality-head">
+    <h2><span class="dot {{ row.dot }}" aria-hidden="true"></span> {{ row.tenant.name }}{% if not row.tenant.enabled %} <span class="badge">disabled</span>{% endif %}</h2>
+    <div class="quality-actions">
+      <span class="muted small">API requests today: {{ row.api_calls }} of {{ row.budget }}</span>
+      {% if row.can_collect %}<form method="post" action="/tenants/{{ row.tenant.id }}/collect"><button type="submit" class="small secondary">Collect now</button></form>{% endif %}
+    </div>
+  </div>
+  <table>
+    <tr><th>Data stream</th><th>Status</th><th>Last success</th><th>Details</th></tr>
+    {% for h in row.streams %}
+    <tr><td>{{ h.label }}</td><td><span class="chip {{ h.chip }}">{{ h.status_label }}</span></td><td>{{ h.last_ok_text }}</td>
+      <td>{{ h.detail }}{% if h.error %}<div class="err-text">{{ h.error }}</div>{% endif %}</td></tr>
+    {% endfor %}
+  </table>
+</section>
+{% else %}
+<section class="panel empty-state"><h3>No tenants yet</h3><p><a href="/tenants">Add a tenant</a> to start collecting.</p></section>
+{% endfor %}
+{% endblock %}

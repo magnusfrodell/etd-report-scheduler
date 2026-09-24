@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Users - ETD Report Scheduler{% endblock %}
+{% block heading %}Users{% endblock %}
+{% block content %}
+<section class="panel">
+  <h2>Users</h2>
+  <table>
+    <tr><th>User</th><th>E-mail</th><th>Global role</th><th>Tenant access</th><th>Status</th><th>Last login (UTC)</th><th>Actions</th></tr>
+    {% for u in users %}
+    <tr>
+      <td><strong>{{ u.label }}</strong><div class="muted">{{ u.username }}</div></td>
+      <td>{{ u.email or '–' }}</td>
+      <td>
+        <form method="post" action="/users/{{ u.id }}/role" style="display:flex;gap:6px;align-items:center">
+          <select name="role">{% for r in GLOBAL_ROLES %}<option value="{{ r }}" {{ 'selected' if r == u.role else '' }}>{{ r.replace('_', ' ') }}</option>{% endfor %}</select>
+          <button class="small secondary" type="submit">Set</button>
+        </form>
+      </td>
+      <td>{% if u.role != 'user' %}<span class="muted">all tenants (manager)</span>{% else %}{% for g in grants.get(u.id, []) %}<span class="chip neutral">{{ tenant_names.get(g.tenant_id, '?') }}: {{ g.role }}</span> {% else %}<span class="muted">none – grant on the Tenants page</span>{% endfor %}{% endif %}</td>
+      <td>{% if u.enabled %}<span class="chip ok">enabled</span>{% else %}<span class="chip warning">disabled</span>{% endif %}</td>
+      <td>{{ u.last_login_at.strftime('%Y-%m-%d %H:%M') if u.last_login_at else 'never' }}</td>
+      <td class="actions">
+        <form method="post" action="/users/{{ u.id }}/password" style="display:flex;gap:6px"><input name="password" type="password" placeholder="new password" autocomplete="new-password" style="width:150px" required><button class="small secondary">Reset</button></form>
+        {% if u.id != principal.user.id %}
+        <form method="post" action="/users/{{ u.id }}/toggle"><button class="small secondary">{{ 'Disable' if u.enabled else 'Enable' }}</button></form>
+        <form method="post" action="/users/{{ u.id }}/delete" data-confirm="Delete user {{ u.username }}?"><button class="small danger">Delete</button></form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</section>
+<section class="panel">
+  <h2>Add user</h2>
+  <form method="post" action="/users" class="form-grid" autocomplete="off">
+    <div><label class="field" for="username">Username</label><input id="username" name="username" type="text" required></div>
+    <div><label class="field" for="display_name">Display name</label><input id="display_name" name="display_name" type="text"></div>
+    <div><label class="field" for="email">E-mail (optional)</label><input id="email" name="email" type="email"></div>
+    <div><label class="field" for="role">Global role</label>
+      <select id="role" name="role">{% for r in GLOBAL_ROLES %}<option value="{{ r }}" {{ 'selected' if r == 'user' else '' }}>{{ r.replace('_', ' ') }}</option>{% endfor %}</select></div>
+    <div><label class="field" for="password">Initial password (min 8 characters)</label><input id="password" name="password" type="password" autocomplete="new-password" required></div>
+    <div class="wide"><button type="submit">Add user</button>
+      <span class="muted">admin: everything · tenant admin: create, edit and delete any tenant, schedules, reports and the cross-tenant roll-up, but not users or settings · user: only the tenants granted on the Tenants page</span></div>
+  </form>
+  <p class="muted">Locked out? <code>docker exec etd-report-scheduler python -m app.manage reset-password &lt;user&gt; &lt;password&gt;</code></p>
+</section>
+{% endblock %}

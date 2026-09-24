@@ -53,6 +53,7 @@ class AppConfig(BaseSettings):
     scheduler_enabled: bool = True
     session_max_age_seconds: int = 12 * 3600
     cookie_secure: bool = False  # set true behind an HTTPS reverse proxy
+    trusted_origins: str = ""  # extra origins allowed to submit forms, e.g. behind a proxy that rewrites Host
 
     @field_validator("log_level")
     @classmethod

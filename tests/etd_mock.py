@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta
+import re
+from datetime import UTC, datetime, timedelta
+from urllib.parse import unquote
 
 import httpx
 
@@ -18,6 +20,8 @@ class MockETD:
         self.reject_first_bearer = reject_first_bearer
         self.n_messages = n_messages
         self.calls: list[tuple[str, dict]] = []
+        self.downloads: list[str] = []
+        self.link_requests = 0
         self.token_calls = 0
         self._rejected_once = False
 
@@ -26,6 +30,8 @@ class MockETD:
         return httpx.MockTransport(self.handler)
 
     def handler(self, request: httpx.Request) -> httpx.Response:
+        if request.url.host == "logs.example.invalid":  # pre-signed S3 download, not the ETD API
+            return self._log_file(request)
         path = request.url.path
         body = json.loads(request.content) if request.content else {}
         self.calls.append((path, body))
@@ -47,7 +53,7 @@ class MockETD:
         if path == "/v1/messages/search":
             return self._search(body)
         if path == "/v1/logs/downloadLinks":
-            return httpx.Response(200, json={"data": {t: [f"https://example.invalid/{t}.jsonl"] for t in body["logTypes"]}})
+            return self._links(body)
         return httpx.Response(404, json={"message": "Not Found"})
 
     def _report(self, body: dict) -> httpx.Response:
@@ -109,3 +115,73 @@ class MockETD:
         if nxt < self.n_messages:
             payload["nextPageToken"] = f"p:{nxt}"
         return httpx.Response(200, json=payload)
+
+    # ------------------------------------------------------------------ Log Export
+    def _links(self, body: dict) -> httpx.Response:
+        start = datetime.strptime(body["timeRange"][0], "%Y-%m-%dT%H").replace(tzinfo=UTC)
+        end = datetime.strptime(body["timeRange"][1], "%Y-%m-%dT%H").replace(tzinfo=UTC)
+        if end - start > timedelta(hours=3):
+            return httpx.Response(400, json={"message": "Invalid daterange"})
+        self.link_requests += 1
+        data: dict[str, list[str]] = {}
+        for log_type in body["logTypes"]:
+            urls, hour = [], start
+            while hour <= end:  # end hour inclusive, like the samples in the API docs
+                urls.append(
+                    f"https://logs.example.invalid/tenant_id%3Dmock/log_date%3D{hour:%Y-%m-%d}/hour%3D{hour:%H}"
+                    f"/log_type%3D{log_type}/part-0000.jsonl?X-Amz-Expires=3600&X-Amz-Signature=sig{self.link_requests}"
+                )
+                hour += timedelta(hours=1)
+            data[log_type] = urls
+        return httpx.Response(200, json={"data": data})
+
+    def _log_file(self, request: httpx.Request) -> httpx.Response:
+        if request.headers.get("Authorization") or request.headers.get("x-api-key"):
+            return httpx.Response(400, text="<Error><Code>InvalidArgument</Code><Message>Only one auth mechanism allowed</Message></Error>")
+        m = re.search(r"log_date=(\d{4}-\d{2}-\d{2})/hour=(\d{2})/log_type=(\w+)/", unquote(str(request.url)))
+        if not m:
+            return httpx.Response(404)
+        self.downloads.append(unquote(request.url.path))
+        lines = self.log_events(m.group(1), int(m.group(2)), m.group(3))
+        return httpx.Response(200, content="\n".join(json.dumps(x) for x in lines).encode())
+
+    @staticmethod
+    def log_events(day: str, hour: int, log_type: str) -> list[dict]:
+        ts = f"{day}T{hour:02d}:10:00Z"
+        if log_type == "audit":
+            if hour != 9:
+                return []
+            return [
+                {"category": "email", "timestamp": f"{day} 09:15:00", "action": "reclassify", "status": "success", "comments": "",
+                 "user": {"ip": "10.0.0.5", "userAgent": "Mozilla/5.0", "id": "user-analyst-1"},
+                 "metadata": {"verdict": "neutral", "description": "Changing verdict to neutral", "emailId": f"e-{day}"}},
+                {"category": "tenant", "timestamp": f"{day} 09:20:00", "action": "create_public_api_client", "status": "success", "comments": None,
+                 "user": {"ip": "10.0.0.9", "userAgent": "python-requests/2.32.0", "id": "user-admin-1"}, "metadata": {"clientId": f"c-{day}"}},
+                {"category": "user", "timestamp": f"{day} 09:25:00", "action": "login", "status": "failure", "comments": None,
+                 "user": {"ip": "203.0.113.9", "userAgent": "Mozilla/5.0", "id": "user-unknown"}, "metadata": None},
+            ]
+        if log_type != "message":
+            return []
+        key = f"{day}-{hour:02d}"
+        events = [
+            {"message": {"eventType": "create", "id": f"n1-{key}", "fromAddresses": "billing@supplier.example", "replyTo": "billing@supplier.example",
+                         "returnPath": "bounce@mail.supplier.example", "direction": "incoming", "timestamp": ts, "mailboxes": ["ap@corp.example"]},
+             "logType": "message", "logDate": day, "logHour": f"{hour:02d}"},
+            {"message": {"eventType": "create", "id": f"n2-{key}", "fromAddresses": "invoice@supp1ier.example", "replyTo": "pay@elsewhere.example",
+                         "returnPath": "x@bulk.example", "direction": "incoming", "timestamp": ts, "mailboxes": ["ap@corp.example"]},
+             "logType": "message", "logDate": day, "logHour": f"{hour:02d}"},
+            {"message": {"eventType": "create", "id": f"c1-{key}", "fromAddresses": "ceo@corp.example", "direction": "incoming", "timestamp": ts,
+                         "mailboxes": ["cfo@corp.example"], "verdict": {"verdict": "phishing", "category": "phishing"},
+                         "action": {"action": "move", "remediatedBy": "automatic", "folder": "junkemail"}},
+             "logType": "message", "logDate": day, "logHour": f"{hour:02d}"},
+            {"message": {"eventType": "create", "id": f"o1-{key}", "fromAddresses": "someone@corp.example", "direction": "outgoing", "timestamp": ts, "mailboxes": []},
+             "logType": "message", "logDate": day, "logHour": f"{hour:02d}"},
+        ]
+        if hour == 12:
+            events += [
+                {"message": {"eventType": "update", "id": f"c1-{key}", "internetMessageId": f"<c1-{key}@x>",
+                             "verdict": {"verdict": "neutral", "reclassifiedBy": "user", "timestamp": ts, "user": "user-analyst-1"}}, "logType": "message"},
+                {"message": {"eventType": "update", "id": f"r1-{key}", "internetMessageId": f"<r1-{key}@x>",
+                             "action": {"action": "move", "folder": "trash", "remediatedBy": "manual", "timestamp": ts, "user": "user-analyst-1"}}, "logType": "message"},
+            ]
+        return events

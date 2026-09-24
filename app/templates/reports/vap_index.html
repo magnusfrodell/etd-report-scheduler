@@ -1,0 +1,49 @@
+{% extends "email/base_report.html" %}
+{% block body %}
+<h2>Summary · {{ ctx.period.label }}</h2>
+<table class="kpis"><tr>
+  <td class="kpi"><div class="v">{{ data.people_count|fmt_int }}</div><div class="l">Mailboxes that received threats</div><div class="d"><span class="note">{{ data.previous_people_count|fmt_int }} previous period</span></div></td>
+  <td class="kpi"><div class="v">{{ data.total_threats|fmt_int }}</div><div class="l">Threat messages</div></td>
+  <td class="kpi"><div class="v">{{ data.top10_share }} %</div><div class="l">of threat deliveries went to the top 10</div><div class="d"><span class="note">attack concentration</span></div></td>
+  <td class="kpi"><div class="v">{{ data.with_unremediated|fmt_int }}</div><div class="l">People with an unremediated threat</div></td>
+</tr></table>
+
+{% if data.attacked_vips %}
+<h2>VIPs under attack</h2>
+<p>{% for r in data.attacked_vips %}<span class="chip {{ 'critical' if r.unremediated else 'warning' }}">{{ r.mailbox }} · index {{ r.index }} · {{ r.messages }} msg{% if r.unremediated %} · {{ r.unremediated }} not remediated{% endif %}</span> {% endfor %}</p>
+{% elif data.vip_count %}
+<p class="note">None of the {{ data.vip_count }} configured VIP mailboxes received threats this period.</p>
+{% else %}
+<p class="note">No VIP mailboxes configured yet - add executives, finance and IT admins under Settings to have them flagged here.</p>
+{% endif %}
+
+<h2>Very Attacked People</h2>
+{% if data.rows %}
+<table>
+  <tr><th>#</th><th>Mailbox</th><th class="num">Index</th><th class="num">Prev.</th><th class="num">Threats</th><th>Verdicts</th><th>Why</th><th>Top techniques</th><th class="num">Campaigns</th><th class="num">Retro</th><th class="num">Not remediated</th></tr>
+  {% for r in data.rows %}
+  <tr>
+    <td>{{ r.rank }} {% if r.movement == 'new' %}<span class="chip warning">new</span>{% elif r.movement == 'up' %}<span class="up">▲{{ r.previous_rank - r.rank }}</span>{% elif r.movement == 'down' %}<span class="down">▼{{ r.rank - r.previous_rank }}</span>{% endif %}</td>
+    <td>{{ r.mailbox }}{% if r.vip %} <span class="chip critical">VIP</span>{% endif %}</td>
+    <td class="num"><strong>{{ r.index }}</strong></td>
+    <td class="num">{{ r.previous_index if r.previous_index is not none else '–' }}</td>
+    <td class="num">{{ r.messages }}</td>
+    <td>{% for v, n in r.verdicts.items() %}{{ v }} {{ n }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+    <td>{{ r.reasons|join(', ') }}</td>
+    <td>{{ r.techniques|join(', ') or '–' }}</td>
+    <td class="num">{{ r.campaigns }}</td>
+    <td class="num">{{ r.retro }}</td>
+    <td class="num">{% if r.unremediated %}<span class="chip critical">{{ r.unremediated }}</span>{% else %}0{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}<p class="note">No threat messages reached any mailbox in this period.</p>{% endif %}
+
+{% if data.technique_totals %}
+<h2>Techniques seen against these people</h2>
+<p>{% for t, n in data.technique_totals %}<span class="chip neutral">{{ t }} · {{ n }}</span> {% endfor %}</p>
+{% endif %}
+
+<h2>How the index is calculated</h2>
+<p class="note">Per message: verdict weight (BEC {{ data.scoring.bec }}, malicious {{ data.scoring.malicious }}, phishing {{ data.scoring.phishing }}, scam {{ data.scoring.scam }}), technique severity {{ data.scoring.severity }}, impersonation {{ data.scoring.impersonation }}, delivered before verdict {{ data.scoring.retro }}, not remediated {{ data.scoring.unremediated }}; targeted messages {{ data.scoring.targeted }}, mass mailings {{ data.scoring.mass }}. Points are summed per recipient and capped at 1000. Use the list to prioritise awareness training, MFA and priority-account protection.</p>
+{% endblock %}

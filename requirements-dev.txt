@@ -1,3 +1,6 @@
--r requirements.txt
+# Test and lint tools. Install the locked runtime first:
+#   pip install --require-hashes -r requirements.txt && pip install -r requirements-dev.txt
 pytest>=8.0
 ruff>=0.5
+aiosmtpd>=1.4
+pip-audit>=2.7

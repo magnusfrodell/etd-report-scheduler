@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import logging
 import smtplib
+import ssl
 from email.message import EmailMessage
 from email.utils import formatdate, make_msgid
 
@@ -45,7 +46,21 @@ def build_message(settings: RuntimeSettings, to: list[str], subject: str, html: 
     return msg
 
 
-def send_email(settings: RuntimeSettings, to: list[str], subject: str, html: str, attachments: list[tuple[str, bytes, str]] | None = None) -> None:
+def tls_context(settings: RuntimeSettings) -> ssl.SSLContext:
+    """TLS for the relay connection: the system CAs plus an optional internal CA, host name checked.
+
+    ``smtplib`` does *not* verify certificates unless it is given a context - without this anyone who
+    can intercept the connection could pose as the relay and read the reports and the SMTP password."""
+    context = ssl.create_default_context()
+    if settings.smtp_ca_pem.strip():
+        context.load_verify_locations(cadata=settings.smtp_ca_pem)
+    if not settings.smtp_tls_verify:
+        context.check_hostname = False
+        context.verify_mode = ssl.CERT_NONE
+    return context
+
+
+def send_email(settings: RuntimeSettings, to: list[str], subject: str, html: str, attachments: list[tuple[str, bytes, str]] | None = None) -> dict[str, tuple[int, bytes]]:
     if not settings.smtp_configured:
         raise EmailNotConfigured("SMTP host and sender address are not configured (Settings > E-mail)")
     if not to:
@@ -55,8 +70,10 @@ def send_email(settings: RuntimeSettings, to: list[str], subject: str, html: str
     with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30) as smtp:
         smtp.ehlo()
         if settings.smtp_starttls:
-            smtp.starttls()
+            smtp.starttls(context=tls_context(settings))
             smtp.ehlo()
         if settings.smtp_username:
             smtp.login(settings.smtp_username, settings.smtp_password)
-        smtp.send_message(msg)
+        refused = smtp.send_message(msg)
+    # The relay may accept the message for some recipients and refuse others without raising.
+    return dict(refused or {})

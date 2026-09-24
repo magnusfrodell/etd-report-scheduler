@@ -17,9 +17,11 @@
       <td>{% if s.last_run_at %}{{ s.last_run_at.strftime('%Y-%m-%d %H:%M') }} <span class="chip {{ s.last_status }}">{{ s.last_status }}</span>{% else %}–{% endif %}</td>
       <td>{{ next_runs.get('report:' ~ s.id, '–') if s.enabled else 'disabled' }}</td>
       <td class="actions">
+        {% if (s.tenant_id is none and principal.can_cross_tenant) or (s.tenant_id is not none and principal.can(s.tenant_id, 'operator')) %}
         <form method="post" action="/schedules/{{ s.id }}/run"><button class="small secondary">Run now</button></form>
         <form method="post" action="/schedules/{{ s.id }}/toggle"><button class="small secondary">{{ 'Disable' if s.enabled else 'Enable' }}</button></form>
-        <form method="post" action="/schedules/{{ s.id }}/delete" onsubmit="return confirm('Delete this schedule?')"><button class="small danger">Delete</button></form>
+        <form method="post" action="/schedules/{{ s.id }}/delete" data-confirm="Delete this schedule?"><button class="small danger">Delete</button></form>
+        {% else %}<span class="muted">view only</span>{% endif %}
       </td>
     </tr>
     {% endfor %}
@@ -27,17 +29,18 @@
   {% else %}<p class="empty">No schedules yet. Add one below - defaults are sensible for each report.</p>{% endif %}
 </section>
 
+{% if operator_tenants or principal.can_cross_tenant %}
 <section class="panel">
   <h2>Add schedule</h2>
   <form method="post" action="/schedules" class="form-grid">
     <div><label class="field" for="report_key">Report</label>
       <select id="report_key" name="report_key">
-        {% for key, r in reports.items() %}<option value="{{ key }}">{{ r.name }} ({{ r.period_kind }}{% if r.scope == 'all' %}, all tenants{% endif %})</option>{% endfor %}
+        {% for key, r in reports.items() %}{% if r.scope != 'all' or principal.can_cross_tenant %}<option value="{{ key }}">{{ r.name }} ({{ r.period_kind }}{% if r.scope == 'all' %}, all tenants{% endif %})</option>{% endif %}{% endfor %}
       </select></div>
     <div><label class="field" for="tenant_id">Tenant (per-tenant reports)</label>
       <select id="tenant_id" name="tenant_id">
         <option value="">– choose –</option>
-        {% for t in tenants %}<option value="{{ t.id }}" {{ 'selected' if selected_tenant and selected_tenant.id == t.id else '' }}>{{ t.name }}</option>{% endfor %}
+        {% for t in operator_tenants %}<option value="{{ t.id }}" {{ 'selected' if selected_tenant and selected_tenant.id == t.id else '' }}>{{ t.name }}</option>{% endfor %}
       </select></div>
     <div><label class="field" for="cron">Cron expression (blank = report default)</label><input id="cron" name="cron" type="text" placeholder="0 7 1 * *"></div>
     <div><label class="field" for="output_format">Format</label>
@@ -52,4 +55,5 @@
     {% endfor %}
   </table>
 </section>
+{% endif %}
 {% endblock %}
