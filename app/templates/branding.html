@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Branding - ETD Report Scheduler{% endblock %}
+{% block heading %}Branding{% endblock %}
+{% macro fields(b, v, key) %}
+<div><label class="field" for="name-{{ key }}">Name shown on reports</label><input id="name-{{ key }}" name="name" type="text" required maxlength="120" value="{{ b.name if b else '' }}" placeholder="Nordic Partner Security Operations"></div>
+<div><label class="field" for="logo-{{ key }}">Logo - PNG or JPEG, at most 300 KB (about 400 × 100 px works well)</label><input id="logo-{{ key }}" name="logo" type="file" accept="image/png,image/jpeg">
+  {% if b and b.logo_b64 %}<label class="checks"><input type="checkbox" name="remove_logo"> Remove the current logo</label>{% endif %}</div>
+<div><label class="field" for="primary-{{ key }}">Header colour</label><input id="primary-{{ key }}" name="primary_color" type="color" value="{{ v.primary if v else defaults.primary }}"></div>
+<div><label class="field" for="accent-{{ key }}">Accent colour (bars and links)</label><input id="accent-{{ key }}" name="accent_color" type="color" value="{{ v.accent if v else defaults.accent }}"></div>
+<div><label class="field" for="sender-{{ key }}">E-mail sender name</label><input id="sender-{{ key }}" name="sender_name" type="text" maxlength="120" value="{{ (b.sender_name or '') if b else '' }}" placeholder="Partner SOC"></div>
+<div><label class="field" for="reply-{{ key }}">Reply-To address</label><input id="reply-{{ key }}" name="reply_to" type="text" maxlength="254" value="{{ (b.reply_to or '') if b else '' }}" placeholder="soc@partner.example"></div>
+<div><label class="field" for="prefix-{{ key }}">Subject prefix</label><input id="prefix-{{ key }}" name="subject_prefix" type="text" maxlength="60" value="{{ (b.subject_prefix or '') if b else '' }}" placeholder="[Partner SOC]"></div>
+<div><label class="field">&nbsp;</label><label class="checks"><input type="checkbox" name="show_tool_credit" {% if not b or b.show_tool_credit %}checked{% endif %}> Mention ETD Report Scheduler in the footer</label></div>
+<div class="wide"><label class="field" for="footer-{{ key }}">Footer text - contact details or a confidentiality note</label><textarea id="footer-{{ key }}" name="footer_text" rows="2" maxlength="600" placeholder="Partner AB · soc@partner.example · +46 8 000 00 00">{{ (b.footer_text or '') if b else '' }}</textarea></div>
+<div class="wide"><label class="checks"><input type="checkbox" name="is_default" {% if b and b.is_default %}checked{% endif %}> Default brand - used by every tenant without a brand of its own</label></div>
+<div class="wide"><button type="submit" class="small">{{ 'Save brand' if b else 'Add brand' }}</button></div>
+{% endmacro %}
+{% block content %}
+<div class="scope-bar"><div>Brands give reports and e-mails your name, logo, colours and footer. A tenant uses the <strong>default</strong> brand unless its reporting profile names another one{% if not brands %}; until a brand exists, reports keep the neutral look{% endif %}.</div></div>
+{% for b in brands %}{% set v = views[b.id] %}
+<section class="panel brand-card">
+  <div class="brand-preview" style="background:linear-gradient(180deg,{{ v.primary }},{{ v.primary_dark }})">
+    <div><div class="by">{{ v.name }}</div><div class="title">Executive summary</div></div>
+    {% if v.logo_src %}<img src="{{ v.logo_src }}" alt="{{ v.name }} logo">{% endif %}
+    <span class="swatch" style="background:{{ v.accent }}" title="Accent colour {{ v.accent }}"></span>
+  </div>
+  <div class="brand-meta">
+    <h2>{{ b.name }}{% if b.is_default %} <span class="badge scheduled">default</span>{% endif %}</h2>
+    <p class="muted small">Chosen by {{ usage.get(b.id, 0) }} tenant(s){% if b.is_default %}, and used by every tenant without a brand of its own{% endif %}.
+      <a href="/branding/{{ b.id }}/preview" target="_blank" rel="noopener">Preview a report</a> · <a href="/branding/{{ b.id }}/preview?format=pdf" target="_blank" rel="noopener">as PDF</a></p>
+  </div>
+  <details>
+    <summary>Edit</summary>
+    <form method="post" action="/branding/{{ b.id }}" enctype="multipart/form-data" class="form-grid">{{ fields(b, v, b.id) }}</form>
+    <form method="post" action="/branding/{{ b.id }}/delete" data-confirm="Delete the brand {{ b.name }}? Tenants that use it get the default brand."><button type="submit" class="small danger">Delete brand</button></form>
+  </details>
+</section>
+{% endfor %}
+<section class="panel" id="add-brand">
+  <h2>Add brand</h2>
+  <form method="post" action="/branding" enctype="multipart/form-data" class="form-grid">{{ fields(none, none, 'new') }}</form>
+</section>
+{% endblock %}

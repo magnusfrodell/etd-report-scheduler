@@ -9,7 +9,7 @@
 <body>
 <div class="login-wrap">
   <form class="login-card" method="post" action="/login">
-    <h1>ETD Report Scheduler</h1>
+    {% if ui_brand and ui_brand.logo_src %}<img class="login-logo" src="{{ ui_brand.logo_src }}" alt="{{ ui_brand.name }}">{% endif %}<h1>ETD Report Scheduler</h1>{% if ui_brand and ui_brand.name %}<p class="muted">{{ ui_brand.name }}</p>{% endif %}
     <p>Sign in with the admin account from your environment configuration.</p>
     {% if err %}<div class="flash error" style="margin-bottom:12px">{{ err }}</div>{% endif %}
     <input type="hidden" name="next" value="{{ request.query_params.get('next', '/') }}">

@@ -7,6 +7,7 @@ The application is multi-tenant by construction. Every ETD tenant is a row with 
 What it adds on top of the built-in ETD console:
 
 * **Scheduling and delivery** – cron-based schedules per tenant, for a group of tenants or for all tenants (including tenants added later), sent to fixed recipients and/or each customer's own contacts, optionally only when a report has findings; HTML e-mail with optional PDF attachment and an archive of every generated report.
+* **Branding** – a partner's name, logo, colours and footer on reports, PDFs and e-mails, with the e-mail sender name, Reply-To and subject prefix; one default brand and, where needed, another brand per tenant.
 * **History and comparison** – daily statistics are kept as long as you like (retention is configurable, ETD keeps 90 days), so every report compares the period with the previous one.
 * **Reports built on message data** – threat-convicted messages are collected through the Message Search API, which enables reports ETD does not offer: compromise indicators on outgoing/internal mail, a Very Attacked People index, campaign clustering and dwell-time/exposure analysis.
 * **Posture, risk and compliance** – with ETD's Log Export and DNS: authentication posture of own domains, vendor and look-alike risk, technique and attachment trends, an audit trail kept beyond ETD's 30 days, and a quarterly posture score for management.
@@ -32,7 +33,7 @@ Bundled reports:
 
 **Technology stack:** Python 3.12, FastAPI, SQLAlchemy 2 + Alembic (SQLite by default, PostgreSQL optional), APScheduler, Jinja2, WeasyPrint for PDF, httpx for the ETD API. Standalone application, delivered as a Docker image; no external services other than the ETD API and an SMTP relay.
 
-**Status:** 0.7.0, alpha. The collectors (including Log Export), scheduler, twelve reports and the admin UI work end to end against a fake ETD API in the test-suite (`pytest`, 115 tests) and have been smoke-tested as a running application. Validation against production ETD tenants in all five regions is the next step - please open an issue with what you find. This is community sample code, not a Cisco product, and is not supported by Cisco TAC.
+**Status:** 0.8.0, alpha. The collectors (including Log Export), scheduler, twelve reports and the admin UI work end to end against a fake ETD API in the test-suite (`pytest`, 120 tests) and have been smoke-tested as a running application. Validation against production ETD tenants in all five regions is the next step - please open an issue with what you find. This is community sample code, not a Cisco product, and is not supported by Cisco TAC.
 
 <!-- Add a screenshot of the dashboard here once you run it against a real tenant: ![Dashboard](docs/dashboard.png) -->
 
@@ -62,7 +63,7 @@ Prerequisites: Docker 24+ with Compose, network access from the container to `ap
 A pre-built multi-arch image (amd64/arm64) is published for every release tag:
 
 ```bash
-docker pull ghcr.io/magnusfrodell/etd-report-scheduler:0.7.0
+docker pull ghcr.io/magnusfrodell/etd-report-scheduler:0.8.0
 ```
 
 To use it, set `image:` instead of `build:` in `docker-compose.yml` (the line is there, commented out). To build yourself instead:
@@ -212,6 +213,7 @@ Sign in as the bootstrap admin, add a tenant, then add users:
 5. **Archive** – every generated report, filtered by report, tenant and status and grouped by month. The selected report is previewed next to the list (scaled to fit), with **Open** for full size and **PDF** to download; step through runs with ↑/↓ or j/k. Failed runs show their error, and an empty filter offers **Run now** for that report and tenant. Links in the dashboard's recent runs open the run here. Each run shows whether it came from a schedule, was run manually or via the API, or was caught up after downtime, and which recipients the relay refused. Deleting a schedule keeps its archived reports.
 6. **Data quality** – per tenant and data stream (daily statistics, convicted messages, Log Export, history backfill): the last successful collection, whether it is late or stalled, each collector's own last error, days with statistics, unreadable log files and API requests used today, with **Collect now**.
 7. **Settings > E-mail > Alert recipients** – e-mailed when a scheduled report fails or is only partly delivered, and once a day while a data stream is stalled. **Settings > Storage and backups** shows the archive and database size, the newest backups and a **Back up the database now** button.
+8. **Branding** (administrators) – add a brand with a name, a PNG or JPEG logo, header and accent colours and a footer, and optionally the e-mail sender name, Reply-To and a subject prefix. The first brand becomes the default; a tenant can use another one from its reporting profile. **Preview a report** shows the brand on a real report, as HTML or PDF. In e-mails the logo is embedded as an inline image, because mail clients block data: images. Without a brand, reports keep the neutral look.
 
 The tenant switcher in the header filters the dashboard, schedules and report cards to one tenant, or shows all; the archive starts from it and has its own tenant filter. Times in the archive are shown in the timezone from Settings.
 
@@ -240,7 +242,7 @@ Generated files are stored under `/data/reports/<tenant>/<report>/<timestamp>-ru
 `.github/workflows/ci.yml` runs ruff, the test-suite and an Alembic consistency check on every push and pull request. `.github/workflows/docker.yml` builds and publishes the container image to GitHub Container Registry when a `v*` tag is pushed:
 
 ```bash
-git tag v0.7.0 && git push origin v0.7.0
+git tag v0.8.0 && git push origin v0.8.0
 ```
 
 ### Architecture

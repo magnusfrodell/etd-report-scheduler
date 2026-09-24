@@ -20,6 +20,7 @@ templates only *hide* what the principal cannot do, the handlers *enforce* it.
 
 from __future__ import annotations
 
+import base64
 import logging
 import ssl
 from collections import Counter
@@ -36,17 +37,29 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session
 
 from app import __version__
+from app.branding import (
+    DEFAULT_ACCENT,
+    DEFAULT_PRIMARY,
+    MAX_LOGO_BYTES,
+    default_brand,
+    logo_type,
+    valid_address,
+    valid_color,
+    view,
+)
 from app.collectors import runner
 from app.collectors.runner import ETD_DAILY_QUOTA, api_calls_today
 from app.config import get_config
 from app.crypto import secret_box
-from app.db import get_db
+from app.db import get_db, session_scope
 from app.delivery import archive as report_files
+from app.delivery.pdf import pdf_available, render_pdf
 from app.etd.factory import client_for_tenant
 from app.etd.regions import REGIONS
 from app.models import (
     GLOBAL_ROLES,
     TENANT_ROLES,
+    Brand,
     ConvictedMessage,
     DailyStat,
     ReportRun,
@@ -60,7 +73,7 @@ from app.reports.base import CATEGORIES, CATEGORY_KEYS, SCOPE_ALL, ReportDefinit
 from app.reports.periods import PERIOD_KINDS
 from app.reports.registry import REPORTS, get_report
 from app.scheduler import scheduler, validate_cron
-from app.services import run_report, run_schedule, schedule_targets
+from app.services import build_context, render_report, run_report, run_schedule, schedule_targets
 from app.settings_store import ALL_VERDICTS, load_settings, save_settings
 from app.tenant_profile import get_profile, parse_addresses, parse_domains, parse_labels
 from app.web.auth import (
@@ -115,6 +128,7 @@ def _base_ctx(request: Request, db: Session, p: Principal, **extra: Any) -> dict
         "selection": current_tenant_selection(request),
         "msg": request.query_params.get("msg"),
         "key_problem": getattr(request.app.state, "key_problem", None),
+        "ui_brand": view(default_brand(db)),
         "err": request.query_params.get("err"),
         "reports": REPORTS,
         **extra,
@@ -132,7 +146,9 @@ def _tenant_or_404(db: Session, tenant_id: int, p: Principal, role: str) -> Tena
 # ------------------------------------------------------------------ login
 @router.get("/login", response_class=HTMLResponse)
 def login_form(request: Request) -> Response:
-    return templates.TemplateResponse(request, "login.html", {"request": request, "err": request.query_params.get("err")})
+    with session_scope() as session:
+        ui_brand = view(default_brand(session))
+    return templates.TemplateResponse(request, "login.html", {"request": request, "err": request.query_params.get("err"), "ui_brand": ui_brand})
 
 
 @router.post("/login")
@@ -239,6 +255,7 @@ def tenants_page(request: Request, db: Session = Depends(get_db), p: Principal =
             grants=grants,
             users=users,
             profiles={t.id: get_profile(t) for t in tenants},
+            brands=list(db.execute(select(Brand).order_by(Brand.name)).scalars()),
         ),
     )
 
@@ -319,6 +336,7 @@ def tenant_profile(
     user_labels: str = Form(""),
     group: str = Form(""),
     report_recipients: str = Form(""),
+    brand_id: str = Form(""),
     db: Session = Depends(get_db),
     p: Principal = Depends(get_principal),
 ) -> Response:
@@ -328,7 +346,8 @@ def tenant_profile(
     vips, bad_vips = parse_addresses(vip_addresses)
     contacts, bad_contacts = parse_addresses(report_recipients)
     tenant.profile = {"own_domains": own, "vendor_domains": vendors, "vip_addresses": vips, "user_labels": parse_labels(user_labels),
-                      "group": " ".join(group.split())[:60], "report_recipients": contacts}
+                      "group": " ".join(group.split())[:60], "report_recipients": contacts,
+                      "brand_id": int(brand_id) if brand_id.isdigit() and db.get(Brand, int(brand_id)) else None}
     db.commit()
     ignored = bad_own + bad_vendors + bad_vips + bad_contacts
     if ignored:
@@ -562,6 +581,135 @@ def schedule_delete(schedule_id: int, db: Session = Depends(get_db), p: Principa
     if scheduler.running:
         scheduler.reload_report_jobs()
     return _redirect("/schedules", "Schedule deleted. Its archived reports are kept.")
+
+
+# ---------------------------------------------------------------- branding
+def _brand_values(form: Any) -> tuple[dict[str, Any], list[str]]:
+    errors = []
+    name = " ".join(str(form.get("name", "")).split())[:120]
+    if not name:
+        errors.append("A brand needs a name.")
+    primary = str(form.get("primary_color", DEFAULT_PRIMARY)).strip().lower()
+    accent = str(form.get("accent_color", DEFAULT_ACCENT)).strip().lower()
+    if not (valid_color(primary) and valid_color(accent)):
+        errors.append("Colours must be written as #rrggbb.")
+    reply_to = str(form.get("reply_to", "")).strip()
+    if reply_to and not valid_address(reply_to):
+        errors.append("Reply-To must be a single e-mail address.")
+    values = {
+        "name": name, "primary_color": primary, "accent_color": accent, "reply_to": reply_to or None,
+        "footer_text": str(form.get("footer_text", "")).strip()[:600] or None,
+        "subject_prefix": " ".join(str(form.get("subject_prefix", "")).split())[:60] or None,
+        "sender_name": " ".join(str(form.get("sender_name", "")).split())[:120] or None,
+        "show_tool_credit": form.get("show_tool_credit") == "on",
+    }
+    return values, errors
+
+
+async def _brand_logo(form: Any) -> tuple[bytes | None, str | None, str | None]:
+    """(data, mime type, error) for an uploaded logo, or Nones when no file was chosen."""
+    upload = form.get("logo")
+    if upload is None or not getattr(upload, "filename", ""):
+        return None, None, None
+    data = await upload.read(MAX_LOGO_BYTES + 1)
+    if not data:
+        return None, None, None
+    if len(data) > MAX_LOGO_BYTES:
+        return None, None, "The logo must be at most 300 KB."
+    kind = logo_type(data)
+    if kind is None:
+        return None, None, "The logo must be a PNG or JPEG image."
+    return data, kind, None
+
+
+def _make_default(db: Session, brand: Brand) -> None:
+    for other in db.execute(select(Brand).where(Brand.is_default.is_(True), Brand.id != brand.id)).scalars():
+        other.is_default = False
+    brand.is_default = True
+
+
+@router.get("/branding", response_class=HTMLResponse)
+def branding_page(request: Request, db: Session = Depends(get_db), p: Principal = Depends(require_admin)) -> Response:
+    brands = list(db.execute(select(Brand).order_by(Brand.is_default.desc(), Brand.name)).scalars())
+    usage = Counter(get_profile(t)["brand_id"] for t in db.execute(select(Tenant)).scalars())
+    return templates.TemplateResponse(request, "branding.html", _base_ctx(
+        request, db, p, brands=brands, views={b.id: view(b) for b in brands}, usage=usage,
+        defaults={"primary": DEFAULT_PRIMARY, "accent": DEFAULT_ACCENT}))
+
+
+@router.post("/branding")
+async def branding_create(request: Request, db: Session = Depends(get_db), p: Principal = Depends(require_admin)) -> Response:
+    form = await request.form()
+    values, errors = _brand_values(form)
+    data, kind, logo_error = await _brand_logo(form)
+    if logo_error:
+        errors.append(logo_error)
+    if errors:
+        return _redirect("/branding", " ".join(errors), error=True)
+    first = db.execute(select(Brand.id).limit(1)).first() is None
+    brand = Brand(**values)
+    if data:
+        brand.logo_b64, brand.logo_type = base64.b64encode(data).decode(), kind
+    db.add(brand)
+    db.flush()
+    if first or form.get("is_default") == "on":  # the first brand applies straight away
+        _make_default(db, brand)
+    db.commit()
+    return _redirect("/branding", f"Brand '{brand.name}' created{' as the default' if brand.is_default else ''}.")
+
+
+@router.post("/branding/{brand_id}")
+async def branding_update(brand_id: int, request: Request, db: Session = Depends(get_db), p: Principal = Depends(require_admin)) -> Response:
+    brand = db.get(Brand, brand_id)
+    if brand is None:
+        return _redirect("/branding", "Brand not found.", error=True)
+    form = await request.form()
+    values, errors = _brand_values(form)
+    data, kind, logo_error = await _brand_logo(form)
+    if logo_error:
+        errors.append(logo_error)
+    if errors:
+        return _redirect("/branding", " ".join(errors), error=True)
+    for field, value in values.items():
+        setattr(brand, field, value)
+    if form.get("remove_logo") == "on":
+        brand.logo_b64 = brand.logo_type = None
+    if data:
+        brand.logo_b64, brand.logo_type = base64.b64encode(data).decode(), kind
+    if form.get("is_default") == "on":
+        _make_default(db, brand)
+    else:
+        brand.is_default = False
+    db.commit()
+    return _redirect("/branding", f"Brand '{brand.name}' saved.")
+
+
+@router.post("/branding/{brand_id}/delete")
+def branding_delete(brand_id: int, db: Session = Depends(get_db), p: Principal = Depends(require_admin)) -> Response:
+    brand = db.get(Brand, brand_id)
+    if brand is None:
+        return _redirect("/branding", "Brand not found.", error=True)
+    name = brand.name
+    db.delete(brand)
+    db.commit()
+    return _redirect("/branding", f"Brand '{name}' deleted. Tenants that used it get the default brand.")
+
+
+@router.get("/branding/{brand_id}/preview")
+def branding_preview(brand_id: int, format: str = "html", db: Session = Depends(get_db), p: Principal = Depends(require_admin)) -> Response:
+    """A real report rendered with the brand - the first tenant's executive summary, or the roll-up."""
+    brand = db.get(Brand, brand_id)
+    if brand is None:
+        return _redirect("/branding", "Brand not found.", error=True)
+    tenant = db.execute(select(Tenant).where(Tenant.enabled.is_(True)).order_by(Tenant.name).limit(1)).scalar()
+    definition = get_report("executive_summary" if tenant else "cross_tenant_rollup")
+    ctx = build_context(db, definition, tenant if definition.scope != SCOPE_ALL else None, utcnow(), load_settings(db).timezone)
+    html = render_report(db, definition, ctx, brand=view(brand))
+    if format == "pdf":
+        document = render_pdf(html)
+        if document:
+            return Response(document, media_type="application/pdf", headers={"Content-Disposition": 'inline; filename="brand-preview.pdf"'})
+    return HTMLResponse(html)
 
 
 # ---------------------------------------------------------------- reports
@@ -869,7 +1017,6 @@ def report_file(run_id: int, fmt: str, db: Session = Depends(get_db), p: Princip
 # --------------------------------------------------------------- settings
 @router.get("/settings", response_class=HTMLResponse)
 def settings_page(request: Request, db: Session = Depends(get_db), p: Principal = Depends(require_admin)) -> Response:
-    from app.delivery.pdf import pdf_available
 
     settings = load_settings(db)
     from app.backup import storage_summary

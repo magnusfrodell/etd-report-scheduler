@@ -27,6 +27,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import __version__
+from app.branding import NEUTRAL, BrandView, brand_for
 from app.config import get_config
 from app.db import session_scope
 from app.delivery import archive, pdf
@@ -81,10 +82,11 @@ def _fmt_pct(value: float | None) -> str:
     return f"{sign}{value:.1f} %"
 
 
-def render_report(session: Session, definition: ReportDefinition, ctx: ReportContext, data: dict[str, Any] | None = None) -> str:
+def render_report(session: Session, definition: ReportDefinition, ctx: ReportContext, data: dict[str, Any] | None = None,
+                  brand: BrandView | None = None) -> str:
     data = definition.build(session, ctx) if data is None else data
     template = template_env().get_template(definition.template)
-    return template.render(report=definition, ctx=ctx, data=data, generated_at=ctx.generated_at, tz=ctx.timezone)
+    return template.render(report=definition, ctx=ctx, data=data, generated_at=ctx.generated_at, tz=ctx.timezone, brand=brand or NEUTRAL)
 
 
 def build_context(session: Session, definition: ReportDefinition, tenant: Tenant | None, now: datetime, tz_name: str, period_kind: str | None = None,
@@ -169,10 +171,13 @@ def run_report(
             tenant = session.get(Tenant, tenant_id) if tenant_id else None
             ctx = build_context(session, definition, tenant, now, settings.timezone, period_kind, reference)
             data = definition.build(session, ctx)
-            html = render_report(session, definition, ctx, data)
+            brand = brand_for(session, tenant)
+            html = render_report(session, definition, ctx, data, brand)
             findings = definition.has_findings(data) if definition.has_findings else True
             tenant_name = tenant.name if tenant else None
             subject = definition.subject.format(tenant=ctx.tenant_name, period=ctx.period.label)
+            if brand.subject_prefix:
+                subject = f"{brand.subject_prefix} {subject}"
             result["period_start"], result["period_end"] = ctx.period.start, ctx.period.end
 
         # Phase 3 - files, PDF and e-mail with no database session open.
@@ -185,8 +190,13 @@ def run_report(
             result["delivery_note"] = "Not sent: nothing to report - the schedule only sends reports with findings."
         elif deliver and to:
             attachments = [(pdf_path.name, pdf_bytes, "application/pdf")] if pdf_bytes else []
+            email_html, inline = html, []
+            if brand.logo_src:  # mail clients block data: images - send the logo as an inline part instead
+                email_html = html.replace(brand.logo_src, "cid:brand-logo")
+                inline = [("brand-logo", brand.logo_bytes, brand.logo_type)]
             try:
-                refused = send_email(settings, to, subject, html, attachments)
+                refused = send_email(settings, to, subject, email_html, attachments, inline_images=inline,
+                                     from_name=brand.sender_name or None, reply_to=brand.reply_to or None)
             except Exception as exc:  # noqa: BLE001
                 raise DeliveryFailed(f"The report was generated, but sending it failed: {type(exc).__name__}: {exc}") from exc
             # An SMTP relay can accept some recipients and refuse others without an error.

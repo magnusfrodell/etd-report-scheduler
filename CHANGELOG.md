@@ -3,6 +3,20 @@
 Database migrations run automatically at start-up. Every version runs as a single container
 with its state in the `/data` volume.
 
+## 0.8.0 - Branding
+
+### Added
+- **Brands** under *Branding* (administrators): a name, a PNG or JPEG logo, header and accent colours, a footer, the e-mail sender name, Reply-To and subject prefix, and whether the footer mentions ETD Report Scheduler. The first brand becomes the default, and a tenant can use another one from its reporting profile. **Preview a report** shows a brand on a real report, as HTML or PDF.
+- Reports and PDFs carry the brand: its name and logo in the header, its colours and its footer. E-mails embed the logo as an inline image, because mail clients block data: images, and use the brand's sender name, Reply-To and subject prefix.
+- The default brand's logo and name on the sign-in page and in the menu, for customers who sign in to read their archive.
+
+### Notes
+- Without a brand, reports keep the neutral look.
+- Colours are limited to `#rrggbb`, because they end up in CSS, and logos to real PNG or JPEG files of at most 300 KB.
+
+### Upgrade notes
+- Migration 0008 runs automatically.
+
 ## 0.7.0 - Partner scale
 
 ### Added

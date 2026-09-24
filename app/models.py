@@ -37,6 +37,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     false,
+    true,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.types import TypeDecorator
@@ -441,3 +442,23 @@ class AlertState(Base):
     key: Mapped[str] = mapped_column(String(160), primary_key=True)
     last_sent_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
     detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class Brand(Base):
+    """A partner brand for reports and e-mails. Tenants use their own brand or the default one."""
+
+    __tablename__ = "brands"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    logo_type: Mapped[str | None] = mapped_column(String(20), nullable=True)  # image/png | image/jpeg
+    logo_b64: Mapped[str | None] = mapped_column(Text, nullable=True)
+    primary_color: Mapped[str] = mapped_column(String(7), nullable=False, default="#0f2a43", server_default="#0f2a43")
+    accent_color: Mapped[str] = mapped_column(String(7), nullable=False, default="#1f77b4", server_default="#1f77b4")
+    footer_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    subject_prefix: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    sender_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    reply_to: Mapped[str | None] = mapped_column(String(254), nullable=True)
+    show_tool_credit: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=true())
+    is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=utcnow)

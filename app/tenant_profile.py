@@ -79,6 +79,7 @@ def get_profile(tenant: Tenant | None) -> dict[str, Any]:
         "user_labels": dict(raw.get("user_labels") or {}),
         "group": str(raw.get("group") or "").strip(),  # schedules can cover every tenant in a group
         "report_recipients": list(raw.get("report_recipients") or []),  # the customer's contacts for scheduled reports
+        "brand_id": raw.get("brand_id") if isinstance(raw.get("brand_id"), int) else None,  # None = the default brand
     }
 
 
