@@ -1,37 +1,37 @@
 {% extends "email/base_report.html" %}
 {% block body %}
-<h2>Summary · {{ ctx.period.label }}</h2>
+<h2>{{ _("Summary · {period_label}", period_label=ctx.period_label) }}</h2>
 <table class="kpis"><tr>
-  <td class="kpi"><div class="v">{{ data.campaign_count }}</div><div class="l">Campaigns (≥2 messages)</div><div class="d"><span class="note">{{ data.previous_campaign_count }} previous period</span></div></td>
-  <td class="kpi"><div class="v">{{ data.total_threats|fmt_int }}</div><div class="l">Threat messages</div><div class="d"><span class="note">{{ data.campaign_share }} % belong to a campaign, {{ data.singletons }} singletons</span></div></td>
-  <td class="kpi"><div class="v">{{ data.still_exposed }}</div><div class="l">Campaign messages not remediated</div></td>
-  <td class="kpi"><div class="v">{{ data.critical|length }}</div><div class="l">Critical campaigns</div></td>
+  <td class="kpi"><div class="v">{{ data.campaign_count }}</div><div class="l">{{ _("Campaigns (≥2 messages)") }}</div><div class="d"><span class="note">{{ _("{previous_campaign_count} previous period", previous_campaign_count=data.previous_campaign_count) }}</span></div></td>
+  <td class="kpi"><div class="v">{{ data.total_threats|fmt_int }}</div><div class="l">{{ _("Threat messages") }}</div><div class="d"><span class="note">{{ _("{campaign_share} % belong to a campaign, {singletons} singletons", campaign_share=data.campaign_share, singletons=data.singletons) }}</span></div></td>
+  <td class="kpi"><div class="v">{{ data.still_exposed }}</div><div class="l">{{ _("Campaign messages not remediated") }}</div></td>
+  <td class="kpi"><div class="v">{{ data.critical|length }}</div><div class="l">{{ _("Critical campaigns") }}</div></td>
 </tr></table>
 {% if data.critical %}
-<h2>Needs attention</h2>
-<p>{% for r in data.critical %}<span class="chip critical">#{{ r.rank }} {{ r.label[:60] }} · {{ r.recipients }} mailboxes · {{ r.not_remediated }} not remediated</span> {% endfor %}</p>
+<h2>{{ _("Needs attention") }}</h2>
+<p>{% for r in data.critical %}<span class="chip critical">{{ _("#{rank} {label} · {recipients} mailboxes · {not_remediated} not remediated", rank=r.rank, label=r.label[:60], recipients=r.recipients, not_remediated=r.not_remediated) }}</span> {% endfor %}</p>
 {% endif %}
-<h2>Campaigns by reach{% if data.truncated %} (top {{ data.rows|length }}){% endif %}</h2>
+<h2>{{ _("Campaigns by reach") }}{% if data.truncated %} {{ _("(top {rows})", rows=data.rows|length) }}{% endif %}</h2>
 {% if data.rows %}
 {% for r in data.rows %}
 <table style="margin-bottom:14px">
-  <tr><th colspan="6">#{{ r.rank }} <span class="chip {{ r.severity }}">{{ r.severity }}</span> {{ r.label }}</th></tr>
+  <tr><th colspan="6">#{{ r.rank }} <span class="chip {{ r.severity }}">{{ _(r.severity) }}</span> {{ r.label }}</th></tr>
   <tr>
-    <td><strong>{{ r.recipients }}</strong> mailboxes · {{ r.messages }} messages</td>
+    <td>{{ _("{recipients} mailboxes · {messages} messages", recipients=r.recipients|strong, messages=r.messages) }}</td>
     <td>{{ r.first_seen|fmt_dt(tz) }} → {{ r.last_seen|fmt_dt(tz) }} ({{ r.days_active }} d)</td>
-    <td>verdicts: {% for v, n in r.verdicts.items() %}{{ v }} {{ n }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
-    <td>auto-remediated {{ r.auto_remediated }} · retro {{ r.retro }} · <span class="{{ 'up' if r.not_remediated else '' }}">not remediated {{ r.not_remediated }}</span></td>
+    <td>{{ _("verdicts:") }} {% for v, n in r.verdicts.items() %}{{ v }} {{ n }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+    <td>{{ _("auto-remediated {auto_remediated} · retro {retro} ·", auto_remediated=r.auto_remediated, retro=r.retro) }} <span class="{{ 'up' if r.not_remediated else '' }}">{{ _("not remediated {not_remediated}", not_remediated=r.not_remediated) }}</span></td>
   </tr>
   <tr>
-    <td colspan="2">senders: {% for d, n in r.sender_domains %}{{ d }} ({{ n }}){% if not loop.last %}, {% endif %}{% endfor %}</td>
-    <td>techniques: {% for t, n in r.techniques %}{{ t }} ({{ n }}){% if not loop.last %}, {% endif %}{% else %}–{% endfor %}</td>
-    <td>URL hosts: {% for h, n in r.url_hosts %}{{ h }} ({{ n }}){% if not loop.last %}, {% endif %}{% else %}–{% endfor %}</td>
+    <td colspan="2">{{ _("senders:") }} {% for d, n in r.sender_domains %}{{ d }} ({{ n }}){% if not loop.last %}, {% endif %}{% endfor %}</td>
+    <td>{{ _("techniques:") }} {% for t, n in r.techniques %}{{ t }} ({{ n }}){% if not loop.last %}, {% endif %}{% else %}–{% endfor %}</td>
+    <td>{{ _("URL hosts:") }} {% for h, n in r.url_hosts %}{{ h }} ({{ n }}){% if not loop.last %}, {% endif %}{% else %}–{% endfor %}</td>
   </tr>
   {% for m in r.samples %}
   <tr class="note"><td>{{ m.timestamp|fmt_dt(tz) }}</td><td>{{ m.from }}</td><td class="subj" title="{{ m.subject }}">{{ m.subject }}</td><td>{{ m.verdict }} · {{ m.action or 'no action' }}</td></tr>
   {% endfor %}
 </table>
 {% endfor %}
-{% else %}<p class="note">No campaigns: no two threat messages in the period shared a subject/sender, URL host or attachment.</p>{% endif %}
-<p class="note">Clustering links messages that share a normalised subject and sender domain, a URL host (generic hosting such as SharePoint or Google Drive excluded) or an attachment SHA-256. Critical = 3+ messages not remediated, or BEC reaching 3+ mailboxes.</p>
+{% else %}<p class="note">{{ _("No campaigns: no two threat messages in the period shared a subject/sender, URL host or attachment.") }}</p>{% endif %}
+<p class="note">{{ _("Clustering links messages that share a normalised subject and sender domain, a URL host (generic hosting such as SharePoint or Google Drive excluded) or an attachment SHA-256. Critical = 3+ messages not remediated, or BEC reaching 3+ mailboxes.") }}</p>
 {% endblock %}

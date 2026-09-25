@@ -55,6 +55,8 @@
               </select></div>
             <div><label class="field" for="f-{{ r.key }}">Format</label>
               <select id="f-{{ r.key }}" name="output_format" form="run-{{ r.key }}"><option value="pdf">PDF + HTML</option><option value="html">HTML only</option></select></div>
+            <div><label class="field" for="l-{{ r.key }}">Language</label>
+              <select id="l-{{ r.key }}" name="language" form="run-{{ r.key }}"><option value="">Tenant's language</option>{% for code, name in REPORT_LANGUAGES.items() %}<option value="{{ code }}">{{ name }}</option>{% endfor %}</select></div>
             <div class="wide"><label class="field" for="t-{{ r.key }}">E-mail to (optional)</label>
               <input id="t-{{ r.key }}" type="text" name="recipients" form="run-{{ r.key }}" placeholder="empty = archive only"></div>
             <div class="wide"><button type="submit" form="run-{{ r.key }}" class="small">{{ icon('play', 12) }} Run with these options</button></div>

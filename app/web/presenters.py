@@ -20,6 +20,7 @@ from datetime import datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from app.i18n import LANGUAGE_NAMES
 from app.models import ReportRun, utcnow
 
 
@@ -119,6 +120,8 @@ def run_view(run: ReportRun, *, definitions: dict[str, Any], tenant_names: dict[
         meta.append(run.delivery_note[0].lower() + run.delivery_note[1:].rstrip("."))
     elif not run.delivery_error:
         meta.append("archive only")
+    if run.language and run.language != "en":
+        meta.append(f"in {LANGUAGE_NAMES.get(run.language, run.language)}")
     return {
         "id": run.id,
         "report_key": run.report_key,

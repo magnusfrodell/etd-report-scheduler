@@ -29,6 +29,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.i18n import Translator
 from app.models import Tenant
 from app.reports.periods import Period
 
@@ -43,12 +44,25 @@ class ReportContext:
     timezone: str
     tenant: Tenant | None = None  # set for scope=tenant
     tenants: list[Tenant] = field(default_factory=list)  # set for scope=all
+    lang: str = "en"  # the report language (app.i18n.LANGUAGES)
+
+    @property
+    def tr(self) -> Translator:
+        return Translator(self.lang)
 
     @property
     def tenant_name(self) -> str:
         if self.tenant is not None:
             return self.tenant.name
-        return "All tenants"
+        return self.tr("All tenants")
+
+    @property
+    def period_label(self) -> str:
+        return self.tr.month(self.period.start) if self.period.kind == "monthly" else self.period.label
+
+    @property
+    def previous_label(self) -> str:
+        return self.tr.month(self.period.previous_start) if self.period.kind == "monthly" else self.period.previous_label
 
 
 BuildFn = Callable[[Session, ReportContext], dict[str, Any]]

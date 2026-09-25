@@ -3,6 +3,21 @@
 Database migrations run automatically at start-up. Every version runs as a single container
 with its state in the `/data` volume.
 
+## 0.10.0 - Report languages
+
+### Added
+- **Report languages** - reports, their PDFs and the report e-mails (subject included) in **English** or **Swedish**. Everything a customer reads is translated: headings, explanations, checks and recommendations. Month names and decimal separators follow the language; ETD's own terms (verdicts, technique names, sender signals) stay in English, as in the ETD console. The admin UI stays English.
+- **Choosing the language** - a default under Settings, a report language per tenant (reporting profile), a language per schedule (by default each tenant's own, so a schedule for all tenants sends each customer the report in their language), a language for a single Run now, and `language=` on `POST /api/reports/{report}/run` (an unknown code is refused). The archive notes the language of every report that is not in English.
+- **Translations as data** - gettext catalogs in `app/locale` (English text as the message id); adding a language is a translation job. See `docs/TRANSLATING.md`. Tests fail when a report text has no translation, a translation changes a placeholder, or a translated report shows a different number than the English one.
+
+### Fixed
+- **Tied items changed places between runs** - when techniques, domains or hosts had the same count, their order (and which ones made a shortened list, such as the three techniques per person in Very Attacked People) depended on Python's per-process hash seed. Ties are now ordered by name, so the same data always gives the same report.
+- **Tables ran off the PDF page** - in Very Attacked People the last column was cut off, and in Exposure and dwell time long subjects pushed the last column past the page edge. Headers of numeric columns can now wrap, long addresses can break and subjects wrap in the PDF (e-mails still shorten them). A test checks every report in every language for content past the page edge.
+
+### Upgrade notes
+- Migration 0009 adds a language to schedules and report runs. Existing schedules use each tenant's language, and tenants use the installation default, English - so reports stay English until you choose otherwise.
+- New dependency: Babel (message catalogs and month names), included in the image and the locked `requirements.txt`.
+
 ## 0.9.0 - Demo mode
 
 ### Added

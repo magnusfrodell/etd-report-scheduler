@@ -29,7 +29,15 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.reports import repo
-from app.reports.analysis import attack_score, cluster_campaigns, recipients_of, technique_types
+from app.reports.analysis import (
+    MASS_MIN_RECIPIENTS,
+    TARGETED_MAX_RECIPIENTS,
+    attack_score,
+    by_count,
+    cluster_campaigns,
+    recipients_of,
+    technique_types,
+)
 from app.reports.base import ReportContext
 from app.settings_store import THREAT_VERDICTS, load_settings
 from app.tenant_profile import get_profile
@@ -65,6 +73,7 @@ def _index_for(messages) -> dict[str, dict[str, Any]]:
 
 
 def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
+    tr = ctx.tr
     assert ctx.tenant is not None, "vap_index is a per-tenant report"
     p = ctx.period
     tid = ctx.tenant.id
@@ -99,8 +108,8 @@ def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
                 "previous_rank": pr,
                 "messages": e["messages"],
                 "verdicts": dict(e["verdicts"]),
-                "techniques": [t for t, _ in e["techniques"].most_common(3)],
-                "reasons": [r for r, _ in e["reasons"].most_common(6)],
+                "techniques": [t for t, _ in by_count(e["techniques"], 3)],
+                "reasons": [r for r, _ in by_count(e["reasons"], 6)],
                 "campaigns": len(e["campaigns"]),
                 "retro": e["retro"],
                 "unremediated": e["unremediated"],
@@ -125,6 +134,7 @@ def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
         "attacked_vips": attacked_vips,
         "vip_count": len(vips),
         "with_unremediated": sum(1 for e in current.values() if e["unremediated"]),
-        "technique_totals": technique_totals.most_common(8),
-        "scoring": {"bec": 10, "malicious": 8, "phishing": 6, "scam": 5, "severity": "+2/+4/+5 medium/high/critical", "impersonation": "+4", "retro": "+3", "unremediated": "+5", "targeted": "×1.5 (≤3 recipients)", "mass": "×0.5 (≥20 recipients)"},
+        "technique_totals": by_count(technique_totals, 8),
+        "scoring": {"bec": 10, "malicious": 8, "phishing": 6, "scam": 5, "severity": tr("+2/+4/+5 medium/high/critical"), "impersonation": "+4", "retro": "+3", "unremediated": "+5", "targeted": tr("×{factor} (≤{n} recipients)", factor=1.5, n=TARGETED_MAX_RECIPIENTS),
+                    "mass": tr("×{factor} (≥{n} recipients)", factor=0.5, n=MASS_MIN_RECIPIENTS)},
     }

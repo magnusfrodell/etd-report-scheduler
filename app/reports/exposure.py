@@ -56,6 +56,7 @@ def _summary(values: list[float]) -> dict[str, Any]:
 
 
 def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
+    tr = ctx.tr
     assert ctx.tenant is not None, "exposure is a per-tenant report"
     p = ctx.period
     now = ctx.generated_at or utcnow()
@@ -92,13 +93,13 @@ def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
         {
             "timestamp": m.timestamp,
             "to_verdict": fmt_hours(hours_between(m.timestamp, m.verdict_timestamp)),
-            "to_action": fmt_hours(hours_between(m.timestamp, m.action_timestamp)) if m.action_timestamp else "not remediated",
+            "to_action": fmt_hours(hours_between(m.timestamp, m.action_timestamp)) if m.action_timestamp else tr("not remediated"),
             "from": m.from_address or m.envelope_from,
             "recipients": len(set(m.mailboxes or m.to_addresses or [])),
             "subject": m.subject,
             "verdict": m.verdict,
             "original_verdict": m.original_verdict,
-            "action": f"{m.action_type} → {m.action_folder}" if m.action_type else "none",
+            "action": f"{m.action_type} → {m.action_folder}" if m.action_type else tr.pgettext("action", "none"),
         }
         for m in sorted(retro, key=lambda m: -(hours_between(m.timestamp, m.action_timestamp) or hours_between(m.timestamp, now) or 0))[:MAX_LIST]
     ]

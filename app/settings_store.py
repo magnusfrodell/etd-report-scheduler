@@ -57,6 +57,7 @@ class RuntimeSettings:
     audit_retention_days: int = 730  # audit trail and verdict changes; ETD itself keeps 30 days
     archive_retention_days: int = 400  # archived reports: rows and files
     alert_recipients: str = ""  # failed scheduled reports and stalled collection; empty = no alerts
+    report_language: str = "en"  # default report language; tenants and schedules can override it
     backup_keep: int = 7  # nightly database backups kept in DATA_DIR/backups; 0 = off
     base_url: str = ""
 

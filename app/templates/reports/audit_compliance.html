@@ -1,71 +1,71 @@
 {% extends "email/base_report.html" %}
 {% block body %}
-<h2>Summary · {{ ctx.period.label }}</h2>
+<h2>{{ _("Summary · {period_label}", period_label=ctx.period_label) }}</h2>
 <table class="kpis"><tr>
-  <td class="kpi"><div class="v">{{ data.coverage.pct }} %</div><div class="l">Audit log collected</div><div class="d"><span class="note">{{ data.coverage.covered_hours }} of {{ data.coverage.hours }} hours</span></div></td>
-  <td class="kpi"><div class="v">{{ data.total|fmt_int }}</div><div class="l">Audit events</div><div class="d"><span class="note">{{ data.previous_total }} previous period</span></div></td>
-  <td class="kpi"><div class="v">{{ data.privileged_count }}</div><div class="l">Privileged changes</div></td>
-  <td class="kpi"><div class="v">{{ data.failed_count }}</div><div class="l">Failed actions</div></td>
+  <td class="kpi"><div class="v">{{ data.coverage.pct }} %</div><div class="l">{{ _("Audit log collected") }}</div><div class="d"><span class="note">{{ _("{covered_hours} of {hours} hours", covered_hours=data.coverage.covered_hours, hours=data.coverage.hours) }}</span></div></td>
+  <td class="kpi"><div class="v">{{ data.total|fmt_int }}</div><div class="l">{{ _("Audit events") }}</div><div class="d"><span class="note">{{ _("{previous_total} previous period", previous_total=data.previous_total) }}</span></div></td>
+  <td class="kpi"><div class="v">{{ data.privileged_count }}</div><div class="l">{{ _("Privileged changes") }}</div></td>
+  <td class="kpi"><div class="v">{{ data.failed_count }}</div><div class="l">{{ _("Failed actions") }}</div></td>
 </tr></table>
 
-<h2>How completely the audit log was collected</h2>
+<h2>{{ _("How completely the audit log was collected") }}</h2>
 {% if not data.log_export_enabled %}
-<p><span class="chip critical">not collected</span> Log Export collection is switched off in Settings.</p>
+<p><span class="chip critical">{{ _("not collected") }}</span> {{ _("Log Export collection is switched off in Settings.") }}</p>
 {% else %}
-<p>Collected from {{ data.coverage.first|fmt_dt if data.coverage.first else '–' }} to {{ data.coverage.cursor|fmt_dt if data.coverage.cursor else '–' }} (status: {{ data.coverage.status or 'pending' }}). ETD keeps audit logs for 30 days; this tool keeps them for {{ data.retention_days }} days.</p>
+<p>{{ _("Collected from {first} to {cursor} (status: {status}). ETD keeps audit logs for 30 days; this tool keeps them for {retention_days} days.", first=data.coverage.first|fmt_dt if data.coverage.first else '–', cursor=data.coverage.cursor|fmt_dt if data.coverage.cursor else '–', status=data.coverage.status or 'pending', retention_days=data.retention_days) }}</p>
 {% if data.coverage.note %}<p class="note">{{ data.coverage.note }}</p>{% endif %}
-<p class="note">Coverage is the share of the period for which this tool fetched Log Export without known gaps. It shows what was collected, not that ETD exported every event.</p>
-{% if data.coverage.partial_files %}<p class="note"><span class="chip warning">incomplete</span> {{ data.coverage.partial_files }} log file(s) in the period had {{ data.coverage.unreadable_lines }} unreadable line(s); the events on those lines are missing.</p>{% endif %}
-{% if not data.coverage.audit_files and data.coverage.pct %}<p class="note">No audit log files were received for the period. Either nothing was changed in ETD, or audit logs are not enabled in ETD's export preferences - the two cannot be told apart here.</p>{% endif %}
+<p class="note">{{ _("Coverage is the share of the period for which this tool fetched Log Export without known gaps. It shows what was collected, not that ETD exported every event.") }}</p>
+{% if data.coverage.partial_files %}<p class="note"><span class="chip warning">{{ _("incomplete") }}</span> {{ _("{partial_files} log file(s) in the period had {unreadable_lines} unreadable line(s); the events on those lines are missing.", partial_files=data.coverage.partial_files, unreadable_lines=data.coverage.unreadable_lines) }}</p>{% endif %}
+{% if not data.coverage.audit_files and data.coverage.pct %}<p class="note">{{ _("No audit log files were received for the period. Either nothing was changed in ETD, or audit logs are not enabled in ETD's export preferences - the two cannot be told apart here.") }}</p>{% endif %}
 {% endif %}
 {% if data.coverage.gaps %}
 <table>
-  <tr><th>Gap from</th><th>Gap to</th></tr>
+  <tr><th>{{ _("Gap from") }}</th><th>{{ _("Gap to") }}</th></tr>
   {% for g in data.coverage.gaps %}<tr><td>{{ g.start|fmt_dt }}</td><td>{{ g.end|fmt_dt }}</td></tr>{% endfor %}
 </table>
-<p class="note">Gaps arise when the collector was stopped for longer than ETD's 30-day retention; they cannot be filled afterwards.</p>
+<p class="note">{{ _("Gaps arise when the collector was stopped for longer than ETD's 30-day retention; they cannot be filled afterwards.") }}</p>
 {% endif %}
 
-<h2>Activity by type</h2>
+<h2>{{ _("Activity by type") }}</h2>
 {% if data.group_rows %}
 <table>
-  <tr><th>Type</th><th class="num">Events</th><th class="num">Previous</th></tr>
-  {% for r in data.group_rows %}<tr><td>{{ r.group }}</td><td class="num">{{ r.events }}</td><td class="num">{{ r.previous }}</td></tr>{% endfor %}
+  <tr><th>{{ _("Type") }}</th><th class="num">{{ _("Events") }}</th><th class="num">{{ _("Previous") }}</th></tr>
+  {% for r in data.group_rows %}<tr><td>{{ _(r.group) }}</td><td class="num">{{ r.events }}</td><td class="num">{{ r.previous }}</td></tr>{% endfor %}
 </table>
-{% else %}<p class="note">No audit events in this period.</p>{% endif %}
+{% else %}<p class="note">{{ _("No audit events in this period.") }}</p>{% endif %}
 
-<h2>Privileged changes</h2>
+<h2>{{ _("Privileged changes") }}</h2>
 {% if data.privileged %}
 <table>
-  <tr><th>Time</th><th>Who</th><th>Via</th><th>IP</th><th>Type</th><th>Action</th><th>Status</th><th>Detail</th></tr>
-  {% for e in data.privileged %}<tr><td>{{ e.timestamp|fmt_dt }}</td><td>{{ e.who }}</td><td>{{ e.via }}</td><td>{{ e.ip or '' }}</td><td>{{ e.group }}</td><td>{{ e.action }}</td><td>{{ e.status }}</td><td>{{ e.detail }}</td></tr>{% endfor %}
+  <tr><th>{{ _("Time") }}</th><th>{{ _("Who") }}</th><th>{{ _("Via") }}</th><th>{{ _("IP") }}</th><th>{{ _("Type") }}</th><th>{{ _("Action") }}</th><th>{{ _("Status") }}</th><th>{{ _("Detail") }}</th></tr>
+  {% for e in data.privileged %}<tr><td>{{ e.timestamp|fmt_dt }}</td><td>{{ e.who }}</td><td>{{ _(e.via) }}</td><td>{{ e.ip or '' }}</td><td>{{ _(e.group) }}</td><td>{{ e.action }}</td><td>{{ e.status }}</td><td>{{ e.detail }}</td></tr>{% endfor %}
 </table>
-{% else %}<p class="note">No API-client, policy, configuration or user-administration changes in this period.</p>{% endif %}
+{% else %}<p class="note">{{ _("No API-client, policy, configuration or user-administration changes in this period.") }}</p>{% endif %}
 
-<h2>Verdict changes and remediation</h2>
-<p>Reclassifications by method: {% for k, v in data.reclass_by_method.items() %}{{ k }} {{ v }}{% if not loop.last %}, {% endif %}{% else %}none{% endfor %}. Remediations by method: {% for k, v in data.remed_by_method.items() %}{{ k }} {{ v }}{% if not loop.last %}, {% endif %}{% else %}none{% endfor %}.</p>
-<p>Analysts released {{ data.to_neutral }} message(s) as neutral (possible false positives{% if data.fp_rate is not none %}, {{ data.fp_rate }} % of {{ data.threats }} threats{% endif %}) and escalated {{ data.to_threat }} to a threat verdict (possible false negatives).</p>
+<h2>{{ _("Verdict changes and remediation") }}</h2>
+<p>{{ _("Reclassifications by method: {reclassifications}. Remediations by method: {remediations}.", reclassifications=data.reclass_by_method|pairs or _("none"), remediations=data.remed_by_method|pairs or _("none")) }}</p>
+<p>{% if data.fp_rate is not none %}{{ _("Analysts released {to_neutral} message(s) as neutral (possible false positives, {fp_rate} % of {threats} threats) and escalated {to_threat} to a threat verdict (possible false negatives).", to_neutral=data.to_neutral, fp_rate=data.fp_rate|dec, threats=data.threats, to_threat=data.to_threat) }}{% else %}{{ _("Analysts released {to_neutral} message(s) as neutral (possible false positives) and escalated {to_threat} to a threat verdict (possible false negatives).", to_neutral=data.to_neutral, to_threat=data.to_threat) }}{% endif %}</p>
 {% if data.per_user %}
 <table>
-  <tr><th>Who</th><th class="num">Reclassified</th><th class="num">To neutral</th><th class="num">To threat</th><th class="num">Remediated</th></tr>
+  <tr><th>{{ _("Who") }}</th><th class="num">{{ _("Reclassified") }}</th><th class="num">{{ _("To neutral") }}</th><th class="num">{{ _("To threat") }}</th><th class="num">{{ _("Remediated") }}</th></tr>
   {% for u in data.per_user %}<tr><td>{{ u.who }}</td><td class="num">{{ u.reclassified }}</td><td class="num">{{ u.to_neutral }}</td><td class="num">{{ u.to_threat }}</td><td class="num">{{ u.remediated }}</td></tr>{% endfor %}
 </table>
 {% endif %}
 
-<h2>Who did what</h2>
+<h2>{{ _("Who did what") }}</h2>
 {% if data.actors %}
 <table>
-  <tr><th>Who</th><th class="num">Events</th><th>Main activity</th><th>Via</th><th class="num">IPs</th><th class="num">Failed</th><th>First / last</th></tr>
-  {% for a in data.actors %}<tr><td>{{ a.label }}</td><td class="num">{{ a.events }}</td><td>{% for g, n in a.groups.items() %}{{ g }} {{ n }}{% if not loop.last %}, {% endif %}{% endfor %}</td><td>{% for k, n in a.agents.items() %}{{ k }}{% if not loop.last %}, {% endif %}{% endfor %}</td><td class="num">{{ a.ip_count }}</td><td class="num">{{ a.failed }}</td><td>{{ a.first|fmt_dt }}<br>{{ a.last|fmt_dt }}</td></tr>{% endfor %}
+  <tr><th>{{ _("Who") }}</th><th class="num">{{ _("Events") }}</th><th>{{ _("Main activity") }}</th><th>{{ _("Via") }}</th><th class="num">{{ _("IPs") }}</th><th class="num">{{ _("Failed") }}</th><th>{{ _("First / last") }}</th></tr>
+  {% for a in data.actors %}<tr><td>{{ a.label }}</td><td class="num">{{ a.events }}</td><td>{% for g, n in a.groups.items() %}{{ _(g) }} {{ n }}{% if not loop.last %}, {% endif %}{% endfor %}</td><td>{% for k, n in a.agents.items() %}{{ _(k) }}{% if not loop.last %}, {% endif %}{% endfor %}</td><td class="num">{{ a.ip_count }}</td><td class="num">{{ a.failed }}</td><td>{{ a.first|fmt_dt }}<br>{{ a.last|fmt_dt }}</td></tr>{% endfor %}
 </table>
-{% if data.unlabelled_users %}<p class="note">ETD's audit log identifies users by id only. Name them in the tenant's reporting profile (user labels): {{ data.unlabelled_users|join(', ') }}</p>{% endif %}
-{% else %}<p class="note">No actors in this period.</p>{% endif %}
+{% if data.unlabelled_users %}<p class="note">{{ _("ETD's audit log identifies users by id only. Name them in the tenant's reporting profile (user labels): {unlabelled_users}", unlabelled_users=data.unlabelled_users|join(', ')) }}</p>{% endif %}
+{% else %}<p class="note">{{ _("No actors in this period.") }}</p>{% endif %}
 
-<h2>Failed actions</h2>
+<h2>{{ _("Failed actions") }}</h2>
 {% if data.failed %}
 <table>
-  <tr><th>Time</th><th>Who</th><th>Via</th><th>IP</th><th>Action</th><th>Status</th><th>Detail</th></tr>
+  <tr><th>{{ _("Time") }}</th><th>{{ _("Who") }}</th><th>{{ _("Via") }}</th><th>{{ _("IP") }}</th><th>{{ _("Action") }}</th><th>{{ _("Status") }}</th><th>{{ _("Detail") }}</th></tr>
   {% for e in data.failed %}<tr><td>{{ e.timestamp|fmt_dt }}</td><td>{{ e.who }}</td><td>{{ e.via }}</td><td>{{ e.ip or '' }}</td><td>{{ e.action }}</td><td>{{ e.status }}</td><td>{{ e.detail }}</td></tr>{% endfor %}
 </table>
-{% else %}<p class="note">No failed actions in this period.</p>{% endif %}
+{% else %}<p class="note">{{ _("No failed actions in this period.") }}</p>{% endif %}
 {% endblock %}

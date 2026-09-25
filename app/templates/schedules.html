@@ -9,7 +9,7 @@
     <tr><th>Report</th><th>For</th><th>Cron ({{ settings.timezone }})</th><th>Recipients</th><th>Format</th><th>Last run</th><th>Next run</th><th>Actions</th></tr>
     {% for row in rows %}{% set s = row.schedule %}
     <tr>
-      <td>{{ reports[s.report_key].name if s.report_key in reports else s.report_key }}{% if s.only_with_findings %}<div class="muted small">only when there are findings</div>{% endif %}</td>
+      <td>{{ reports[s.report_key].name if s.report_key in reports else s.report_key }}{% if s.only_with_findings %}<div class="muted small">only when there are findings</div>{% endif %}{% if s.language %}<div class="muted small">in {{ LANGUAGE_NAMES.get(s.language, s.language) }}</div>{% endif %}</td>
       <td>{{ row.target }}</td>
       <td><code>{{ s.cron }}</code></td>
       <td>{{ row.recipients }}{% if row.without_recipients %}<div class="warn-text">{{ row.without_recipients }} tenant(s) have no report recipients and get archive-only reports</div>{% endif %}</td>
@@ -54,6 +54,8 @@
         <option value="tenant">Each tenant's report recipients</option>
         <option value="both">Both</option>
       </select></div>
+    <div><label class="field" for="language">Language</label>
+      <select id="language" name="language"><option value="">Each tenant's language</option>{% for code, name in REPORT_LANGUAGES.items() %}<option value="{{ code }}">{{ name }}</option>{% endfor %}</select></div>
     <div><label class="field">&nbsp;</label><label class="checks"><input type="checkbox" name="only_with_findings"> Only send when there are findings</label></div>
     <div class="wide"><label class="field" for="recipients">Recipients (comma separated; reports across all tenants fall back to the partner recipients in Settings)</label><input id="recipients" name="recipients" type="text" placeholder="soc@example.com, ciso@example.com"></div>
     <p class="wide muted small">A tenant's group and report recipients are set in its reporting profile on the Tenants page. "Only when there are findings" applies to {{ findings_reports|join(', ') }}; the report is still generated and archived.</p>

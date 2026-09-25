@@ -1,18 +1,18 @@
 {% extends "email/base_report.html" %}
 {% block body %}
-<h2>Overall <span class="chip {{ data.overall }}">{{ data.overall }}</span></h2>
+<h2>{{ _("Overall") }} <span class="chip {{ data.overall }}">{{ _(data.overall) }}</span></h2>
 <table class="kpis"><tr>
-  <td class="kpi"><div class="v">{{ data.today_total|fmt_int }}</div><div class="l">Messages scanned {{ ctx.period.label }}</div></td>
-  <td class="kpi"><div class="v">{{ data.baseline_avg|fmt_int }}</div><div class="l">30-day daily average ({{ data.baseline_days }} days)</div></td>
-  <td class="kpi"><div class="v">{{ data.today_threats }}</div><div class="l">Threats</div></td>
-  <td class="kpi"><div class="v">{{ data.stats_collected_at|fmt_dt(tz) }}</div><div class="l">Statistics last collected</div></td>
+  <td class="kpi"><div class="v">{{ data.today_total|fmt_int }}</div><div class="l">{{ _("Messages scanned {period_label}", period_label=ctx.period_label) }}</div></td>
+  <td class="kpi"><div class="v">{{ data.baseline_avg|fmt_int }}</div><div class="l">{{ _("30-day daily average ({baseline_days} days)", baseline_days=data.baseline_days) }}</div></td>
+  <td class="kpi"><div class="v">{{ data.today_threats }}</div><div class="l">{{ _("Threats") }}</div></td>
+  <td class="kpi"><div class="v">{{ data.stats_collected_at|fmt_dt(tz) }}</div><div class="l">{{ _("Statistics last collected") }}</div></td>
 </tr></table>
-<h2>Checks</h2>
+<h2>{{ _("Checks") }}</h2>
 <table>
-  <tr><th>Check</th><th>Status</th><th>Detail</th></tr>
+  <tr><th>{{ _("Check") }}</th><th>{{ _("Status") }}</th><th>{{ _("Detail") }}</th></tr>
   {% for c in data.checks %}
-  <tr><td>{{ c.name }}</td><td><span class="chip {{ c.status }}">{{ c.status }}</span></td><td>{{ c.detail }}</td></tr>
+  <tr><td>{{ c.name }}</td><td><span class="chip {{ c.status }}">{{ _(c.status) }}</span></td><td>{{ c.detail }}</td></tr>
   {% endfor %}
 </table>
-<p class="note">A volume close to zero usually means the Microsoft 365 journal rule or the ETD connector stopped delivering mail to ETD - the ETD console itself does not alert on this.</p>
+<p class="note">{{ _("A volume close to zero usually means the Microsoft 365 journal rule or the ETD connector stopped delivering mail to ETD - the ETD console itself does not alert on this.") }}</p>
 {% endblock %}

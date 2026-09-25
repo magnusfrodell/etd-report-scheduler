@@ -30,6 +30,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.i18n import LANGUAGES
 from app.models import ConvictedMessage, SenderDomainDaily, Tenant, utcnow
 from app.reports.domains import FREEMAIL, registrable
 
@@ -80,6 +81,7 @@ def get_profile(tenant: Tenant | None) -> dict[str, Any]:
         "group": str(raw.get("group") or "").strip(),  # schedules can cover every tenant in a group
         "report_recipients": list(raw.get("report_recipients") or []),  # the customer's contacts for scheduled reports
         "brand_id": raw.get("brand_id") if isinstance(raw.get("brand_id"), int) else None,  # None = the default brand
+        "language": raw.get("language") if raw.get("language") in LANGUAGES else "",  # "" = the installation default
     }
 
 

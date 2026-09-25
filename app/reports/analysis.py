@@ -32,6 +32,7 @@ from datetime import datetime
 from typing import Any
 from urllib.parse import urlparse
 
+from app.i18n import N_, local_decimal
 from app.models import ConvictedMessage
 from app.settings_store import THREAT_VERDICTS
 
@@ -57,6 +58,14 @@ _WS = re.compile(r"\s+")
 
 
 # ------------------------------------------------------------- normalisers
+
+def by_count(counter: Counter, n: int | None = None) -> list[tuple[Any, int]]:
+    """Counter.most_common with a fixed order for ties (by key). Counter keeps insertion order for equal
+    counts, and that order often comes from sets of strings, which Python orders differently in every
+    process - so tied techniques or domains used to swap places between runs of the same report."""
+    items = sorted(counter.items(), key=lambda kv: (-kv[1], str(kv[0])))
+    return items if n is None else items[:n]
+
 def normalize_subject(subject: str | None) -> str:
     if not subject:
         return ""
@@ -137,31 +146,35 @@ def is_threat(msg: ConvictedMessage) -> bool:
 
 
 # ---------------------------------------------------------------- scoring
+SEVERITY_REASONS = {"low": N_("low severity"), "medium": N_("medium severity"), "high": N_("high severity"),
+                    "critical": N_("critical severity")}
+
+
 def attack_score(msg: ConvictedMessage) -> tuple[float, list[str]]:
     """Points this message contributes to each of its recipients, with the reasons."""
     reasons: list[str] = []
     score = float(VERDICT_WEIGHT.get(msg.verdict or "", 0))
-    reasons.append(msg.verdict or "unknown")
+    reasons.append(msg.verdict or N_("unknown"))
     sev = technique_severity(msg)
     if sev and SEVERITY_BONUS.get(sev):
         score += SEVERITY_BONUS[sev]
-        reasons.append(f"{sev} severity")
+        reasons.append(SEVERITY_REASONS.get(sev, f"{sev} severity"))
     if any("imperson" in t.lower() or "high impact" in t.lower() for t in technique_types(msg)):
         score += IMPERSONATION_BONUS
-        reasons.append("impersonation")
+        reasons.append(N_("impersonation"))
     if msg.is_retro_verdict:
         score += RETRO_BONUS
-        reasons.append("delivered before verdict")
+        reasons.append(N_("delivered before verdict"))
     if not msg.action_type:
         score += UNREMEDIATED_BONUS
-        reasons.append("not remediated")
+        reasons.append(N_("not remediated"))
     n = len(recipients_of(msg))
     if 0 < n <= TARGETED_MAX_RECIPIENTS:
         score *= 1.5
-        reasons.append("targeted")
+        reasons.append(N_("targeted"))
     elif n >= MASS_MIN_RECIPIENTS:
         score *= 0.5
-        reasons.append("mass mailing")
+        reasons.append(N_("mass mailing"))
     return round(score, 1), reasons
 
 
@@ -189,11 +202,11 @@ class Campaign:
     @property
     def label(self) -> str:
         subjects = Counter((m.subject or "(no subject)") for m in self.messages)
-        return subjects.most_common(1)[0][0]
+        return by_count(subjects, 1)[0][0]
 
     @property
     def sender_domains(self) -> list[tuple[str, int]]:
-        return Counter(email_domain(m.from_address or m.envelope_from) or "(unknown)" for m in self.messages).most_common(5)
+        return by_count(Counter(email_domain(m.from_address or m.envelope_from) or "(unknown)" for m in self.messages), 5)
 
     @property
     def verdicts(self) -> dict[str, int]:
@@ -204,14 +217,14 @@ class Campaign:
         c: Counter[str] = Counter()
         for m in self.messages:
             c.update(set(technique_types(m)))
-        return c.most_common(5)
+        return by_count(c, 5)
 
     @property
     def url_hosts(self) -> list[tuple[str, int]]:
         c: Counter[str] = Counter()
         for m in self.messages:
             c.update({h for h in (url_host(u) for u in (m.urls or [])) if h})
-        return c.most_common(5)
+        return by_count(c, 5)
 
     @property
     def auto_remediated(self) -> int:
@@ -310,5 +323,5 @@ def fmt_hours(h: float | None) -> str:
     if h < 1:
         return f"{int(round(h * 60))} min"
     if h < 48:
-        return f"{h:.1f} h"
-    return f"{h / 24:.1f} d"
+        return local_decimal(f"{h:.1f} h")
+    return local_decimal(f"{h / 24:.1f} d")

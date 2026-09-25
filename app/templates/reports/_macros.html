@@ -1,5 +1,5 @@
 {% macro delta(row) -%}
-  {% if row.pct is none %}<span class="flat">new</span>
+  {% if row.pct is none %}<span class="flat">{{ _("new") }}</span>
   {% elif row.delta > 0 %}<span class="up">▲ {{ row.pct|fmt_pct }}</span>
   {% elif row.delta < 0 %}<span class="down">▼ {{ row.pct|fmt_pct }}</span>
   {% else %}<span class="flat">±0</span>{% endif %}

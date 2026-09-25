@@ -1,52 +1,52 @@
 {% extends "email/base_report.html" %}
 {% block body %}
-<h2>Summary · {{ ctx.period.label }}</h2>
+<h2>{{ _("Summary · {period_label}", period_label=ctx.period_label) }}</h2>
 <table class="kpis"><tr>
-  <td class="kpi"><div class="v">{{ data.counts.compromised }}</div><div class="l">Possibly compromised counterparties</div><div class="d"><span class="note">{{ data.counts.critical }} critical</span></div></td>
-  <td class="kpi"><div class="v">{{ data.counts.lookalikes }}</div><div class="l">Look-alike domains</div><div class="d"><span class="note">{{ data.counts.delivered_lookalikes }} delivered mail</span></div></td>
-  <td class="kpi"><div class="v">{{ data.counts.rare }}</div><div class="l">BEC/scam from new or rare senders</div></td>
-  <td class="kpi"><div class="v">{{ data.protected_count }}</div><div class="l">Protected domains</div><div class="d"><span class="note">{{ data.explicit|length }} listed · {{ data.established_count }} learned</span></div></td>
+  <td class="kpi"><div class="v">{{ data.counts.compromised }}</div><div class="l">{{ _("Possibly compromised counterparties") }}</div><div class="d"><span class="note">{{ _("{critical} critical", critical=data.counts.critical) }}</span></div></td>
+  <td class="kpi"><div class="v">{{ data.counts.lookalikes }}</div><div class="l">{{ _("Look-alike domains") }}</div><div class="d"><span class="note">{{ _("{delivered_lookalikes} delivered mail", delivered_lookalikes=data.counts.delivered_lookalikes) }}</span></div></td>
+  <td class="kpi"><div class="v">{{ data.counts.rare }}</div><div class="l">{{ _("BEC/scam from new or rare senders") }}</div></td>
+  <td class="kpi"><div class="v">{{ data.protected_count }}</div><div class="l">{{ _("Protected domains") }}</div><div class="d"><span class="note">{{ _("{explicit} listed · {established_count} learned", explicit=data.explicit|length, established_count=data.established_count) }}</span></div></td>
 </tr></table>
 
-<h2>Possibly compromised counterparties</h2>
+<h2>{{ _("Possibly compromised counterparties") }}</h2>
 {% if data.compromised %}
 <table>
-  <tr><th>Domain</th><th>Severity</th><th class="num">Threats</th><th class="num">Recipients</th><th>Why trusted</th><th>Signals</th><th>Senders</th><th>First / last</th></tr>
+  <tr><th>{{ _("Domain") }}</th><th>{{ _("Severity") }}</th><th class="num">{{ _("Threats") }}</th><th class="num">{{ _("Recipients") }}</th><th>{{ _("Why trusted") }}</th><th>{{ _("Signals") }}</th><th>{{ _("Senders") }}</th><th>{{ _("First / last") }}</th></tr>
   {% for r in data.compromised %}
-  <tr><td>{{ r.domain }}</td><td><span class="chip {{ r.severity }}">{{ r.severity }}</span></td><td class="num">{{ r.messages }}{% if r.financial %}<div class="note">{{ r.financial }} BEC/scam</div>{% endif %}</td><td class="num">{{ r.recipients }}</td><td>{{ r.reasons|join('; ') }}</td><td>{% if r.reply_to_elsewhere %}Reply-To to another domain ({{ r.reply_to_elsewhere }})<br>{% endif %}{% if r.unremediated %}<span class="up">Not remediated ({{ r.unremediated }})</span>{% endif %}{% if not r.reply_to_elsewhere and not r.unremediated %}–{% endif %}</td><td>{{ r.senders|join(', ') }}</td><td>{{ r.first|fmt_dt }}<br>{{ r.last|fmt_dt }}</td></tr>
+  <tr><td>{{ r.domain }}</td><td><span class="chip {{ r.severity }}">{{ _(r.severity) }}</span></td><td class="num">{{ r.messages }}{% if r.financial %}<div class="note">{{ _("{financial} BEC/scam", financial=r.financial) }}</div>{% endif %}</td><td class="num">{{ r.recipients }}</td><td>{{ r.reasons|join('; ') }}</td><td>{% if r.reply_to_elsewhere %}{{ _("Reply-To to another domain ({reply_to_elsewhere})", reply_to_elsewhere=r.reply_to_elsewhere) }}<br>{% endif %}{% if r.unremediated %}<span class="up">{{ _("Not remediated ({unremediated})", unremediated=r.unremediated) }}</span>{% endif %}{% if not r.reply_to_elsewhere and not r.unremediated %}–{% endif %}</td><td>{{ r.senders|join(', ') }}</td><td>{{ r.first|fmt_dt }}<br>{{ r.last|fmt_dt }}</td></tr>
   {% endfor %}
 </table>
-<p class="note">Threats from a listed vendor, from a domain with a history of clean mail, or that ETD tags as a frequent sender for the recipient. Vendor email compromise usually looks like this: a real account, a plausible thread and a changed bank account.</p>
-{% else %}<p class="note">No threats from trusted counterparties in this period.</p>{% endif %}
+<p class="note">{{ _("Threats from a listed vendor, from a domain with a history of clean mail, or that ETD tags as a frequent sender for the recipient. Vendor email compromise usually looks like this: a real account, a plausible thread and a changed bank account.") }}</p>
+{% else %}<p class="note">{{ _("No threats from trusted counterparties in this period.") }}</p>{% endif %}
 
-<h2>Look-alike domains</h2>
+<h2>{{ _("Look-alike domains") }}</h2>
 {% if data.lookalikes %}
 <table>
-  <tr><th>Domain</th><th>Imitates</th><th>Method</th><th class="num">Convicted</th><th class="num">Delivered</th><th class="num">As Reply-To</th><th class="num">Recipients</th><th>Severity</th></tr>
+  <tr><th>{{ _("Domain") }}</th><th>{{ _("Imitates") }}</th><th>{{ _("Method") }}</th><th class="num">{{ _("Convicted") }}</th><th class="num">{{ _("Delivered") }}</th><th class="num">{{ _("As Reply-To") }}</th><th class="num">{{ _("Recipients") }}</th><th>{{ _("Severity") }}</th></tr>
   {% for r in data.lookalikes %}
-  <tr><td>{{ r.domain }}{% if r.seen_as %}<div class="note">as {{ r.seen_as }}</div>{% endif %}</td><td>{{ r.protected }} <span class="note">{{ r.target }}</span></td><td>{{ r.method }}{% if r.distance %} ({{ r.distance }}){% endif %}</td><td class="num">{{ r.threats }}</td><td class="num">{{ r.delivered if data.has_logs else '–' }}</td><td class="num">{{ r.reply_to }}</td><td class="num">{{ r.recipients }}</td><td><span class="chip {{ r.severity }}">{{ r.severity }}</span></td></tr>
+  <tr><td>{{ r.domain }}{% if r.seen_as %}<div class="note">{{ _("as {seen_as}", seen_as=r.seen_as) }}</div>{% endif %}</td><td>{{ r.protected }} <span class="note">{{ r.target }}</span></td><td>{{ r.method }}{% if r.distance %} ({{ r.distance }}){% endif %}</td><td class="num">{{ r.threats }}</td><td class="num">{{ r.delivered if data.has_logs else '–' }}</td><td class="num">{{ r.reply_to }}</td><td class="num">{{ r.recipients }}</td><td><span class="chip {{ r.severity }}">{{ _(r.severity) }}</span></td></tr>
   {% endfor %}
 </table>
-<p class="note">Checked against {{ data.protected_count }} protected domain(s): own domains, listed vendors and the most active counterparties. Methods: TLD swap, homoglyph, typosquat (edit distance), combosquat and subdomain spoof. Delivered counts mail that was not convicted (Log Export). Heuristic - verify before blocking.</p>
-{% else %}<p class="note">No look-alikes of protected domains seen in this period.</p>{% endif %}
+<p class="note">{{ _("Checked against {protected_count} protected domain(s): own domains, listed vendors and the most active counterparties. Methods: TLD swap, homoglyph, typosquat (edit distance), combosquat and subdomain spoof. Delivered counts mail that was not convicted (Log Export). Heuristic - verify before blocking.", protected_count=data.protected_count) }}</p>
+{% else %}<p class="note">{{ _("No look-alikes of protected domains seen in this period.") }}</p>{% endif %}
 
-<h2>New or rare senders with financial lures</h2>
+<h2>{{ _("New or rare senders with financial lures") }}</h2>
 {% if data.rare %}
 <table>
-  <tr><th>Domain</th><th class="num">Messages</th><th>Verdicts</th><th>Signals</th><th class="num">Recipients</th><th>Subjects</th></tr>
+  <tr><th>{{ _("Domain") }}</th><th class="num">{{ _("Messages") }}</th><th>{{ _("Verdicts") }}</th><th>{{ _("Signals") }}</th><th class="num">{{ _("Recipients") }}</th><th>{{ _("Subjects") }}</th></tr>
   {% for r in data.rare %}<tr><td>{{ r.domain }}</td><td class="num">{{ r.messages }}</td><td>{% for v, n in r.verdicts.items() %}{{ v }} {{ n }}{% if not loop.last %}, {% endif %}{% endfor %}</td><td>{{ r.signals|join(', ') }}</td><td class="num">{{ r.recipients }}</td><td>{{ r.subjects|join(' | ') }}</td></tr>{% endfor %}
 </table>
-{% else %}<p class="note">No BEC or scam from new or rare senders in this period.</p>{% endif %}
+{% else %}<p class="note">{{ _("No BEC or scam from new or rare senders in this period.") }}</p>{% endif %}
 
-<h2>Listed vendors</h2>
+<h2>{{ _("Listed vendors") }}</h2>
 {% if data.inventory %}
 <table>
-  <tr><th>Vendor domain</th><th class="num">Clean days</th><th class="num">Messages</th><th class="num">Threats</th><th class="num">Look-alikes</th><th class="num">Reply-To ≠ From</th><th>Last seen</th></tr>
+  <tr><th>{{ _("Vendor domain") }}</th><th class="num">{{ _("Clean days") }}</th><th class="num">{{ _("Messages") }}</th><th class="num">{{ _("Threats") }}</th><th class="num">{{ _("Look-alikes") }}</th><th class="num">{{ _("Reply-To ≠ From") }}</th><th>{{ _("Last seen") }}</th></tr>
   {% for r in data.inventory %}<tr><td>{{ r.domain }}</td><td class="num">{{ r.clean_days_before if data.has_logs else '–' }}</td><td class="num">{{ r.messages if data.has_logs else '–' }}</td><td class="num">{{ r.threats }}</td><td class="num">{{ r.lookalikes }}</td><td class="num">{{ r.reply_to_mismatch if data.has_logs else '–' }}</td><td>{{ r.last_seen or '–' }}</td></tr>{% endfor %}
 </table>
-{% else %}<p class="note">No vendors listed - add them in the tenant's reporting profile.</p>{% endif %}
-<p class="note">{% if data.has_logs %}Counterparty history is learned from Log Export (clean mail on at least 3 days before the period).{% else %}Without Log Export only listed vendors and ETD's frequent-sender signal are used.{% endif %}</p>
+{% else %}<p class="note">{{ _("No vendors listed - add them in the tenant's reporting profile.") }}</p>{% endif %}
+<p class="note">{% if data.has_logs %}{{ _("Counterparty history is learned from Log Export (clean mail on at least 3 days before the period).") }}{% else %}{{ _("Without Log Export only listed vendors and ETD's frequent-sender signal are used.") }}{% endif %}</p>
 
-<h2>Recommendations</h2>
-{% if data.recommendations %}<ul>{% for r in data.recommendations %}<li>{{ r }}</li>{% endfor %}</ul>{% else %}<p class="note">No specific recommendations for this period.</p>{% endif %}
+<h2>{{ _("Recommendations") }}</h2>
+{% if data.recommendations %}<ul>{% for r in data.recommendations %}<li>{{ r }}</li>{% endfor %}</ul>{% else %}<p class="note">{{ _("No specific recommendations for this period.") }}</p>{% endif %}
 {% endblock %}

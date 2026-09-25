@@ -13,4 +13,5 @@ cryptography>=42.0
 pydantic-settings>=2.3,<3.0
 itsdangerous>=2.2,<3.0
 dnspython>=2.6,<3.0
+babel>=2.14,<3.0  # report languages: message catalogs, localized month names
 weasyprint>=62.0 ; platform_system != "Windows"

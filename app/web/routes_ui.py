@@ -56,6 +56,7 @@ from app.delivery import archive as report_files
 from app.delivery.pdf import pdf_available, render_pdf
 from app.etd.factory import client_for_tenant
 from app.etd.regions import REGIONS
+from app.i18n import LANGUAGE_NAMES, LANGUAGES, normalize
 from app.models import (
     GLOBAL_ROLES,
     TENANT_ROLES,
@@ -97,6 +98,8 @@ templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent
 templates.env.globals["app_version"] = __version__
 templates.env.globals["REGIONS"] = REGIONS
 templates.env.globals["icon"] = icon
+templates.env.globals["REPORT_LANGUAGES"] = LANGUAGES
+templates.env.globals["LANGUAGE_NAMES"] = LANGUAGE_NAMES
 templates.env.globals["GLOBAL_ROLES"] = GLOBAL_ROLES
 templates.env.globals["TENANT_ROLES"] = TENANT_ROLES
 
@@ -339,6 +342,7 @@ def tenant_profile(
     group: str = Form(""),
     report_recipients: str = Form(""),
     brand_id: str = Form(""),
+    language: str = Form(""),
     db: Session = Depends(get_db),
     p: Principal = Depends(get_principal),
 ) -> Response:
@@ -349,7 +353,8 @@ def tenant_profile(
     contacts, bad_contacts = parse_addresses(report_recipients)
     tenant.profile = {"own_domains": own, "vendor_domains": vendors, "vip_addresses": vips, "user_labels": parse_labels(user_labels),
                       "group": " ".join(group.split())[:60], "report_recipients": contacts,
-                      "brand_id": int(brand_id) if brand_id.isdigit() and db.get(Brand, int(brand_id)) else None}
+                      "brand_id": int(brand_id) if brand_id.isdigit() and db.get(Brand, int(brand_id)) else None,
+                      "language": language if language in LANGUAGES else ""}
     db.commit()
     ignored = bad_own + bad_vendors + bad_vips + bad_contacts
     if ignored:
@@ -511,6 +516,7 @@ def schedule_create(
     output_format: str = Form("pdf"),
     recipient_mode: str = Form("fixed"),
     only_with_findings: str = Form(""),
+    language: str = Form(""),
     db: Session = Depends(get_db),
     p: Principal = Depends(get_principal),
 ) -> Response:
@@ -549,6 +555,7 @@ def schedule_create(
         tenant_id=tid, report_key=report_key, cron=cron, recipients=recipients.strip(), output_format="html" if output_format == "html" else "pdf",
         enabled=True, target=kind, target_group=group, recipient_mode=recipient_mode if recipient_mode in ("fixed", "tenant", "both") else "fixed",
         only_with_findings=only_with_findings == "on" and definition.has_findings is not None,
+        language=language if language in LANGUAGES else "",
     )
     db.add(schedule)
     db.commit()
@@ -958,6 +965,7 @@ def report_run_now(
     recipients: str = Form(""),
     output_format: str = Form("pdf"),
     tenant_id: str = Form(""),
+    language: str = Form(""),
     next: str = Form(""),
     db: Session = Depends(get_db),
     p: Principal = Depends(get_principal),
@@ -994,7 +1002,8 @@ def report_run_now(
             targets = list(allowed)
             label = f"{len(allowed)} tenant(s)"
     for tid in targets:
-        background.add_task(run_report, report_key, tenant_id=tid, recipients=to, output_format=fmt, deliver=bool(to), period_kind=period)
+        background.add_task(run_report, report_key, tenant_id=tid, recipients=to, output_format=fmt, deliver=bool(to), period_kind=period,
+                            language=language if language in LANGUAGES else None)
     how = f"and sent to {', '.join(to)}" if to else "(archive only, no e-mail)"
     return _redirect(back, f"'{definition.name}' started for {label} {how}.")
 
@@ -1063,6 +1072,7 @@ async def settings_save(request: Request, db: Session = Depends(get_db), p: Prin
         "audit_retention_days": max(90, int(str(form.get("audit_retention_days", "730")) or 730)),
         "archive_retention_days": max(30, int(str(form.get("archive_retention_days", "400")) or 400)),
         "alert_recipients": str(form.get("alert_recipients", "")).strip(),
+        "report_language": normalize(str(form.get("report_language", "en"))),
         "backup_keep": max(0, min(60, int(str(form.get("backup_keep", "7")) or 7))),
         "base_url": str(form.get("base_url", "")).strip(),
     }

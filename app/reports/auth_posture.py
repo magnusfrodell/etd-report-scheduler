@@ -34,9 +34,10 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.i18n import Translator
 from app.reports import domains as dns_posture
 from app.reports import repo
-from app.reports.analysis import email_domain
+from app.reports.analysis import by_count, email_domain
 from app.reports.base import ReportContext
 from app.reports.domains import FREEMAIL, registrable
 from app.settings_store import THREAT_VERDICTS
@@ -61,33 +62,35 @@ def policy_bucket(result: dict[str, Any]) -> str:
     return policy if policy in ("reject", "quarantine", "none") else "unknown"
 
 
-def own_domain_recommendations(checks: list[dict[str, Any]], spoofed_by_domain: Counter[str]) -> list[str]:
+def own_domain_recommendations(checks: list[dict[str, Any]], spoofed_by_domain: Counter[str], tr: Translator | None = None) -> list[str]:
+    tr = tr or Translator()
     recs: list[str] = []
     for c in checks:
         d, dmarc, spf = c["domain"], c["dmarc"], c["spf"]
         if c.get("error"):
-            recs.append(f"{d}: DNS could not be checked ({c['error']}).")
+            recs.append(tr("{domain}: DNS could not be checked ({error}).", domain=d, error=c['error']))
             continue
         spoofs = spoofed_by_domain.get(registrable(d), 0)
-        tail = f" Attackers used this domain in the From: header {spoofs} time(s) this period." if spoofs else ""
+        tail = tr(" Attackers used this domain in the From: header {spoofs} time(s) this period.", spoofs=spoofs) if spoofs else ""
         if not dmarc["present"]:
-            recs.append(f"{d}: publish a DMARC record (start with p=none and rua reporting, then move to p=reject).{tail}")
+            recs.append(tr("{domain}: publish a DMARC record (start with p=none and rua reporting, then move to p=reject).{tail}", domain=d, tail=tail))
         elif dmarc["policy"] == "none":
-            recs.append(f"{d}: DMARC is p=none and offers no protection - move towards p=quarantine and p=reject.{tail}")
+            recs.append(tr("{domain}: DMARC is p=none and offers no protection - move towards p=quarantine and p=reject.{tail}", domain=d, tail=tail))
         elif dmarc["level"] == "warning":
-            recs.append(f"{d}: finish DMARC enforcement ({dmarc['status']} -> p=reject, pct=100).{tail}")
+            recs.append(tr("{domain}: finish DMARC enforcement ({status} -> p=reject, pct=100).{tail}", domain=d, status=dmarc['status'], tail=tail))
         if dmarc["present"] and not dmarc.get("rua"):
-            recs.append(f"{d}: add rua= to the DMARC record so you receive aggregate reports.")
+            recs.append(tr("{domain}: add rua= to the DMARC record so you receive aggregate reports.", domain=d))
         if spf["level"] == "critical":
-            recs.append(f"{d}: fix SPF ({spf['status']}).")
+            recs.append(tr("{domain}: fix SPF ({status}).", domain=d, status=spf['status']))
         elif spf["level"] == "warning":
-            recs.append(f"{d}: tighten SPF ({spf['status']}) - end with -all or ~all and stay under 10 DNS lookups.")
+            recs.append(tr("{domain}: tighten SPF ({status}) - end with -all or ~all and stay under 10 DNS lookups.", domain=d, status=spf['status']))
         if not c["mta_sts"] or not c["tls_rpt"]:
-            recs.append(f"{d}: publish MTA-STS and TLS-RPT so inbound TLS cannot be downgraded silently.")
+            recs.append(tr("{domain}: publish MTA-STS and TLS-RPT so inbound TLS cannot be downgraded silently.", domain=d))
     return recs
 
 
 def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
+    tr = ctx.tr
     assert ctx.tenant is not None, "auth_posture is a per-tenant report"
     p = ctx.period
     tid = ctx.tenant.id
@@ -122,7 +125,7 @@ def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
         d = email_domain(m.from_address or m.envelope_from)
         if d and registrable(d) not in own_regs:
             sender_counts[d] += 1
-    top = sender_counts.most_common(MAX_THREAT_DOMAINS)
+    top = by_count(sender_counts, MAX_THREAT_DOMAINS)
     results = dns_posture.check_many([d for d, _ in top], kind="dmarc")
     by_policy: Counter[str] = Counter()
     domains_by_policy: dict[str, list[tuple[str, int]]] = {k: [] for k in POLICY_ORDER}
@@ -134,18 +137,15 @@ def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
     enforcing = by_policy["reject"] + by_policy["quarantine"]
     freemail = sum(n for d, n in top if registrable(d) in FREEMAIL)
 
-    recs = own_domain_recommendations(own_checks, spoofed_by_domain)
+    recs = own_domain_recommendations(own_checks, spoofed_by_domain, tr)
     if spoofed and all(c["dmarc"]["level"] == "ok" for c in own_checks if not c.get("error")) and own_checks:
-        recs.append("Threats using your own domains as sender arrived although your DMARC policy is p=reject - check paths that skip authentication, "
-                    "e.g. Microsoft 365 Direct Send or inbound connectors that trust the gateway.")
+        recs.append(tr("Threats using your own domains as sender arrived although your DMARC policy is p=reject - check paths that skip authentication, e.g. Microsoft 365 Direct Send or inbound connectors that trust the gateway."))
     if checked and enforcing:
-        recs.append(f"{_pct(enforcing, checked)} % of the checked threats came from domains that publish an enforcing DMARC policy today. "
-                    "ETD does not show whether each message passed DMARC, and a policy may have changed since delivery, but the sending "
-                    "domain's DMARC did not keep these threats out - content and behaviour detection is what stops them.")
+        recs.append(tr("{enforcing} % of the checked threats came from domains that publish an enforcing DMARC policy today. ETD does not show whether each message passed DMARC, and a policy may have changed since delivery, but the sending domain's DMARC did not keep these threats out - content and behaviour detection is what stops them.", enforcing=_pct(enforcing, checked)))
     if alignment["reply_to_pct_threats"] and alignment["reply_to_pct_clean"] is not None and alignment["reply_to_pct_threats"] > 2 * (alignment["reply_to_pct_clean"] or 0):
-        recs.append("A Reply-To pointing to another domain is far more common in threats than in clean mail - a strong BEC signal to train on.")
+        recs.append(tr("A Reply-To pointing to another domain is far more common in threats than in clean mail - a strong BEC signal to train on."))
     if not rows:
-        recs.append("Enable Log Export in ETD to see spoofing and Return-Path/Reply-To alignment across all incoming mail, not only threats.")
+        recs.append(tr("Enable Log Export in ETD to see spoofing and Return-Path/Reply-To alignment across all incoming mail, not only threats."))
 
     return {
         "own_checks": own_checks,

@@ -294,6 +294,7 @@ class ReportSchedule(Base):
     target_group: Mapped[str | None] = mapped_column(String(60), nullable=True)
     recipient_mode: Mapped[str] = mapped_column(String(16), nullable=False, default="fixed", server_default="fixed")  # fixed | tenant | both
     only_with_findings: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
+    language: Mapped[str] = mapped_column(String(8), nullable=False, default="", server_default="")  # "" = each tenant's language
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=utcnow)
     last_run_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     last_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
@@ -327,6 +328,7 @@ class ReportRun(Base):
     triggered_by: Mapped[str | None] = mapped_column(String(16), nullable=True)  # schedule | manual | catchup | api
     delivery_error: Mapped[str | None] = mapped_column(Text, nullable=True)  # recipients the relay refused
     delivery_note: Mapped[str | None] = mapped_column(String(300), nullable=True)  # why nothing was sent: no findings, no recipients
+    language: Mapped[str | None] = mapped_column(String(8), nullable=True)  # the report language this run used
 
     schedule: Mapped[ReportSchedule | None] = relationship(back_populates="runs")
 

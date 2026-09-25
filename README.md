@@ -34,7 +34,7 @@ Bundled reports:
 
 **Technology stack:** Python 3.12, FastAPI, SQLAlchemy 2 + Alembic (SQLite by default, PostgreSQL optional), APScheduler, Jinja2, WeasyPrint for PDF, httpx for the ETD API. Standalone application, delivered as a Docker image; no external services other than the ETD API and an SMTP relay.
 
-**Status:** 0.9.0, alpha. The collectors (including Log Export), scheduler, twelve reports and the admin UI work end to end against a fake ETD API in the test-suite (`pytest`, 125 tests) and have been smoke-tested as a running application. Validation against production ETD tenants in all five regions is the next step - please open an issue with what you find. This is community sample code, not a Cisco product, and is not supported by Cisco TAC.
+**Status:** 0.10.0, alpha. The collectors (including Log Export), scheduler, twelve reports (in English and Swedish) and the admin UI work end to end against a fake ETD API in the test-suite (`pytest`, 139 tests) and have been smoke-tested as a running application. Validation against production ETD tenants in all five regions is the next step - please open an issue with what you find. This is community sample code, not a Cisco product, and is not supported by Cisco TAC.
 
 <!-- Add a screenshot of the dashboard here once you run it against a real tenant: ![Dashboard](docs/dashboard.png) -->
 
@@ -64,7 +64,7 @@ docker run -d --name etd-demo -p 8080:8080 \
   -e DEMO_MODE=true -e ADMIN_PASSWORD=choose-a-password \
   -e SECRET_KEY="$(openssl rand -hex 32)" \
   -e ENCRYPTION_KEY="$(python3 -c 'import base64, os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())')" \
-  ghcr.io/magnusfrodell/etd-report-scheduler:0.9.0
+  ghcr.io/magnusfrodell/etd-report-scheduler:0.10.0
 ```
 
 Sign in at http://localhost:8080 as `admin`. Within a minute the demo has collected 90 days of history and filled the archive with the reports its schedules would have produced. Each tenant has a story:
@@ -84,6 +84,8 @@ E-mails are saved as `.eml` files in `/data/demo-outbox` instead of being sent. 
 
 ![Vendor risk as PDF](docs/images/vendor-risk-pdf.png)
 
+To see a Swedish report, open a demo tenant's reporting profile on the Tenants page, set *Report language* to Svenska and press **Run now** on any report card.
+
 ## Installation
 
 ### Option A: Docker (recommended)
@@ -93,7 +95,7 @@ Prerequisites: Docker 24+ with Compose, network access from the container to `ap
 A pre-built multi-arch image (amd64/arm64) is published for every release tag:
 
 ```bash
-docker pull ghcr.io/magnusfrodell/etd-report-scheduler:0.9.0
+docker pull ghcr.io/magnusfrodell/etd-report-scheduler:0.10.0
 ```
 
 To use it, set `image:` instead of `build:` in `docker-compose.yml` (the line is there, commented out). To build yourself instead:
@@ -174,10 +176,10 @@ pytest
 ### In the UI (stored in the database)
 
 * **Tenants** – display name, region (`Beta` for accounts in the ETD beta programme), client ID, client secret and API key. Create these in ETD under *Administration > API Clients* (admin or super-admin role) and *API Key > Generate New Key*; the API key is sent as the `x-api-key` header on every call. The connection is tested when you save; on success the initial collection starts in the background and the *History* column shows the backfill progress (`recent only` → `n of 90 days, backfilling` → `90 days`). *API calls today* shows quota use per tenant.
-* **Schedules** – report; one tenant, a group of tenants or all tenants; a cron expression in the configured timezone; who gets it (the recipients in the schedule, each tenant's report recipients, or both); HTML or PDF; and optionally *only when there are findings* for compromise indicators, health check, campaigns, exposure and vendor risk. Each report has a sensible default cron. Cron expressions follow standard cron: `minute hour day month day-of-week`, where day-of-week 0 or 7 is Sunday and 1 is Monday.
-* **Tenant reporting profile** – besides domains, vendors, VIPs and user labels: an optional *group* (for schedules that cover a group, such as a service tier) and the customer's *report recipients*.
+* **Schedules** – report; one tenant, a group of tenants or all tenants; a cron expression in the configured timezone; who gets it (the recipients in the schedule, each tenant's report recipients, or both); HTML or PDF; and optionally *only when there are findings* for compromise indicators, health check, campaigns, exposure and vendor risk. Each report has a sensible default cron. Cron expressions follow standard cron: `minute hour day month day-of-week`, where day-of-week 0 or 7 is Sunday and 1 is Monday; and the report language (each tenant's own by default).
+* **Tenant reporting profile** – besides domains, vendors, VIPs and user labels: an optional *group* (for schedules that cover a group, such as a service tier) the customer's *report recipients* and the *report language*.
 * **Reporting profile per tenant** (Tenants page, manager role) – own domains (blank = detected from outgoing mail and recipients), vendor and partner domains to watch, VIP mailboxes (added to the global list) and names for ETD user ids, because ETD's audit log records users by UUID only.
-* **Settings** – timezone (IANA name, e.g. `Europe/Stockholm`), SMTP relay, partner recipients (default for cross-tenant reports), retention in days, which verdicts to store per message (threats only by default: `bec`, `scam`, `phishing`, `malicious`; adding `spam`/`graymail` multiplies the volume), the daily API budget per tenant (default 8 000 of ETD's 10 000), the backfill window size, the global VIP mailboxes, Log Export collection on/off and how long the audit trail is kept (default 730 days).
+* **Settings** – timezone (IANA name, e.g. `Europe/Stockholm`), the default report language, SMTP relay, partner recipients (default for cross-tenant reports), retention in days, which verdicts to store per message (threats only by default: `bec`, `scam`, `phishing`, `malicious`; adding `spam`/`graymail` multiplies the volume), the daily API budget per tenant (default 8 000 of ETD's 10 000), the backfill window size, the global VIP mailboxes, Log Export collection on/off and how long the audit trail is kept (default 730 days).
 
 ### Log Export (audit trail, verdict changes, sender history)
 
@@ -245,6 +247,7 @@ Sign in as the bootstrap admin, add a tenant, then add users:
 6. **Data quality** – per tenant and data stream (daily statistics, convicted messages, Log Export, history backfill): the last successful collection, whether it is late or stalled, each collector's own last error, days with statistics, unreadable log files and API requests used today, with **Collect now**.
 7. **Settings > E-mail > Alert recipients** – e-mailed when a scheduled report fails or is only partly delivered, and once a day while a data stream is stalled. **Settings > Storage and backups** shows the archive and database size, the newest backups and a **Back up the database now** button.
 8. **Branding** (administrators) – add a brand with a name, a PNG or JPEG logo, header and accent colours and a footer, and optionally the e-mail sender name, Reply-To and a subject prefix. The first brand becomes the default; a tenant can use another one from its reporting profile. **Preview a report** shows the brand on a real report, as HTML or PDF. In e-mails the logo is embedded as an inline image, because mail clients block data: images. Without a brand, reports keep the neutral look.
+9. **Report languages** – reports, PDFs and report e-mails in English or Swedish. Set the default under **Settings**, a customer's language in the tenant's reporting profile, or pick one for a schedule or a single **Run now**. See [Report languages](#report-languages).
 
 The tenant switcher in the header filters the dashboard, schedules and report cards to one tenant, or shows all; the archive starts from it and has its own tenant filter. Times in the archive are shown in the timezone from Settings.
 
@@ -262,18 +265,34 @@ curl -b cookies.txt http://localhost:8080/api/me
 curl -b cookies.txt http://localhost:8080/api/tenants
 curl -b cookies.txt -X POST http://localhost:8080/api/tenants/1/collect
 curl -b cookies.txt -X POST "http://localhost:8080/api/reports/executive_summary/run?tenant_id=1&deliver=false"
+# the same report in Swedish (en, sv; leave it out for the tenant's own language)
+curl -b cookies.txt -X POST "http://localhost:8080/api/reports/executive_summary/run?tenant_id=1&deliver=false&language=sv"
 ```
 
 Generated files are stored under `/data/reports/<tenant>/<report>/<timestamp>-run<id>.html|pdf` in the volume; the run id keeps every run's files distinct.
 
 ## Additional paragraphs
 
+### Report languages
+
+Reports, their PDFs and the report e-mails (subject included) are available in **English** and **Swedish**. The language is chosen in this order:
+
+1. the language picked for a schedule, a **Run now** or an API call (`language=sv`);
+2. the tenant's *report language* (reporting profile on the Tenants page);
+3. the installation default under **Settings**.
+
+A schedule for all tenants or a group therefore sends each customer the report in their own language. The archive notes the language of every report that is not in English.
+
+Everything a customer reads is translated: headings, explanations, checks and recommendations. Month names and decimal separators follow the language (augusti 2026, 20,8 h). ETD's own terms - verdicts, technique names and sender signals - stay in English, as the ETD console shows them. The admin UI is English only.
+
+Adding a language (Danish, Norwegian and Finnish are the obvious next ones) is a translation job rather than a code change - see [docs/TRANSLATING.md](docs/TRANSLATING.md).
+
 ### Continuous integration
 
 `.github/workflows/ci.yml` runs ruff, the test-suite and an Alembic consistency check on every push and pull request. `.github/workflows/docker.yml` builds and publishes the container image to GitHub Container Registry when a `v*` tag is pushed:
 
 ```bash
-git tag v0.9.0 && git push origin v0.9.0
+git tag v0.10.0 && git push origin v0.10.0
 ```
 
 ### Architecture

@@ -36,6 +36,7 @@ SPIKE_FACTOR = 3.0
 
 
 def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
+    tr = ctx.tr
     assert ctx.tenant is not None, "health_check is a per-tenant report"
     p = ctx.period
     tenant = ctx.tenant
@@ -53,31 +54,31 @@ def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
 
     if not day_rows:
-        checks.append({"name": "Statistics collected", "status": "critical", "detail": "No statistics stored for the period - collector has not run or failed."})
+        checks.append({"name": tr("Statistics collected"), "status": "critical", "detail": tr("No statistics stored for the period - collector has not run or failed.")})
     else:
-        checks.append({"name": "Statistics collected", "status": "ok", "detail": f"{len(day_rows)} day(s) of data present."})
+        checks.append({"name": tr("Statistics collected"), "status": "ok", "detail": tr("{day_rows_count} day(s) of data present.", day_rows_count=len(day_rows))})
 
     if baseline_avg > 0 and day_rows:
         ratio = today_total / baseline_avg
         if ratio <= CRITICAL_RATIO:
-            status, detail = "critical", f"Volume {today_total} is {ratio:.0%} of the 30-day average ({baseline_avg:.0f}). Check journaling/connector."
+            status, detail = "critical", tr("Volume {today_total} is {ratio:.0%} of the 30-day average ({baseline_avg:.0f}). Check journaling/connector.", today_total=today_total, ratio=ratio, baseline_avg=baseline_avg)
         elif ratio <= WARN_RATIO:
-            status, detail = "warning", f"Volume {today_total} is {ratio:.0%} of the 30-day average ({baseline_avg:.0f})."
+            status, detail = "warning", tr("Volume {today_total} is {ratio:.0%} of the 30-day average ({baseline_avg:.0f}).", today_total=today_total, ratio=ratio, baseline_avg=baseline_avg)
         else:
-            status, detail = "ok", f"Volume {today_total} vs 30-day average {baseline_avg:.0f} ({ratio:.0%})."
-        checks.append({"name": "Message volume", "status": status, "detail": detail})
+            status, detail = "ok", tr("Volume {today_total} vs 30-day average {baseline_avg:.0f} ({ratio:.0%}).", today_total=today_total, baseline_avg=baseline_avg, ratio=ratio)
+        checks.append({"name": tr("Message volume"), "status": status, "detail": detail})
     elif day_rows:
-        checks.append({"name": "Message volume", "status": "ok", "detail": f"Volume {today_total}; no baseline yet (fewer than one day of history)."})
+        checks.append({"name": tr("Message volume"), "status": "ok", "detail": tr("Volume {today_total}; no baseline yet (fewer than one day of history).", today_total=today_total)})
 
     if baseline_threat_avg > 0 and today_threats >= SPIKE_FACTOR * baseline_threat_avg and today_threats >= 5:
-        checks.append({"name": "Threat spike", "status": "warning", "detail": f"{today_threats} threats vs 30-day average {baseline_threat_avg:.1f} - possible campaign."})
+        checks.append({"name": tr("Threat spike"), "status": "warning", "detail": tr("{today_threats} threats vs 30-day average {baseline_threat_avg:.1f} - possible campaign.", today_threats=today_threats, baseline_threat_avg=baseline_threat_avg)})
     else:
-        checks.append({"name": "Threat spike", "status": "ok", "detail": f"{today_threats} threats vs 30-day average {baseline_threat_avg:.1f}."})
+        checks.append({"name": tr("Threat spike"), "status": "ok", "detail": tr("{today_threats} threats vs 30-day average {baseline_threat_avg:.1f}.", today_threats=today_threats, baseline_threat_avg=baseline_threat_avg)})
 
     if tenant.last_error:
-        checks.append({"name": "Collector errors", "status": "warning", "detail": f"{tenant.last_error} (at {tenant.last_error_at:%Y-%m-%d %H:%M} UTC)"})
+        checks.append({"name": tr("Collector errors"), "status": "warning", "detail": tr("{last_error} (at {when:%Y-%m-%d %H:%M} UTC)", last_error=tenant.last_error, when=tenant.last_error_at)})
     else:
-        checks.append({"name": "Collector errors", "status": "ok", "detail": "No errors recorded."})
+        checks.append({"name": tr("Collector errors"), "status": "ok", "detail": tr("No errors recorded.")})
 
     order = {"critical": 0, "warning": 1, "ok": 2}
     overall = min((c["status"] for c in checks), key=lambda s: order[s])

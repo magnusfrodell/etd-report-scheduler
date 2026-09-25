@@ -30,13 +30,15 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.i18n import N_
 from app.models import AuditEvent, LogFile, Tenant
 from app.reports import repo
+from app.reports.analysis import by_count
 from app.reports.base import ReportContext
 from app.settings_store import THREAT_VERDICTS, load_settings
 from app.tenant_profile import get_profile, user_label
 
-PRIVILEGED = ("API access", "Policy and configuration", "User administration")
+PRIVILEGED = (N_("API access"), N_("Policy and configuration"), N_("User administration"))
 _API_AGENTS = ("python", "curl", "postman", "go-http", "java", "okhttp", "axios", "node", "powershell", "insomnia", "httpie", "requests")
 MAX_ROWS = 100
 
@@ -44,31 +46,31 @@ MAX_ROWS = 100
 def group_of(category: str, action: str) -> str:
     c, a = (category or "").lower(), (action or "").lower()
     if c == "email" and "reclass" in a:
-        return "Reclassification"
+        return N_("Reclassification")
     if c == "email" and any(k in a for k in ("remediat", "move", "delete", "quarantine", "restore", "release")):
-        return "Remediation"
+        return N_("Remediation")
     if any(k in a for k in ("api_client", "apiclient", "api_key", "apikey", "public_api")):
-        return "API access"
+        return N_("API access")
     if any(k in a for k in ("policy", "rule", "setting", "config", "business", "connector", "allow", "block", "list", "domain", "export")):
-        return "Policy and configuration"
+        return N_("Policy and configuration")
     if any(k in a for k in ("login", "logout", "sign", "token", "session", "sso", "auth")):
-        return "Sign-in and session"
+        return N_("Sign-in and session")
     if c in ("user", "users", "tenant") and any(k in a for k in ("create", "update", "delete", "invite", "role", "add", "remove", "disable", "enable")):
-        return "User administration"
+        return N_("User administration")
     if c == "email":
-        return "Message handling"
+        return N_("Message handling")
     return (category or "other").replace("_", " ").capitalize()
 
 
 def agent_kind(user_agent: str | None) -> str:
     ua = (user_agent or "").lower()
     if not ua:
-        return "unknown"
+        return N_("unknown")
     if any(k in ua for k in _API_AGENTS):
-        return "API / automation"
+        return N_("API / automation")
     if "mozilla" in ua:
-        return "Web UI"
-    return "other"
+        return N_("Web UI")
+    return N_("other")
 
 
 def meta_summary(meta: Any) -> str:
@@ -150,7 +152,7 @@ def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
         a["failed"] += 0 if (e.status or "").lower() in ("success", "ok", "") else 1
         a["first"], a["last"] = min(a["first"], e.timestamp), max(a["last"], e.timestamp)
     actor_rows = sorted(
-        ({**a, "groups": dict(a["groups"].most_common(4)), "ips": sorted(a["ips"])[:5], "ip_count": len(a["ips"]),
+        ({**a, "groups": dict(by_count(a["groups"], 4)), "ips": sorted(a["ips"])[:5], "ip_count": len(a["ips"]),
           "agents": dict(a["agents"])} for a in actors.values()),
         key=lambda r: -r["events"],
     )
@@ -186,7 +188,7 @@ def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
         "log_export_enabled": settings.log_export_enabled,
         "total": len(events),
         "previous_total": len(previous),
-        "group_rows": [{"group": g, "events": n, "previous": prev_groups.get(g, 0)} for g, n in groups.most_common()],
+        "group_rows": [{"group": g, "events": n, "previous": prev_groups.get(g, 0)} for g, n in by_count(groups)],
         "failed": [row(e) for e in failed[:MAX_ROWS]],
         "failed_count": len(failed),
         "actors": actor_rows[:MAX_ROWS],

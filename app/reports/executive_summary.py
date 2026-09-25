@@ -34,6 +34,7 @@ def _delta_row(label: str, current: int, previous: int) -> dict[str, Any]:
 
 
 def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
+    tr = ctx.tr
     assert ctx.tenant is not None, "executive_summary is a per-tenant report"
     p = ctx.period
     tid = ctx.tenant.id
@@ -46,10 +47,10 @@ def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
     direction_rows = [_delta_row(d, getattr(current, d), getattr(previous, d)) for d in DIRECTION_ORDER]
 
     headline = [
-        _delta_row("Messages scanned", current.total_messages, previous.total_messages),
-        _delta_row("Threats caught", current.threats, previous.threats),
-        _delta_row("Unwanted (spam + graymail)", current.unwanted, previous.unwanted),
-        _delta_row("Retrospective verdicts", current.retro_verdicts, previous.retro_verdicts),
+        _delta_row(tr("Messages scanned"), current.total_messages, previous.total_messages),
+        _delta_row(tr("Threats caught"), current.threats, previous.threats),
+        _delta_row(tr("Unwanted (spam + graymail)"), current.unwanted, previous.unwanted),
+        _delta_row(tr("Retrospective verdicts"), current.retro_verdicts, previous.retro_verdicts),
     ]
 
     days_in_period = max(1, current.days_with_data or p.days)
@@ -87,6 +88,6 @@ def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
         "coverage_note": (
             None
             if current.days_with_data >= p.days
-            else f"Statistics exist for {current.days_with_data} of {p.days} days in this period."
+            else tr("Statistics exist for {days_with_data} of {days} days in this period.", days_with_data=current.days_with_data, days=p.days)
         ),
     }

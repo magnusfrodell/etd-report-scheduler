@@ -1,37 +1,37 @@
 {% extends "email/base_report.html" %}
 {% block body %}
-<h2>Summary <span class="chip {{ data.severity }}">{{ data.severity }}</span></h2>
-<p>{{ data.total }} threat-convicted message(s) sent <strong>from inside the organisation</strong> (outgoing or internal) during {{ ctx.period.label }}, from {{ data.sender_count }} distinct sender(s). Previous period: {{ data.previous_total }}.</p>
+<h2>{{ _("Summary") }} <span class="chip {{ data.severity }}">{{ _(data.severity) }}</span></h2>
+<p>{{ _("{total} threat-convicted message(s) sent {inside} (outgoing or internal) during {period_label}, from {sender_count} distinct sender(s). Previous period: {previous_total}.", total=data.total, inside=_("from inside the organisation")|strong, period_label=ctx.period_label, sender_count=data.sender_count, previous_total=data.previous_total) }}</p>
 {% if not data.senders %}
-<p class="note">Nothing to act on. A threat verdict on outgoing/internal mail is the classic sign of a compromised account or an infected client, so an empty report is the good outcome.</p>
+<p class="note">{{ _("Nothing to act on. A threat verdict on outgoing/internal mail is the classic sign of a compromised account or an infected client, so an empty report is the good outcome.") }}</p>
 {% else %}
-<p class="note">Recommended handling: verify each sender below (recent sign-ins, mailbox rules, MFA state), reset credentials where compromise is confirmed, and check whether the messages were remediated in recipients' mailboxes.</p>
-<h2>Senders</h2>
+<p class="note">{{ _("Recommended handling: verify each sender below (recent sign-ins, mailbox rules, MFA state), reset credentials where compromise is confirmed, and check whether the messages were remediated in recipients' mailboxes.") }}</p>
+<h2>{{ _("Senders") }}</h2>
 <table>
-  <tr><th>Sender</th><th class="num">Messages</th><th class="num">Recipients</th><th>Verdicts</th><th>Direction</th><th>First / last seen</th><th class="num">Auto-remediated</th><th class="num">No action</th></tr>
+  <tr><th>{{ _("Sender") }}</th><th class="num">{{ _("Messages") }}</th><th class="num">{{ _("Recipients") }}</th><th>{{ _("Verdicts") }}</th><th>{{ _("Direction") }}</th><th>{{ _("First / last seen") }}</th><th class="num">{{ _("Auto-remediated") }}</th><th class="num">{{ _("No action") }}</th></tr>
   {% for s in data.senders %}
   <tr>
     <td>{{ s.sender }}</td>
     <td class="num">{{ s.count }}</td>
     <td class="num">{{ s.recipient_count }}</td>
     <td>{% for v, n in s.verdicts.items() %}{{ v }} {{ n }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
-    <td>{% for d, n in s.directions.items() %}{{ d }} {{ n }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+    <td>{% for d, n in s.directions.items() %}{{ _(d) }} {{ n }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
     <td>{{ s.first_seen|fmt_dt(tz) }} / {{ s.last_seen|fmt_dt(tz) }}</td>
     <td class="num">{{ s.auto_remediated }}</td>
     <td class="num">{{ s.not_remediated }}</td>
   </tr>
   {% endfor %}
 </table>
-<h2>Messages{% if data.truncated %} (first 200){% endif %}</h2>
+<h2>{{ _("Messages") }}{% if data.truncated %} {{ _("(first 200)") }}{% endif %}</h2>
 <table>
-  <tr><th>Time</th><th>From</th><th>To</th><th>Subject</th><th>Verdict</th><th>Action</th></tr>
+  <tr><th>{{ _("Time") }}</th><th>{{ _("From") }}</th><th>{{ _("To") }}</th><th>{{ _("Subject") }}</th><th>{{ _("Verdict") }}</th><th>{{ _("Action") }}</th></tr>
   {% for msg in data.messages %}
   <tr>
     <td>{{ msg.timestamp|fmt_dt(tz) }}</td>
     <td>{{ msg.from_address or msg.envelope_from or '–' }}</td>
     <td>{{ (msg.to_addresses or [])|join(', ') }}</td>
     <td class="subj" title="{{ msg.subject }}">{{ msg.subject or '–' }}</td>
-    <td>{{ msg.verdict }}{% if msg.is_retro_verdict %} (retro){% endif %}</td>
+    <td>{{ msg.verdict }}{% if msg.is_retro_verdict %} {{ _("(retro)") }}{% endif %}</td>
     <td>{{ msg.action_type or 'none' }}{% if msg.action_folder %} → {{ msg.action_folder }}{% endif %}</td>
   </tr>
   {% endfor %}

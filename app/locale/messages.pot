@@ -1,0 +1,1770 @@
+#, python-brace-format
+msgid " Attackers used this domain in the From: header {spoofs} time(s) this period."
+msgstr ""
+
+#, python-brace-format
+msgid "#{rank} {label} · {recipients} mailboxes · {not_remediated} not remediated"
+msgstr ""
+
+msgid "(first 200)"
+msgstr ""
+
+#, python-brace-format
+msgid "(first {exposed})"
+msgstr ""
+
+msgid "(provisional)"
+msgstr ""
+
+msgid "(retro)"
+msgstr ""
+
+#, python-brace-format
+msgid "(slowest {retro_rows})"
+msgstr ""
+
+#, python-brace-format
+msgid "(top {rows})"
+msgstr ""
+
+msgid "(unknown sender)"
+msgstr ""
+
+#, python-brace-format
+msgid "({previous} before)"
+msgstr ""
+
+#, python-brace-format
+msgid "+ {bec_nopayload_count} BEC without payload"
+msgstr ""
+
+msgid "+2/+4/+5 medium/high/critical"
+msgstr ""
+
+msgid "+all (anyone may send)"
+msgstr ""
+
+#, python-brace-format
+msgid ", {open_retro_count} still not remediated"
+msgstr ""
+
+#, python-brace-format
+msgid ", {partial} file(s) with unreadable lines"
+msgstr ""
+
+msgid "- ETD returned the threats without techniques"
+msgstr ""
+
+#, python-brace-format
+msgid "30-day daily average ({baseline_days} days)"
+msgstr ""
+
+#, python-brace-format
+msgid "; last error: {last_error}"
+msgstr ""
+
+msgid "?all (neutral)"
+msgstr ""
+
+msgid ""
+"A Reply-To pointing to another domain is far more common in threats than in clean mail - a strong BEC signal to train"
+" on."
+msgstr ""
+
+msgid ""
+"A threat verdict with no action usually means the policy is in monitor mode for that verdict, a remediation error, or"
+" an allow-list rule (\"Rule\" column). Remediate manually and check the policy."
+msgstr ""
+
+msgid ""
+"A volume close to zero usually means the Microsoft 365 journal rule or the ETD connector stopped delivering mail to "
+"ETD - the ETD console itself does not alert on this."
+msgstr ""
+
+msgid "API / automation"
+msgstr ""
+
+msgid "API access"
+msgstr ""
+
+msgid "Abused legitimate service"
+msgstr ""
+
+msgid "Action"
+msgstr ""
+
+msgid "Activity by type"
+msgstr ""
+
+msgid "Add the look-alike domains to your block lists and ask the registrar or vendor to act on typosquats."
+msgstr ""
+
+msgid "Age"
+msgstr ""
+
+#, python-brace-format, python-format
+msgid ""
+"All incoming mail (Log Export): {claimed_own} message(s) claimed one of your domains in From:, "
+"{claimed_own_convicted} of them convicted. The Return-Path domain differed from the From: domain in {mismatch_pct} % "
+"of {incoming} incoming messages."
+msgstr ""
+
+msgid "All tenants"
+msgstr ""
+
+#, python-brace-format
+msgid "All tenants · {period_label}"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"Analysts released {to_neutral} message(s) as neutral (possible false positives) and escalated {to_threat} to a threat"
+" verdict (possible false negatives)."
+msgstr ""
+
+#, python-brace-format, python-format
+msgid ""
+"Analysts released {to_neutral} message(s) as neutral (possible false positives, {fp_rate} % of {threats} threats) and"
+" escalated {to_threat} to a threat verdict (possible false negatives)."
+msgstr ""
+
+msgid "Archive / disk image"
+msgstr ""
+
+msgid "As Reply-To"
+msgstr ""
+
+msgid "Attachment only"
+msgstr ""
+
+msgid "Attachment types"
+msgstr ""
+
+msgid "Attachments"
+msgstr ""
+
+msgid "Audit and compliance"
+msgstr ""
+
+msgid "Audit events"
+msgstr ""
+
+msgid "Audit log collected"
+msgstr ""
+
+msgid "Authentication posture"
+msgstr ""
+
+msgid "Auto-remediated"
+msgstr ""
+
+msgid "Azure hosting"
+msgstr ""
+
+msgid "BEC"
+msgstr ""
+
+msgid "BEC/scam from new or rare senders"
+msgstr ""
+
+msgid "BIMI"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"Block or strip .html/.htm/.svg attachments at the gateway - {html_svg} HTML/SVG attachment(s) carried threats (HTML "
+"smuggling, SVG phishing)."
+msgstr ""
+
+msgid "Block script, shortcut and executable attachments outright; they have no business use in mail."
+msgstr ""
+
+msgid "Business risk"
+msgstr ""
+
+msgid "Calendar invite"
+msgstr ""
+
+msgid "Campaign clusters"
+msgstr ""
+
+msgid "Campaign messages not remediated"
+msgstr ""
+
+msgid "Campaigns"
+msgstr ""
+
+msgid "Campaigns (≥2 messages)"
+msgstr ""
+
+msgid "Campaigns by reach"
+msgstr ""
+
+msgid "Change"
+msgstr ""
+
+#, python-brace-format
+msgid "Change compares threats with {previous_label}. A spike is flagged at ≥2× the previous period and at least 10 threats."
+msgstr ""
+
+msgid "Check"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"Checked against {protected_count} protected domain(s): own domains, listed vendors and the most active "
+"counterparties. Methods: TLD swap, homoglyph, typosquat (edit distance), combosquat and subdomain spoof. Delivered "
+"counts mail that was not convicted (Log Export). Heuristic - verify before blocking."
+msgstr ""
+
+msgid "Checks"
+msgstr ""
+
+msgid "Clean days"
+msgstr ""
+
+msgid "Cloudflare"
+msgstr ""
+
+msgid ""
+"Clustering links messages that share a normalised subject and sender domain, a URL host (generic hosting such as "
+"SharePoint or Google Drive excluded) or an attachment SHA-256. Critical = 3+ messages not remediated, or BEC reaching"
+" 3+ mailboxes."
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"Collected from {first} to {cursor} (status: {status}). ETD keeps audit logs for 30 days; this tool keeps them for "
+"{retention_days} days."
+msgstr ""
+
+msgid "Collector errors"
+msgstr ""
+
+msgid "Compromise indicators"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"Contact {vendors} out of band: threats came from accounts you normally trust - treat as a possible compromise and "
+"hold any payment changes."
+msgstr ""
+
+msgid "Convicted"
+msgstr ""
+
+msgid "Convicted messages have not been collected yet, so remediation cannot be assessed."
+msgstr ""
+
+#, python-brace-format, python-format
+msgid "Convicted messages were last collected {collected:%Y-%m-%d %H:%M} UTC, before the period ended."
+msgstr ""
+
+msgid "Counterparty history is learned from Log Export (clean mail on at least 3 days before the period)."
+msgstr ""
+
+msgid ""
+"Coverage is the share of the period for which this tool fetched Log Export without known gaps. It shows what was "
+"collected, not that ETD exported every event."
+msgstr ""
+
+msgid "Critical campaigns"
+msgstr ""
+
+msgid "Cross-tenant roll-up"
+msgstr ""
+
+msgid "DMARC"
+msgstr ""
+
+msgid "DMARC enforcement on own domains"
+msgstr ""
+
+msgid "DMARC policy of the domains that sent threats"
+msgstr ""
+
+msgid "Daily threats"
+msgstr ""
+
+msgid "Data collection healthy"
+msgstr ""
+
+msgid "Day"
+msgstr ""
+
+msgid "Days with data"
+msgstr ""
+
+msgid "Delivered"
+msgstr ""
+
+msgid "Delivered before verdict (retro)"
+msgstr ""
+
+msgid "Detail"
+msgstr ""
+
+msgid "Details: Techniques and business risk, Vendor risk, Authentication posture and Audit and compliance reports."
+msgstr ""
+
+msgid "Developer hosting"
+msgstr ""
+
+msgid "Direction"
+msgstr ""
+
+msgid "Distinct techniques"
+msgstr ""
+
+msgid "Domain"
+msgstr ""
+
+msgid "Double extension"
+msgstr ""
+
+msgid "Dwell time distribution (retro threats, delivery → remediation)"
+msgstr ""
+
+msgid "Dwell time for retro verdicts"
+msgstr ""
+
+msgid "ETD returned no business-risk values for this period."
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"ETD's audit log identifies users by id only. Name them in the tenant's reporting profile (user labels): "
+"{unlabelled_users}"
+msgstr ""
+
+#, python-brace-format
+msgid "ETD: frequent sender ({frequent_count})"
+msgstr ""
+
+msgid ""
+"Enable Log Export in ETD (Administration > Business > Export Log Preferences) to learn counterparties from clean mail"
+" and to detect delivered look-alikes."
+msgstr ""
+
+msgid ""
+"Enable Log Export in ETD to see spoofing and Return-Path/Reply-To alignment across all incoming mail, not only "
+"threats."
+msgstr ""
+
+msgid "Enable audit and message logs in ETD (Administration > Business > Export Log Preferences) and in Settings."
+msgstr ""
+
+msgid "Enable automatic remediation for every threat verdict so nothing waits for an analyst."
+msgstr ""
+
+msgid "Error"
+msgstr ""
+
+msgid "Evasion"
+msgstr ""
+
+msgid "Events"
+msgstr ""
+
+msgid "Every threat in the period has been remediated."
+msgstr ""
+
+msgid "Examples"
+msgstr ""
+
+msgid "Executable / installer"
+msgstr ""
+
+msgid "Executive summary"
+msgstr ""
+
+msgid "Exposure and dwell time"
+msgstr ""
+
+msgid "Failed"
+msgstr ""
+
+msgid "Failed actions"
+msgstr ""
+
+msgid "False-positive rate"
+msgstr ""
+
+msgid "Family"
+msgstr ""
+
+msgid "File sharing"
+msgstr ""
+
+msgid "First / last"
+msgstr ""
+
+msgid "First / last seen"
+msgstr ""
+
+msgid "Fix collector errors on the Tenants page so reports cover the whole period."
+msgstr ""
+
+msgid "Forms / surveys"
+msgstr ""
+
+msgid "From"
+msgstr ""
+
+msgid "Gap from"
+msgstr ""
+
+msgid "Gap to"
+msgstr ""
+
+msgid "Gaps arise when the collector was stopped for longer than ETD's 30-day retention; they cannot be filled afterwards."
+msgstr ""
+
+msgid "Google services"
+msgstr ""
+
+msgid "Grade"
+msgstr ""
+
+msgid "HTML / SVG"
+msgstr ""
+
+msgid "HTML smuggling and disguised file types."
+msgstr ""
+
+#, python-brace-format
+msgid "Headline · {period_label} vs {previous_label}"
+msgstr ""
+
+msgid "Health check"
+msgstr ""
+
+msgid "Hidden text and image-only mail built to fool filters."
+msgstr ""
+
+msgid "How completely the audit log was collected"
+msgstr ""
+
+msgid "How the index is calculated"
+msgstr ""
+
+msgid "How the payload was delivered"
+msgstr ""
+
+msgid "IP"
+msgstr ""
+
+msgid "IPs"
+msgstr ""
+
+msgid "Image"
+msgstr ""
+
+msgid "Imitates"
+msgstr ""
+
+msgid "Impersonation"
+msgstr ""
+
+#, python-brace-format
+msgid "Impersonation in {impersonation_threats} threat(s) - keep High Impact Personnel and brand lists up to date in ETD."
+msgstr ""
+
+msgid "Index"
+msgstr ""
+
+msgid "Inspect or quarantine archives and disk images (.zip/.iso/.img) - they are used to slip executables past filters."
+msgstr ""
+
+msgid "Insufficient evidence for a score"
+msgstr ""
+
+msgid "Keep the collector running - ETD deletes audit logs after 30 days, so gaps cannot be filled later."
+msgstr ""
+
+msgid "Kind"
+msgstr ""
+
+msgid "Known relationship"
+msgstr ""
+
+msgid "Last seen"
+msgstr ""
+
+msgid "Link and attachment"
+msgstr ""
+
+msgid "Link infrastructure"
+msgstr ""
+
+msgid "Link only"
+msgstr ""
+
+msgid "Link-borne attacks incl. redirects, shorteners and QR codes."
+msgstr ""
+
+msgid "List executives, finance and IT admins as VIPs so attacks on them are flagged."
+msgstr ""
+
+msgid ""
+"List your key suppliers and partners in the tenant's reporting profile to get look-alike and compromise monitoring "
+"for them."
+msgstr ""
+
+msgid "Listed vendors"
+msgstr ""
+
+msgid "Log Export collection is switched off in Settings."
+msgstr ""
+
+msgid "Log Export is not collected, so there is no audit trail beyond ETD's 30 days."
+msgstr ""
+
+msgid "Look-alike domains"
+msgstr ""
+
+msgid "Look-alikes"
+msgstr ""
+
+msgid "MTA-STS"
+msgstr ""
+
+msgid "MTA-STS and TLS-RPT"
+msgstr ""
+
+msgid "Mailbox"
+msgstr ""
+
+msgid "Mailboxes that received threats"
+msgstr ""
+
+msgid "Main activity"
+msgstr ""
+
+msgid "Malicious"
+msgstr ""
+
+msgid "Malicious attachment"
+msgstr ""
+
+msgid "Malicious link"
+msgstr ""
+
+msgid "Max"
+msgstr ""
+
+msgid "Median"
+msgstr ""
+
+msgid "Median dwell time (retro)"
+msgstr ""
+
+msgid "Median time in inbox until remediation"
+msgstr ""
+
+#, python-brace-format
+msgid "Median {median_exposure} from delivery to remediation for {exposure_count} retro-convicted message(s){still_open}."
+msgstr ""
+
+msgid "Message handling"
+msgstr ""
+
+msgid "Message volume"
+msgstr ""
+
+msgid "Messages"
+msgstr ""
+
+msgid "Messages scanned"
+msgstr ""
+
+#, python-brace-format
+msgid "Messages scanned {period_label}"
+msgstr ""
+
+msgid "Method"
+msgstr ""
+
+msgid "Microsoft Forms / Sway / Dynamics"
+msgstr ""
+
+msgid "Month"
+msgstr ""
+
+#, python-brace-format
+msgid "Most-abused legitimate service: {service} ({urls} URL(s)) - consider stricter handling or sandboxing of links to it."
+msgstr ""
+
+msgid "Move every own domain to DMARC p=reject - spoofing your own domain is the cheapest attack there is."
+msgstr ""
+
+msgid "Needs attention"
+msgstr ""
+
+msgid "New or rare senders with financial lures"
+msgstr ""
+
+msgid "New, rare or disposable senders and poor infrastructure reputation."
+msgstr ""
+
+msgid "No API-client, policy, configuration or user-administration changes in this period."
+msgstr ""
+
+msgid "No BEC or scam from new or rare senders in this period."
+msgstr ""
+
+msgid "No QR-code threats or text-only lures in this period."
+msgstr ""
+
+msgid "No VIP mailboxes configured yet - add executives, finance and IT admins under Settings to have them flagged here."
+msgstr ""
+
+msgid "No action"
+msgstr ""
+
+msgid "No actors in this period."
+msgstr ""
+
+msgid "No attachments on threats in this period."
+msgstr ""
+
+msgid "No audit events in this period."
+msgstr ""
+
+msgid ""
+"No audit log files were received for the period. Either nothing was changed in ETD, or audit logs are not enabled in "
+"ETD's export preferences - the two cannot be told apart here."
+msgstr ""
+
+msgid "No campaigns: no two threat messages in the period shared a subject/sender, URL host or attachment."
+msgstr ""
+
+msgid "No daily statistics stored for this period yet."
+msgstr ""
+
+msgid "No errors recorded."
+msgstr ""
+
+msgid "No external threat senders in this period."
+msgstr ""
+
+msgid "No failed actions in this period."
+msgstr ""
+
+msgid "No gaps found - keep it that way."
+msgstr ""
+
+msgid "No link or attachment"
+msgstr ""
+
+msgid "No look-alikes of protected domains seen in this period."
+msgstr ""
+
+msgid "No own domains known or DNS unavailable."
+msgstr ""
+
+msgid ""
+"No own domains known yet. Add them in the tenant's reporting profile, or enable Log Export so they can be detected "
+"from outgoing mail."
+msgstr ""
+
+msgid "No retrospective verdicts in the period."
+msgstr ""
+
+msgid "No specific recommendations for this period."
+msgstr ""
+
+msgid "No statistics stored for the period - collector has not run or failed."
+msgstr ""
+
+msgid "No technique data in this period"
+msgstr ""
+
+msgid "No threat messages reached any mailbox in this period."
+msgstr ""
+
+msgid "No threat-sender data collected yet."
+msgstr ""
+
+msgid "No threats from trusted counterparties in this period."
+msgstr ""
+
+msgid "No threats in the period."
+msgstr ""
+
+msgid "No threats spoofed your domains in this period."
+msgstr ""
+
+msgid "No threats through allow-lists"
+msgstr ""
+
+msgid "No top-target data collected yet."
+msgstr ""
+
+msgid "No vendors listed - add them in the tenant's reporting profile."
+msgstr ""
+
+msgid "No verdict-change data (Log Export) for the period."
+msgstr ""
+
+#, python-brace-format
+msgid "None of the {vip_count} configured VIP mailboxes received threats this period."
+msgstr ""
+
+msgid "Not remediated"
+msgstr ""
+
+#, python-brace-format
+msgid "Not remediated ({unremediated})"
+msgstr ""
+
+msgid ""
+"Nothing to act on. A threat verdict on outgoing/internal mail is the classic sign of a compromised account or an "
+"infected client, so an empty report is the good outcome."
+msgstr ""
+
+msgid "Nothing to add - the authentication posture looks good."
+msgstr ""
+
+msgid "Office"
+msgstr ""
+
+msgid "Office with macros / legacy"
+msgstr ""
+
+msgid "OneNote"
+msgstr ""
+
+msgid "Other"
+msgstr ""
+
+msgid "Overall"
+msgstr ""
+
+msgid ""
+"Own domains were auto-detected from outgoing mail and recipient addresses. Set them in the tenant's reporting profile"
+" for an exact list."
+msgstr ""
+
+msgid "Own domains with DMARC p=reject"
+msgstr ""
+
+msgid "PDF"
+msgstr ""
+
+msgid "Payload"
+msgstr ""
+
+msgid "People with an unremediated threat"
+msgstr ""
+
+msgid "Per 10,000"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"Per message: verdict weight (BEC {bec}, malicious {malicious}, phishing {phishing}, scam {scam}), technique severity "
+"{severity}, impersonation {impersonation}, delivered before verdict {retro}, not remediated {unremediated}; targeted "
+"messages {targeted}, mass mailings {mass}. Points are summed per recipient and capped at 1000. Use the list to "
+"prioritise awareness training, MFA and priority-account protection."
+msgstr ""
+
+msgid "Phishing"
+msgstr ""
+
+msgid "Points"
+msgstr ""
+
+msgid "Policy and configuration"
+msgstr ""
+
+msgid "Possibly compromised counterparties"
+msgstr ""
+
+msgid "Posture and effectiveness"
+msgstr ""
+
+#, python-brace-format
+msgid "Posture and effectiveness · {period_label}"
+msgstr ""
+
+msgid "Posture score (0-100)"
+msgstr ""
+
+msgid "Pressure and requests - credentials, contact details, opening attachments."
+msgstr ""
+
+msgid "Pretends to be a brand, colleague or the victim. Maintain High Impact Personnel and brand lists in ETD."
+msgstr ""
+
+msgid "Prev."
+msgstr ""
+
+msgid "Previous"
+msgstr ""
+
+msgid "Priorities"
+msgstr ""
+
+msgid "Privileged changes"
+msgstr ""
+
+msgid "Protected domains"
+msgstr ""
+
+msgid "Publish MTA-STS and TLS-RPT so inbound TLS cannot be downgraded silently."
+msgstr ""
+
+msgid "Publish one SPF record per domain ending in -all or ~all, within 10 DNS lookups."
+msgstr ""
+
+msgid "Published policy"
+msgstr ""
+
+msgid "QR code"
+msgstr ""
+
+msgid "QR codes and text-only lures"
+msgstr ""
+
+msgid ""
+"QR codes are counted from ETD's \"QR code\" technique and QR-origin URLs in urlMetadata. Text-only lures are scam, "
+"phishing or BEC messages with no link and at most PDF or image attachments - the shape of callback phishing (TOAD). "
+"ETD has no phone-number technique, so this is a heuristic."
+msgstr ""
+
+msgid "Ranking by threats"
+msgstr ""
+
+msgid "Rcpts"
+msgstr ""
+
+msgid "Received"
+msgstr ""
+
+msgid "Recipient"
+msgstr ""
+
+msgid "Recipients"
+msgstr ""
+
+msgid "Reclassification"
+msgstr ""
+
+#, python-brace-format
+msgid "Reclassifications by method: {reclassifications}. Remediations by method: {remediations}."
+msgstr ""
+
+msgid "Reclassified"
+msgstr ""
+
+msgid "Recommendations"
+msgstr ""
+
+msgid ""
+"Recommended handling: verify each sender below (recent sign-ins, mailbox rules, MFA state), reset credentials where "
+"compromise is confirmed, and check whether the messages were remediated in recipients' mailboxes."
+msgstr ""
+
+msgid "Region"
+msgstr ""
+
+msgid "Remediated"
+msgstr ""
+
+msgid "Remediation"
+msgstr ""
+
+msgid "Remediation is automatic"
+msgstr ""
+
+#, python-brace-format
+msgid "Reply-To to another domain ({reply_to_elsewhere})"
+msgstr ""
+
+msgid "Reply-To ≠ From"
+msgstr ""
+
+msgid "Retro"
+msgstr ""
+
+msgid "Retro msgs"
+msgstr ""
+
+msgid "Retro threats remediated within 1 h"
+msgstr ""
+
+msgid "Retro-convicted mail sits in inboxes too long - make sure retrospective verdicts trigger automatic remediation."
+msgstr ""
+
+msgid "Retro-convicted messages"
+msgstr ""
+
+msgid "Retrospective verdicts"
+msgstr ""
+
+msgid "Review allow-list rules: threats were delivered because a rule trusted the sender."
+msgstr ""
+
+msgid "Review what analysts release as neutral and tune policies or allow rules accordingly."
+msgstr ""
+
+msgid "Risk"
+msgstr ""
+
+msgid "Rule"
+msgstr ""
+
+msgid "SPF"
+msgstr ""
+
+msgid "SPF on own domains"
+msgstr ""
+
+msgid "Scam"
+msgstr ""
+
+msgid "Scanned"
+msgstr ""
+
+msgid "Script / shortcut"
+msgstr ""
+
+msgid "Sender"
+msgstr ""
+
+msgid "Sender reputation"
+msgstr ""
+
+msgid "Senders"
+msgstr ""
+
+msgid "Severity"
+msgstr ""
+
+msgid "Share"
+msgstr ""
+
+msgid "SharePoint / OneDrive"
+msgstr ""
+
+msgid "Sign-in and session"
+msgstr ""
+
+msgid "Signals"
+msgstr ""
+
+msgid "Site builders"
+msgstr ""
+
+msgid "Six-month trend"
+msgstr ""
+
+msgid "Social engineering"
+msgstr ""
+
+msgid "Some threat verdicts have no action - check for monitor-only policies and remediation errors in ETD."
+msgstr ""
+
+msgid "Spam + graymail"
+msgstr ""
+
+msgid "Spoofing of your domains"
+msgstr ""
+
+msgid "Statistics collected"
+msgstr ""
+
+#, python-brace-format
+msgid "Statistics exist for {days_with_data} of {days} days in this period."
+msgstr ""
+
+#, python-brace-format
+msgid "Statistics for {days_with_data} of {days} days"
+msgstr ""
+
+msgid "Statistics last collected"
+msgstr ""
+
+msgid "Status"
+msgstr ""
+
+msgid "Still in inboxes - threats without remediation"
+msgstr ""
+
+msgid "Subject"
+msgstr ""
+
+msgid "Subjects"
+msgstr ""
+
+msgid "Summary"
+msgstr ""
+
+#, python-brace-format
+msgid "Summary · {period_label}"
+msgstr ""
+
+msgid "TLS-RPT"
+msgstr ""
+
+msgid "Technique"
+msgstr ""
+
+msgid "Technique families"
+msgstr ""
+
+msgid "Techniques and business risk"
+msgstr ""
+
+msgid "Techniques seen against these people"
+msgstr ""
+
+msgid "Tenant"
+msgstr ""
+
+msgid "Tenants"
+msgstr ""
+
+msgid "Text-only lures (possible callback)"
+msgstr ""
+
+msgid "The API returned no rule information for this period."
+msgstr ""
+
+#, python-brace-format
+msgid "The daily statistics count {stats_threats} threat(s), but no convicted messages were collected for the period."
+msgstr ""
+
+#, python-format
+msgid ""
+"The score is the share of points earned on the checks that could be assessed. n/a means a check does not apply to the"
+" period (for example no threats); unknown means the data is missing and is never counted as a pass. With less than 80"
+" % of the weight assessed, no score or grade is given."
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"The {threat_domains_checked} most frequent threat sender domains were checked in DNS. \"reject\" and \"quarantine\" "
+"are the policies these domains publish today. ETD does not include the SPF, DKIM or DMARC result of each message, and"
+" a policy may have changed since delivery, so this does not show that the messages passed authentication."
+msgstr ""
+
+msgid "This period"
+msgstr ""
+
+msgid "Threat landscape in brief"
+msgstr ""
+
+msgid "Threat messages"
+msgstr ""
+
+msgid "Threat rate"
+msgstr ""
+
+#, python-brace-format, python-format
+msgid ""
+"Threat rate {threat_rate_pct} % of scanned mail. At this pace ETD would catch about {threats_per_year} threats and "
+"{unwanted_per_year} unwanted messages per year (daily average × 365, same method as the Impact Report)."
+msgstr ""
+
+msgid "Threat spike"
+msgstr ""
+
+msgid "Threat spikes"
+msgstr ""
+
+msgid "Threats"
+msgstr ""
+
+msgid "Threats and unwanted mail by verdict"
+msgstr ""
+
+msgid "Threats caught"
+msgstr ""
+
+msgid ""
+"Threats from a listed vendor, from a domain with a history of clean mail, or that ETD tags as a frequent sender for "
+"the recipient. Vendor email compromise usually looks like this: a real account, a plausible thread and a changed bank"
+" account."
+msgstr ""
+
+msgid "Threats from domains with enforcing DMARC"
+msgstr ""
+
+msgid "Threats from senders the recipient normally talks to - often a compromised partner account."
+msgstr ""
+
+msgid "Threats remediated"
+msgstr ""
+
+msgid "Threats spoofing your domains"
+msgstr ""
+
+msgid "Threats still not remediated"
+msgstr ""
+
+msgid "Threats stopped"
+msgstr ""
+
+msgid ""
+"Threats using your own domains as sender arrived although your DMARC policy is p=reject - check paths that skip "
+"authentication, e.g. Microsoft 365 Direct Send or inbound connectors that trust the gateway."
+msgstr ""
+
+msgid "Threats with QR codes"
+msgstr ""
+
+msgid "Threats with Reply-To to another domain"
+msgstr ""
+
+msgid "Time"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"Time to verdict: median {median}, p90 {p90}, max {max} ({count} messages). Remediation: {auto_count} automatic, "
+"{manual_count} manual."
+msgstr ""
+
+msgid "To"
+msgstr ""
+
+msgid "To neutral"
+msgstr ""
+
+msgid "To threat"
+msgstr ""
+
+msgid "Top domains"
+msgstr ""
+
+msgid "Top external threat senders"
+msgstr ""
+
+msgid "Top targets"
+msgstr ""
+
+msgid "Top techniques"
+msgstr ""
+
+msgid "Total"
+msgstr ""
+
+msgid "Traffic by direction"
+msgstr ""
+
+msgid "Tunnels / IPFS"
+msgstr ""
+
+msgid "Type"
+msgstr ""
+
+msgid "URL hosts:"
+msgstr ""
+
+msgid "URL shorteners"
+msgstr ""
+
+msgid "URLs"
+msgstr ""
+
+msgid "Unwanted"
+msgstr ""
+
+msgid "Unwanted (spam + graymail)"
+msgstr ""
+
+msgid "User administration"
+msgstr ""
+
+msgid "VIP"
+msgstr ""
+
+msgid "VIPs defined"
+msgstr ""
+
+msgid "VIPs under attack"
+msgstr ""
+
+msgid "Vendor domain"
+msgstr ""
+
+msgid "Vendor risk"
+msgstr ""
+
+msgid "Verdict"
+msgstr ""
+
+msgid "Verdict changes and remediation"
+msgstr ""
+
+msgid "Verdicts"
+msgstr ""
+
+msgid "Very Attacked People"
+msgstr ""
+
+msgid "Via"
+msgstr ""
+
+#, python-brace-format
+msgid "Volume {today_total} is {ratio:.0%} of the 30-day average ({baseline_avg:.0f})."
+msgstr ""
+
+#, python-brace-format
+msgid "Volume {today_total} is {ratio:.0%} of the 30-day average ({baseline_avg:.0f}). Check journaling/connector."
+msgstr ""
+
+#, python-brace-format
+msgid "Volume {today_total} vs 30-day average {baseline_avg:.0f} ({ratio:.0%})."
+msgstr ""
+
+#, python-brace-format
+msgid "Volume {today_total}; no baseline yet (fewer than one day of history)."
+msgstr ""
+
+msgid "Web UI"
+msgstr ""
+
+msgid "What it means"
+msgstr ""
+
+msgid "Who"
+msgstr ""
+
+msgid "Who did what"
+msgstr ""
+
+msgid "Why"
+msgstr ""
+
+msgid "Why trusted"
+msgstr ""
+
+msgid "Without Log Export only listed vendors and ETD's frequent-sender signal are used."
+msgstr ""
+
+msgid "Your domains"
+msgstr ""
+
+#, python-brace-format
+msgid "[ETD] Audit and compliance - {tenant} - {period}"
+msgstr ""
+
+#, python-brace-format
+msgid "[ETD] Authentication posture - {tenant} - {period}"
+msgstr ""
+
+#, python-brace-format
+msgid "[ETD] Campaigns - {tenant} - {period}"
+msgstr ""
+
+#, python-brace-format
+msgid "[ETD] Compromise indicators - {tenant} - {period}"
+msgstr ""
+
+#, python-brace-format
+msgid "[ETD] Cross-tenant roll-up - {period}"
+msgstr ""
+
+#, python-brace-format
+msgid "[ETD] Executive summary - {tenant} - {period}"
+msgstr ""
+
+#, python-brace-format
+msgid "[ETD] Exposure and dwell time - {tenant} - {period}"
+msgstr ""
+
+#, python-brace-format
+msgid "[ETD] Health check - {tenant} - {period}"
+msgstr ""
+
+#, python-brace-format
+msgid "[ETD] Posture and effectiveness - {tenant} - {period}"
+msgstr ""
+
+#, python-brace-format
+msgid "[ETD] Techniques and business risk - {tenant} - {period}"
+msgstr ""
+
+#, python-brace-format
+msgid "[ETD] Vendor risk - {tenant} - {period}"
+msgstr ""
+
+#, python-brace-format
+msgid "[ETD] Very Attacked People - {tenant} - {period}"
+msgstr ""
+
+#, python-brace-format
+msgid "as {seen_as}"
+msgstr ""
+
+msgid "attack concentration"
+msgstr ""
+
+#, python-brace-format
+msgid "auto-remediated {auto_remediated} · retro {retro} ·"
+msgstr ""
+
+msgid "counterparty"
+msgstr ""
+
+msgid "critical"
+msgstr ""
+
+msgid "critical severity"
+msgstr ""
+
+#, python-brace-format
+msgid "daily report for {period}"
+msgstr ""
+
+msgid "data covers UTC days as aggregated by ETD"
+msgstr ""
+
+msgid "delivered before verdict"
+msgstr ""
+
+msgid "domains auto-detected"
+msgstr ""
+
+msgid "error"
+msgstr ""
+
+msgid "first seen this period"
+msgstr ""
+
+msgid "from inside the organisation"
+msgstr ""
+
+#, python-brace-format
+msgid "generated {when} ({tz})"
+msgstr ""
+
+msgid "high severity"
+msgstr ""
+
+msgid "high-risk type"
+msgstr ""
+
+msgid "impersonation"
+msgstr ""
+
+msgid "incoming"
+msgstr ""
+
+msgid "incomplete"
+msgstr ""
+
+msgid "inherited"
+msgstr ""
+
+msgid "internal"
+msgstr ""
+
+msgid "listed vendor"
+msgstr ""
+
+msgid "low severity"
+msgstr ""
+
+msgid "mass mailing"
+msgstr ""
+
+msgid "medium severity"
+msgstr ""
+
+msgid "missing"
+msgstr ""
+
+#, python-brace-format
+msgid "monthly report for {period}"
+msgstr ""
+
+msgid "multiple records (invalid)"
+msgstr ""
+
+msgid "multiple records (permerror)"
+msgstr ""
+
+msgid "n/a"
+msgstr ""
+
+msgid "na"
+msgstr ""
+
+msgid "needs Log Export"
+msgstr ""
+
+msgid "new"
+msgstr ""
+
+msgid "no"
+msgstr ""
+
+msgid "no all mechanism"
+msgstr ""
+
+msgid "no rua"
+msgstr ""
+
+msgid "none"
+msgstr ""
+
+msgctxt "action"
+msgid "none"
+msgstr ""
+
+msgid "not collected"
+msgstr ""
+
+msgid "not remediated"
+msgstr ""
+
+#, python-brace-format
+msgid "not remediated {not_remediated}"
+msgstr ""
+
+msgid "of threat deliveries went to the top 10"
+msgstr ""
+
+msgid "ok"
+msgstr ""
+
+msgid "other"
+msgstr ""
+
+msgid "outgoing"
+msgstr ""
+
+msgid "own domain"
+msgstr ""
+
+#, python-brace-format
+msgid "p90 {p90} · max {max}"
+msgstr ""
+
+#, python-brace-format
+msgid "quarterly report for {period}"
+msgstr ""
+
+msgid "redirect"
+msgstr ""
+
+msgid "senders:"
+msgstr ""
+
+msgid "spike"
+msgstr ""
+
+msgid "targeted"
+msgstr ""
+
+msgid "techniques:"
+msgstr ""
+
+msgid "unknown"
+msgstr ""
+
+msgid "verdicts:"
+msgstr ""
+
+msgid "warning"
+msgstr ""
+
+#, python-brace-format
+msgid "weekly report for {period}"
+msgstr ""
+
+msgid "yes"
+msgstr ""
+
+#, python-brace-format
+msgid "{allow_count} threat(s) matched an allow/safe rule."
+msgstr ""
+
+#, python-brace-format, python-format
+msgid "{auto:.0f} % of remediations were automatic."
+msgstr ""
+
+#, python-brace-format
+msgid "{auto_pct} % automatically"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"{bec_nopayload_count} BEC message(s) carried no payload at all - payment-change requests need out-of-band "
+"verification."
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"{callback_count} text-only lure(s) without a link look like callback phishing - teach finance and the service desk to"
+" verify phone numbers independently."
+msgstr ""
+
+#, python-brace-format
+msgid "{campaign_share} % belong to a campaign, {singletons} singletons"
+msgstr ""
+
+#, python-brace-format
+msgid "{campaigns} campaign(s), {qr} QR-code threat(s), {callback} possible callback lure(s)"
+msgstr ""
+
+#, python-brace-format
+msgid "{clean_days} days of clean mail before"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"{compromised} possibly compromised counterpart(ies), {lookalikes} look-alike domain(s), {spoofed} spoof(s) of own "
+"domains"
+msgstr ""
+
+#, python-brace-format
+msgid "{covered_hours} of {hours} hours"
+msgstr ""
+
+#, python-brace-format
+msgid "{critical} critical"
+msgstr ""
+
+#, python-brace-format
+msgid "{day_rows_count} day(s) of data present."
+msgstr ""
+
+#, python-brace-format
+msgid "{days_with_data}/{days} days"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"{delivered_la_count} look-alike domain(s) delivered mail that was NOT convicted - search and remediate in ETD and "
+"block the domains."
+msgstr ""
+
+#, python-brace-format
+msgid "{delivered_lookalikes} delivered mail"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"{disguised} attachment(s) disguised their real type (double extension or masqueraded extension) - show file "
+"extensions on endpoints."
+msgstr ""
+
+#, python-brace-format
+msgid "{domain}: DMARC is p=none and offers no protection - move towards p=quarantine and p=reject.{tail}"
+msgstr ""
+
+#, python-brace-format
+msgid "{domain}: DNS could not be checked ({error})."
+msgstr ""
+
+#, python-brace-format
+msgid "{domain}: add rua= to the DMARC record so you receive aggregate reports."
+msgstr ""
+
+#, python-brace-format
+msgid "{domain}: finish DMARC enforcement ({status} -> p=reject, pct=100).{tail}"
+msgstr ""
+
+#, python-brace-format
+msgid "{domain}: fix SPF ({status})."
+msgstr ""
+
+#, python-brace-format
+msgid "{domain}: publish MTA-STS and TLS-RPT so inbound TLS cannot be downgraded silently."
+msgstr ""
+
+#, python-brace-format
+msgid "{domain}: publish a DMARC record (start with p=none and rua reporting, then move to p=reject).{tail}"
+msgstr ""
+
+#, python-brace-format
+msgid "{domain}: tighten SPF ({status}) - end with -all or ~all and stay under 10 DNS lookups."
+msgstr ""
+
+#, python-brace-format, python-format
+msgid ""
+"{enforcing} % of the checked threats came from domains that publish an enforcing DMARC policy today. ETD does not "
+"show whether each message passed DMARC, and a policy may have changed since delivery, but the sending domain's DMARC "
+"did not keep these threats out - content and behaviour detection is what stops them."
+msgstr ""
+
+#, python-brace-format, python-format
+msgid "{evidence} % of the scoring weight could be assessed"
+msgstr ""
+
+#, python-brace-format
+msgid "{explicit} listed · {established_count} learned"
+msgstr ""
+
+#, python-brace-format
+msgid "{family}: {messages} threat(s)"
+msgstr ""
+
+#, python-brace-format
+msgid "{financial} BEC/scam"
+msgstr ""
+
+#, python-brace-format, python-format
+msgid "{freemail_pct} % came from free-mail providers."
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"{known_relationship} threat(s) came from senders ETD recognises as regular correspondents - see the Vendor risk "
+"report for possibly compromised partners."
+msgstr ""
+
+#, python-brace-format, python-format
+msgid "{last_error} (at {when:%Y-%m-%d %H:%M} UTC)"
+msgstr ""
+
+#, python-brace-format
+msgid "{mailbox} · index {index} · {messages} msg"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"{messages_with_attachments} threat(s) carried attachments. Top extensions: {extensions}. ETD flagged "
+"{html_attachment} malicious HTML attachment(s) and {masqueraded} masqueraded extension(s)."
+msgstr ""
+
+#, python-brace-format
+msgid "{new_techniques} new vs previous period"
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"{partial_files} log file(s) in the period had {unreadable_lines} unreadable line(s); the events on those lines are "
+"missing."
+msgstr ""
+
+#, python-brace-format, python-format
+msgid "{pct} % of the period's hours collected, {gap_count} gap(s)"
+msgstr ""
+
+#, python-brace-format
+msgid "{previous_campaign_count} previous period"
+msgstr ""
+
+#, python-brace-format
+msgid "{previous_people_count} previous period"
+msgstr ""
+
+#, python-brace-format
+msgid "{previous_qr} previous period"
+msgstr ""
+
+#, python-brace-format
+msgid "{previous_total} previous period"
+msgstr ""
+
+#, python-brace-format
+msgid "{previous_unremediated_count} previous period"
+msgstr ""
+
+#, python-brace-format
+msgid "{privileged_changes} privileged change(s) in ETD"
+msgstr ""
+
+#, python-brace-format
+msgid "{qr_count} threat(s) used QR codes, which move the click to unmanaged phones - include quishing in awareness training."
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"{rare_financial} BEC/scam message(s) came from new or rare domains - require call-back verification for bank-detail "
+"changes."
+msgstr ""
+
+#, python-brace-format
+msgid "{recipients} mailboxes · {messages} messages"
+msgstr ""
+
+#, python-brace-format
+msgid "{remediated_count} of {threats_count} threats were moved or deleted ({cov:.1f} %)."
+msgstr ""
+
+#, python-brace-format, python-format
+msgid "{reply_to_pct_clean} % of clean mail"
+msgstr ""
+
+#, python-brace-format, python-format
+msgid "{retro_share} % of {total_threats} threats · {previous_retro_count} previous period"
+msgstr ""
+
+#, python-brace-format
+msgid "{retro} retro-convicted"
+msgstr ""
+
+#, python-brace-format
+msgid "{shortened} threat(s) used shortened URLs and {low_rep_tld} a low-reputation TLD. Most common TLDs:"
+msgstr ""
+
+#, python-brace-format
+msgid "{spoofed_count} threat(s) used one of your domains in the From: header ({verdicts})."
+msgstr ""
+
+#, python-brace-format
+msgid "{tenant}: {threats} vs {previous_threats}"
+msgstr ""
+
+#, python-brace-format
+msgid "{threat_messages_checked} of {threat_total} threats checked"
+msgstr ""
+
+#, python-brace-format
+msgid "{threats_prev} previous period · {per_10k} per 10,000 messages"
+msgstr ""
+
+#, python-brace-format
+msgid "{to_neutral} manual reclassification(s) to neutral against {threats} threats ({fp} %)."
+msgstr ""
+
+#, python-brace-format
+msgid "{today_threats} threats vs 30-day average {baseline_threat_avg:.1f} - possible campaign."
+msgstr ""
+
+#, python-brace-format
+msgid "{today_threats} threats vs 30-day average {baseline_threat_avg:.1f}."
+msgstr ""
+
+#, python-brace-format
+msgid ""
+"{total} threat-convicted message(s) sent {inside} (outgoing or internal) during {period_label}, from {sender_count} "
+"distinct sender(s). Previous period: {previous_total}."
+msgstr ""
+
+#, python-brace-format
+msgid "{vips_count} VIP mailbox(es) configured."
+msgstr ""
+
+#, python-brace-format
+msgid "{with_tls} of {own_checks_count} domain(s) publish both."
+msgstr ""
+
+#, python-brace-format
+msgid "· grade {grade}"
+msgstr ""
+
+#, python-brace-format
+msgid "· {unremediated} not remediated"
+msgstr ""
+
+#, python-brace-format
+msgid "×{factor} (≤{n} recipients)"
+msgstr ""
+
+#, python-brace-format
+msgid "×{factor} (≥{n} recipients)"
+msgstr ""
+
+msgid "→ remediation"
+msgstr ""
+
+msgid "→ verdict"
+msgstr ""

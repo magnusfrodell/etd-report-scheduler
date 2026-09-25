@@ -1,0 +1,1900 @@
+# Swedish report texts for ETD Report Scheduler.
+# See docs/TRANSLATING.md for how to add or update a language.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: ETD Report Scheduler 0.10.0\n"
+"Report-Msgid-Bugs-To: https://github.com/magnusfrodell/etd-report-scheduler/issues\n"
+"Language: sv\n"
+"Language-Team: Swedish\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#, python-brace-format
+msgid " Attackers used this domain in the From: header {spoofs} time(s) this period."
+msgstr " Angripare använde domänen i From:-huvudet {spoofs} gång(er) under perioden."
+
+#, python-brace-format
+msgid "#{rank} {label} · {recipients} mailboxes · {not_remediated} not remediated"
+msgstr "#{rank} {label} · {recipients} mottagare · ej åtgärdade: {not_remediated}"
+
+msgid "(first 200)"
+msgstr "(de första 200)"
+
+#, python-brace-format
+msgid "(first {exposed})"
+msgstr "(de första {exposed})"
+
+msgid "(provisional)"
+msgstr "(preliminär)"
+
+msgid "(retro)"
+msgstr "(retroaktiv)"
+
+#, python-brace-format
+msgid "(slowest {retro_rows})"
+msgstr "(de {retro_rows} långsammaste)"
+
+#, python-brace-format
+msgid "(top {rows})"
+msgstr "(topp {rows})"
+
+msgid "(unknown sender)"
+msgstr "(okänd avsändare)"
+
+#, python-brace-format
+msgid "({previous} before)"
+msgstr "({previous} före)"
+
+#, python-brace-format
+msgid "+ {bec_nopayload_count} BEC without payload"
+msgstr "+ {bec_nopayload_count} BEC utan länk eller bilaga"
+
+msgid "+2/+4/+5 medium/high/critical"
+msgstr "+2/+4/+5 medel/hög/kritisk"
+
+msgid "+all (anyone may send)"
+msgstr "+all (alla får skicka)"
+
+#, python-brace-format
+msgid ", {open_retro_count} still not remediated"
+msgstr ", ej åtgärdade ännu: {open_retro_count}"
+
+#, python-brace-format
+msgid ", {partial} file(s) with unreadable lines"
+msgstr ", {partial} fil(er) med oläsbara rader"
+
+msgid "- ETD returned the threats without techniques"
+msgstr "- ETD returnerade hoten utan tekniker"
+
+#, python-brace-format
+msgid "30-day daily average ({baseline_days} days)"
+msgstr "Dagligt snitt senaste 30 dagarna ({baseline_days} dagar)"
+
+#, python-brace-format
+msgid "; last error: {last_error}"
+msgstr "; senaste fel: {last_error}"
+
+msgid "?all (neutral)"
+msgstr "?all (neutral)"
+
+msgid ""
+"A Reply-To pointing to another domain is far more common in threats than in clean mail - a strong BEC signal to train"
+" on."
+msgstr ""
+"En Reply-To som pekar på en annan domän är betydligt vanligare i hot än i ren e-post - en stark BEC-signal att "
+"utbilda om."
+
+msgid ""
+"A threat verdict with no action usually means the policy is in monitor mode for that verdict, a remediation error, or"
+" an allow-list rule (\"Rule\" column). Remediate manually and check the policy."
+msgstr ""
+"En hotbedömning utan åtgärd betyder oftast att policyn står i övervakningsläge för den bedömningen, att åtgärden "
+"misslyckades eller att en tillåtelseregel slog till (kolumnen \"Regel\"). Åtgärda manuellt och kontrollera policyn."
+
+msgid ""
+"A volume close to zero usually means the Microsoft 365 journal rule or the ETD connector stopped delivering mail to "
+"ETD - the ETD console itself does not alert on this."
+msgstr ""
+"En volym nära noll betyder oftast att journalregeln i Microsoft 365 eller ETD-kopplingen har slutat leverera e-post "
+"till ETD - ETD-konsolen larmar inte själv om detta."
+
+msgid "API / automation"
+msgstr "API / automatisering"
+
+msgid "API access"
+msgstr "API-åtkomst"
+
+msgid "Abused legitimate service"
+msgstr "Missbrukad legitim tjänst"
+
+msgid "Action"
+msgstr "Åtgärd"
+
+msgid "Activity by type"
+msgstr "Aktivitet per typ"
+
+msgid "Add the look-alike domains to your block lists and ask the registrar or vendor to act on typosquats."
+msgstr ""
+"Lägg till de förväxlingsbara domänerna i era blockeringslistor och be registraren eller leverantören att agera mot "
+"typosquatting."
+
+msgid "Age"
+msgstr "Ålder"
+
+#, python-brace-format, python-format
+msgid ""
+"All incoming mail (Log Export): {claimed_own} message(s) claimed one of your domains in From:, "
+"{claimed_own_convicted} of them convicted. The Return-Path domain differed from the From: domain in {mismatch_pct} % "
+"of {incoming} incoming messages."
+msgstr ""
+"All inkommande e-post (Log Export): {claimed_own} meddelande(n) angav en av era domäner i From:, varav "
+"{claimed_own_convicted} hotklassades. Return-Path-domänen skilde sig från From:-domänen i {mismatch_pct} % av "
+"{incoming} inkommande meddelande(n)."
+
+msgid "All tenants"
+msgstr "Alla tenants"
+
+#, python-brace-format
+msgid "All tenants · {period_label}"
+msgstr "Alla tenants · {period_label}"
+
+#, python-brace-format
+msgid ""
+"Analysts released {to_neutral} message(s) as neutral (possible false positives) and escalated {to_threat} to a threat"
+" verdict (possible false negatives)."
+msgstr ""
+"Analytiker släppte {to_neutral} meddelande(n) med bedömningen neutral (möjliga falska positiva) och uppgraderade "
+"{to_threat} till en hotbedömning (möjliga falska negativa)."
+
+#, python-brace-format, python-format
+msgid ""
+"Analysts released {to_neutral} message(s) as neutral (possible false positives, {fp_rate} % of {threats} threats) and"
+" escalated {to_threat} to a threat verdict (possible false negatives)."
+msgstr ""
+"Analytiker släppte {to_neutral} meddelande(n) med bedömningen neutral (möjliga falska positiva, {fp_rate} % av "
+"{threats} hot) och uppgraderade {to_threat} till en hotbedömning (möjliga falska negativa)."
+
+msgid "Archive / disk image"
+msgstr "Arkiv / diskavbild"
+
+msgid "As Reply-To"
+msgstr "Som Reply-To"
+
+msgid "Attachment only"
+msgstr "Endast bilaga"
+
+msgid "Attachment types"
+msgstr "Bilagetyper"
+
+msgid "Attachments"
+msgstr "Bilagor"
+
+msgid "Audit and compliance"
+msgstr "Granskning och regelefterlevnad"
+
+msgid "Audit events"
+msgstr "Granskningshändelser"
+
+msgid "Audit log collected"
+msgstr "Granskningslogg insamlad"
+
+msgid "Authentication posture"
+msgstr "E-postautentisering"
+
+msgid "Auto-remediated"
+msgstr "Automatiskt åtgärdade"
+
+msgid "Azure hosting"
+msgstr "Azure-hosting"
+
+msgid "BEC"
+msgstr "BEC"
+
+msgid "BEC/scam from new or rare senders"
+msgstr "BEC/bedrägeri från nya eller ovanliga avsändare"
+
+msgid "BIMI"
+msgstr "BIMI"
+
+#, python-brace-format
+msgid ""
+"Block or strip .html/.htm/.svg attachments at the gateway - {html_svg} HTML/SVG attachment(s) carried threats (HTML "
+"smuggling, SVG phishing)."
+msgstr ""
+"Blockera eller ta bort .html/.htm/.svg-bilagor i gatewayen - antal HTML/SVG-bilagor som bar hot: {html_svg} (HTML-"
+"smuggling, SVG-nätfiske)."
+
+msgid "Block script, shortcut and executable attachments outright; they have no business use in mail."
+msgstr "Blockera skript, genvägar och körbara bilagor helt; de har ingen affärsnytta i e-post."
+
+msgid "Business risk"
+msgstr "Affärsrisk"
+
+msgid "Calendar invite"
+msgstr "Kalenderinbjudan"
+
+msgid "Campaign clusters"
+msgstr "Kampanjkluster"
+
+msgid "Campaign messages not remediated"
+msgstr "Kampanjmeddelanden som inte åtgärdats"
+
+msgid "Campaigns"
+msgstr "Kampanjer"
+
+msgid "Campaigns (≥2 messages)"
+msgstr "Kampanjer (≥2 meddelanden)"
+
+msgid "Campaigns by reach"
+msgstr "Kampanjer efter räckvidd"
+
+msgid "Change"
+msgstr "Förändring"
+
+#, python-brace-format
+msgid "Change compares threats with {previous_label}. A spike is flagged at ≥2× the previous period and at least 10 threats."
+msgstr "Förändringen jämför hot med {previous_label}. En topp flaggas vid ≥2× föregående period och minst 10 hot."
+
+msgid "Check"
+msgstr "Kontroll"
+
+#, python-brace-format
+msgid ""
+"Checked against {protected_count} protected domain(s): own domains, listed vendors and the most active "
+"counterparties. Methods: TLD swap, homoglyph, typosquat (edit distance), combosquat and subdomain spoof. Delivered "
+"counts mail that was not convicted (Log Export). Heuristic - verify before blocking."
+msgstr ""
+"Kontrollerat mot {protected_count} domän(er) som skyddas: egna domäner, listade leverantörer och de mest aktiva "
+"motparterna. Metoder: byte av toppdomän, homoglyfer, typosquatting (redigeringsavstånd), combosquatting och "
+"förfalskade underdomäner. Levererade räknar e-post som inte hotklassades (Log Export). Heuristik - verifiera innan ni"
+" blockerar."
+
+msgid "Checks"
+msgstr "Kontroller"
+
+msgid "Clean days"
+msgstr "Rena dagar"
+
+msgid "Cloudflare"
+msgstr "Cloudflare"
+
+msgid ""
+"Clustering links messages that share a normalised subject and sender domain, a URL host (generic hosting such as "
+"SharePoint or Google Drive excluded) or an attachment SHA-256. Critical = 3+ messages not remediated, or BEC reaching"
+" 3+ mailboxes."
+msgstr ""
+"Klustringen kopplar ihop meddelanden som delar normaliserat ämne och avsändardomän, en URL-värd (generella tjänster "
+"som SharePoint och Google Drive undantagna) eller en bilagas SHA-256. Kritisk = 3+ meddelanden som inte åtgärdats, "
+"eller BEC som nått 3+ postlådor."
+
+#, python-brace-format
+msgid ""
+"Collected from {first} to {cursor} (status: {status}). ETD keeps audit logs for 30 days; this tool keeps them for "
+"{retention_days} days."
+msgstr ""
+"Insamlat från {first} till {cursor} (status: {status}). ETD sparar granskningsloggar i 30 dagar; det här verktyget "
+"sparar dem i {retention_days} dagar."
+
+msgid "Collector errors"
+msgstr "Insamlingsfel"
+
+msgid "Compromise indicators"
+msgstr "Tecken på kapade konton"
+
+#, python-brace-format
+msgid ""
+"Contact {vendors} out of band: threats came from accounts you normally trust - treat as a possible compromise and "
+"hold any payment changes."
+msgstr ""
+"Kontakta {vendors} via en annan kanal: hoten kom från konton ni normalt litar på - behandla det som ett möjligt "
+"intrång och stoppa alla ändringar av betalningsuppgifter."
+
+msgid "Convicted"
+msgstr "Hotklassade"
+
+msgid "Convicted messages have not been collected yet, so remediation cannot be assessed."
+msgstr "Hotklassade meddelanden har inte samlats in ännu, så åtgärdandet kan inte bedömas."
+
+#, python-brace-format, python-format
+msgid "Convicted messages were last collected {collected:%Y-%m-%d %H:%M} UTC, before the period ended."
+msgstr "Hotklassade meddelanden samlades senast in {collected:%Y-%m-%d %H:%M} UTC, innan perioden tog slut."
+
+msgid "Counterparty history is learned from Log Export (clean mail on at least 3 days before the period)."
+msgstr "Motpartshistoriken lärs in från Log Export (ren e-post under minst 3 dagar före perioden)."
+
+msgid ""
+"Coverage is the share of the period for which this tool fetched Log Export without known gaps. It shows what was "
+"collected, not that ETD exported every event."
+msgstr ""
+"Täckningen är den andel av perioden som verktyget hämtade Log Export för utan kända luckor. Den visar vad som "
+"samlades in, inte att ETD exporterade varje händelse."
+
+msgid "Critical campaigns"
+msgstr "Kritiska kampanjer"
+
+msgid "Cross-tenant roll-up"
+msgstr "Sammanställning för alla tenants"
+
+msgid "DMARC"
+msgstr "DMARC"
+
+msgid "DMARC enforcement on own domains"
+msgstr "DMARC-tillämpning på egna domäner"
+
+msgid "DMARC policy of the domains that sent threats"
+msgstr "DMARC-policy för domänerna som skickade hot"
+
+msgid "Daily threats"
+msgstr "Hot per dag"
+
+msgid "Data collection healthy"
+msgstr "Datainsamlingen fungerar"
+
+msgid "Day"
+msgstr "Dag"
+
+msgid "Days with data"
+msgstr "Dagar med data"
+
+msgid "Delivered"
+msgstr "Levererade"
+
+msgid "Delivered before verdict (retro)"
+msgstr "Levererade före bedömning (retroaktiva)"
+
+msgid "Detail"
+msgstr "Detalj"
+
+msgid "Details: Techniques and business risk, Vendor risk, Authentication posture and Audit and compliance reports."
+msgstr ""
+"Detaljer: rapporterna Tekniker och affärsrisk, Leverantörsrisk, E-postautentisering samt Granskning och "
+"regelefterlevnad."
+
+msgid "Developer hosting"
+msgstr "Utvecklarhosting"
+
+msgid "Direction"
+msgstr "Riktning"
+
+msgid "Distinct techniques"
+msgstr "Olika tekniker"
+
+msgid "Domain"
+msgstr "Domän"
+
+msgid "Double extension"
+msgstr "Dubbel filändelse"
+
+msgid "Dwell time distribution (retro threats, delivery → remediation)"
+msgstr "Fördelning av uppehållstid (retroaktiva hot, leverans → åtgärd)"
+
+msgid "Dwell time for retro verdicts"
+msgstr "Uppehållstid för retroaktiva bedömningar"
+
+msgid "ETD returned no business-risk values for this period."
+msgstr "ETD returnerade inga affärsriskvärden för perioden."
+
+#, python-brace-format
+msgid ""
+"ETD's audit log identifies users by id only. Name them in the tenant's reporting profile (user labels): "
+"{unlabelled_users}"
+msgstr ""
+"ETD:s granskningslogg identifierar användare endast med id. Namnge dem i tenantens rapportprofil (användaretiketter):"
+" {unlabelled_users}"
+
+#, python-brace-format
+msgid "ETD: frequent sender ({frequent_count})"
+msgstr "ETD: frekvent avsändare ({frequent_count})"
+
+msgid ""
+"Enable Log Export in ETD (Administration > Business > Export Log Preferences) to learn counterparties from clean mail"
+" and to detect delivered look-alikes."
+msgstr ""
+"Aktivera Log Export i ETD (Administration > Business > Export Log Preferences) för att lära in motparter från ren "
+"e-post och upptäcka levererade förväxlingsdomäner."
+
+msgid ""
+"Enable Log Export in ETD to see spoofing and Return-Path/Reply-To alignment across all incoming mail, not only "
+"threats."
+msgstr ""
+"Aktivera Log Export i ETD för att se förfalskning och överensstämmelse för Return-Path/Reply-To i all inkommande "
+"e-post, inte bara i hot."
+
+msgid "Enable audit and message logs in ETD (Administration > Business > Export Log Preferences) and in Settings."
+msgstr ""
+"Aktivera gransknings- och meddelandeloggar i ETD (Administration > Business > Export Log Preferences) och under "
+"Settings."
+
+msgid "Enable automatic remediation for every threat verdict so nothing waits for an analyst."
+msgstr "Aktivera automatisk åtgärd för varje hotbedömning så att inget väntar på en analytiker."
+
+msgid "Error"
+msgstr "Fel"
+
+msgid "Evasion"
+msgstr "Kringgående"
+
+msgid "Events"
+msgstr "Händelser"
+
+msgid "Every threat in the period has been remediated."
+msgstr "Alla hot under perioden har åtgärdats."
+
+msgid "Examples"
+msgstr "Exempel"
+
+msgid "Executable / installer"
+msgstr "Körbar fil / installationsprogram"
+
+msgid "Executive summary"
+msgstr "Ledningssammanfattning"
+
+msgid "Exposure and dwell time"
+msgstr "Exponering och uppehållstid"
+
+msgid "Failed"
+msgstr "Misslyckade"
+
+msgid "Failed actions"
+msgstr "Misslyckade åtgärder"
+
+msgid "False-positive rate"
+msgstr "Andel falska positiva"
+
+msgid "Family"
+msgstr "Familj"
+
+msgid "File sharing"
+msgstr "Fildelning"
+
+msgid "First / last"
+msgstr "Första / sista"
+
+msgid "First / last seen"
+msgstr "Först / senast sedd"
+
+msgid "Fix collector errors on the Tenants page so reports cover the whole period."
+msgstr "Åtgärda insamlingsfelen på sidan Tenants så att rapporterna täcker hela perioden."
+
+msgid "Forms / surveys"
+msgstr "Formulär / enkäter"
+
+msgid "From"
+msgstr "Från"
+
+msgid "Gap from"
+msgstr "Lucka från"
+
+msgid "Gap to"
+msgstr "Lucka till"
+
+msgid "Gaps arise when the collector was stopped for longer than ETD's 30-day retention; they cannot be filled afterwards."
+msgstr "Luckor uppstår när insamlingen har stått still längre än ETD:s lagring på 30 dagar; de kan inte fyllas i efteråt."
+
+msgid "Google services"
+msgstr "Googles tjänster"
+
+msgid "Grade"
+msgstr "Betyg"
+
+msgid "HTML / SVG"
+msgstr "HTML / SVG"
+
+msgid "HTML smuggling and disguised file types."
+msgstr "HTML-smuggling och förklädda filtyper."
+
+#, python-brace-format
+msgid "Headline · {period_label} vs {previous_label}"
+msgstr "I korthet · {period_label} jämfört med {previous_label}"
+
+msgid "Health check"
+msgstr "Hälsokontroll"
+
+msgid "Hidden text and image-only mail built to fool filters."
+msgstr "Dold text och e-post med bara bilder, byggd för att lura filter."
+
+msgid "How completely the audit log was collected"
+msgstr "Hur fullständigt granskningsloggen samlades in"
+
+msgid "How the index is calculated"
+msgstr "Så beräknas indexet"
+
+msgid "How the payload was delivered"
+msgstr "Hur det skadliga innehållet levererades"
+
+msgid "IP"
+msgstr "IP"
+
+msgid "IPs"
+msgstr "IP-adresser"
+
+msgid "Image"
+msgstr "Bild"
+
+msgid "Imitates"
+msgstr "Imiterar"
+
+msgid "Impersonation"
+msgstr "Imitation"
+
+#, python-brace-format
+msgid "Impersonation in {impersonation_threats} threat(s) - keep High Impact Personnel and brand lists up to date in ETD."
+msgstr "Imitation i {impersonation_threats} hot - håll listorna High Impact Personnel och varumärken uppdaterade i ETD."
+
+msgid "Index"
+msgstr "Index"
+
+msgid "Inspect or quarantine archives and disk images (.zip/.iso/.img) - they are used to slip executables past filters."
+msgstr ""
+"Inspektera eller sätt arkiv och diskavbilder (.zip/.iso/.img) i karantän - de används för att smyga körbara filer "
+"förbi filter."
+
+msgid "Insufficient evidence for a score"
+msgstr "Underlaget räcker inte för ett betyg"
+
+msgid "Keep the collector running - ETD deletes audit logs after 30 days, so gaps cannot be filled later."
+msgstr "Låt insamlingen gå hela tiden - ETD raderar granskningsloggar efter 30 dagar, så luckor kan inte fyllas i senare."
+
+msgid "Kind"
+msgstr "Typ"
+
+msgid "Known relationship"
+msgstr "Känd relation"
+
+msgid "Last seen"
+msgstr "Senast sedd"
+
+msgid "Link and attachment"
+msgstr "Länk och bilaga"
+
+msgid "Link infrastructure"
+msgstr "Länkinfrastruktur"
+
+msgid "Link only"
+msgstr "Endast länk"
+
+msgid "Link-borne attacks incl. redirects, shorteners and QR codes."
+msgstr "Länkburna attacker, inklusive omdirigeringar, länkförkortare och QR-koder."
+
+msgid "List executives, finance and IT admins as VIPs so attacks on them are flagged."
+msgstr "Lägg in ledning, ekonomi och IT-administratörer som VIP så att attacker mot dem flaggas."
+
+msgid ""
+"List your key suppliers and partners in the tenant's reporting profile to get look-alike and compromise monitoring "
+"for them."
+msgstr ""
+"Lägg in era viktigaste leverantörer och partner i tenantens rapportprofil för att bevaka förväxlingsdomäner och "
+"kapade konton hos dem."
+
+msgid "Listed vendors"
+msgstr "Listade leverantörer"
+
+msgid "Log Export collection is switched off in Settings."
+msgstr "Insamling av Log Export är avstängd under Settings."
+
+msgid "Log Export is not collected, so there is no audit trail beyond ETD's 30 days."
+msgstr "Log Export samlas inte in, så det finns ingen granskningshistorik utöver ETD:s 30 dagar."
+
+msgid "Look-alike domains"
+msgstr "Förväxlingsbara domäner"
+
+msgid "Look-alikes"
+msgstr "Förväxlingsdomäner"
+
+msgid "MTA-STS"
+msgstr "MTA-STS"
+
+msgid "MTA-STS and TLS-RPT"
+msgstr "MTA-STS och TLS-RPT"
+
+msgid "Mailbox"
+msgstr "Postlåda"
+
+msgid "Mailboxes that received threats"
+msgstr "Postlådor som tog emot hot"
+
+msgid "Main activity"
+msgstr "Huvudsaklig aktivitet"
+
+msgid "Malicious"
+msgstr "Skadlig"
+
+msgid "Malicious attachment"
+msgstr "Skadlig bilaga"
+
+msgid "Malicious link"
+msgstr "Skadlig länk"
+
+msgid "Max"
+msgstr "Max"
+
+msgid "Median"
+msgstr "Median"
+
+msgid "Median dwell time (retro)"
+msgstr "Median uppehållstid (retroaktiva)"
+
+msgid "Median time in inbox until remediation"
+msgstr "Mediantid i inkorgen till åtgärd"
+
+#, python-brace-format
+msgid "Median {median_exposure} from delivery to remediation for {exposure_count} retro-convicted message(s){still_open}."
+msgstr ""
+"Median {median_exposure} från leverans till åtgärd för {exposure_count} meddelande(n) som klassats som hot i "
+"efterhand{still_open}."
+
+msgid "Message handling"
+msgstr "Meddelandehantering"
+
+msgid "Message volume"
+msgstr "Meddelandevolym"
+
+msgid "Messages"
+msgstr "Meddelanden"
+
+msgid "Messages scanned"
+msgstr "Skannade meddelanden"
+
+#, python-brace-format
+msgid "Messages scanned {period_label}"
+msgstr "Skannade meddelanden {period_label}"
+
+msgid "Method"
+msgstr "Metod"
+
+msgid "Microsoft Forms / Sway / Dynamics"
+msgstr "Microsoft Forms / Sway / Dynamics"
+
+msgid "Month"
+msgstr "Månad"
+
+#, python-brace-format
+msgid "Most-abused legitimate service: {service} ({urls} URL(s)) - consider stricter handling or sandboxing of links to it."
+msgstr ""
+"Mest missbrukade legitima tjänst: {service} ({urls} länk(ar)) - överväg striktare hantering eller sandlådeanalys av "
+"länkar dit."
+
+msgid "Move every own domain to DMARC p=reject - spoofing your own domain is the cheapest attack there is."
+msgstr "Flytta alla egna domäner till DMARC p=reject - att förfalska er egen domän är den billigaste attack som finns."
+
+msgid "Needs attention"
+msgstr "Behöver åtgärdas"
+
+msgid "New or rare senders with financial lures"
+msgstr "Nya eller ovanliga avsändare med ekonomiska lockbeten"
+
+msgid "New, rare or disposable senders and poor infrastructure reputation."
+msgstr "Nya, ovanliga eller tillfälliga avsändare och infrastruktur med dåligt rykte."
+
+msgid "No API-client, policy, configuration or user-administration changes in this period."
+msgstr "Inga ändringar av API-klienter, policyer, konfiguration eller användaradministration under perioden."
+
+msgid "No BEC or scam from new or rare senders in this period."
+msgstr "Ingen BEC eller bedrägeri från nya eller ovanliga avsändare under perioden."
+
+msgid "No QR-code threats or text-only lures in this period."
+msgstr "Inga hot med QR-koder eller lockbeten med enbart text under perioden."
+
+msgid "No VIP mailboxes configured yet - add executives, finance and IT admins under Settings to have them flagged here."
+msgstr ""
+"Inga VIP-postlådor har lagts in ännu - lägg in ledning, ekonomi och IT-administratörer under Settings så flaggas de "
+"här."
+
+msgid "No action"
+msgstr "Ingen åtgärd"
+
+msgid "No actors in this period."
+msgstr "Inga aktörer under perioden."
+
+msgid "No attachments on threats in this period."
+msgstr "Inga bilagor i hot under perioden."
+
+msgid "No audit events in this period."
+msgstr "Inga granskningshändelser under perioden."
+
+msgid ""
+"No audit log files were received for the period. Either nothing was changed in ETD, or audit logs are not enabled in "
+"ETD's export preferences - the two cannot be told apart here."
+msgstr ""
+"Inga granskningsloggfiler togs emot för perioden. Antingen ändrades ingenting i ETD, eller så är granskningsloggar "
+"inte aktiverade i ETD:s exportinställningar - de två fallen går inte att skilja åt här."
+
+msgid "No campaigns: no two threat messages in the period shared a subject/sender, URL host or attachment."
+msgstr "Inga kampanjer: inga två hotmeddelanden under perioden delade ämne och avsändare, URL-värd eller bilaga."
+
+msgid "No daily statistics stored for this period yet."
+msgstr "Ingen daglig statistik har sparats för perioden ännu."
+
+msgid "No errors recorded."
+msgstr "Inga fel registrerade."
+
+msgid "No external threat senders in this period."
+msgstr "Inga externa hotavsändare under perioden."
+
+msgid "No failed actions in this period."
+msgstr "Inga misslyckade åtgärder under perioden."
+
+msgid "No gaps found - keep it that way."
+msgstr "Inga luckor hittades - se till att det förblir så."
+
+msgid "No link or attachment"
+msgstr "Varken länk eller bilaga"
+
+msgid "No look-alikes of protected domains seen in this period."
+msgstr "Inga förväxlingsdomäner till skyddade domäner under perioden."
+
+msgid "No own domains known or DNS unavailable."
+msgstr "Inga egna domäner kända, eller DNS otillgängligt."
+
+msgid ""
+"No own domains known yet. Add them in the tenant's reporting profile, or enable Log Export so they can be detected "
+"from outgoing mail."
+msgstr ""
+"Inga egna domäner är kända ännu. Lägg in dem i tenantens rapportprofil, eller aktivera Log Export så att de kan "
+"upptäckas från utgående e-post."
+
+msgid "No retrospective verdicts in the period."
+msgstr "Inga retroaktiva bedömningar under perioden."
+
+msgid "No specific recommendations for this period."
+msgstr "Inga särskilda rekommendationer för perioden."
+
+msgid "No statistics stored for the period - collector has not run or failed."
+msgstr "Ingen statistik sparad för perioden - insamlingen har inte körts eller har misslyckats."
+
+msgid "No technique data in this period"
+msgstr "Inga teknikdata under perioden"
+
+msgid "No threat messages reached any mailbox in this period."
+msgstr "Inga hotmeddelanden nådde någon postlåda under perioden."
+
+msgid "No threat-sender data collected yet."
+msgstr "Inga data om hotavsändare har samlats in ännu."
+
+msgid "No threats from trusted counterparties in this period."
+msgstr "Inga hot från betrodda motparter under perioden."
+
+msgid "No threats in the period."
+msgstr "Inga hot under perioden."
+
+msgid "No threats spoofed your domains in this period."
+msgstr "Inga hot förfalskade era domäner under perioden."
+
+msgid "No threats through allow-lists"
+msgstr "Inga hot genom tillåtelselistor"
+
+msgid "No top-target data collected yet."
+msgstr "Inga data om de mest utsatta mottagarna har samlats in ännu."
+
+msgid "No vendors listed - add them in the tenant's reporting profile."
+msgstr "Inga leverantörer listade - lägg in dem i tenantens rapportprofil."
+
+msgid "No verdict-change data (Log Export) for the period."
+msgstr "Inga data om ändrade bedömningar (Log Export) för perioden."
+
+#, python-brace-format
+msgid "None of the {vip_count} configured VIP mailboxes received threats this period."
+msgstr "Ingen av de {vip_count} inlagda VIP-postlådorna tog emot hot under perioden."
+
+msgid "Not remediated"
+msgstr "Ej åtgärdade"
+
+#, python-brace-format
+msgid "Not remediated ({unremediated})"
+msgstr "Ej åtgärdade ({unremediated})"
+
+msgid ""
+"Nothing to act on. A threat verdict on outgoing/internal mail is the classic sign of a compromised account or an "
+"infected client, so an empty report is the good outcome."
+msgstr ""
+"Inget att åtgärda. En hotbedömning på utgående eller intern e-post är det klassiska tecknet på ett kapat konto eller "
+"en infekterad klient, så en tom rapport är det goda utfallet."
+
+msgid "Nothing to add - the authentication posture looks good."
+msgstr "Inget att tillägga - e-postautentiseringen ser bra ut."
+
+msgid "Office"
+msgstr "Office"
+
+msgid "Office with macros / legacy"
+msgstr "Office med makron / äldre format"
+
+msgid "OneNote"
+msgstr "OneNote"
+
+msgid "Other"
+msgstr "Övrigt"
+
+msgid "Overall"
+msgstr "Sammantaget"
+
+msgid ""
+"Own domains were auto-detected from outgoing mail and recipient addresses. Set them in the tenant's reporting profile"
+" for an exact list."
+msgstr ""
+"Egna domäner upptäcktes automatiskt från utgående e-post och mottagaradresser. Ange dem i tenantens rapportprofil för"
+" en exakt lista."
+
+msgid "Own domains with DMARC p=reject"
+msgstr "Egna domäner med DMARC p=reject"
+
+msgid "PDF"
+msgstr "PDF"
+
+msgid "Payload"
+msgstr "Innehåll"
+
+msgid "People with an unremediated threat"
+msgstr "Personer med ett oåtgärdat hot"
+
+msgid "Per 10,000"
+msgstr "Per 10 000"
+
+#, python-brace-format
+msgid ""
+"Per message: verdict weight (BEC {bec}, malicious {malicious}, phishing {phishing}, scam {scam}), technique severity "
+"{severity}, impersonation {impersonation}, delivered before verdict {retro}, not remediated {unremediated}; targeted "
+"messages {targeted}, mass mailings {mass}. Points are summed per recipient and capped at 1000. Use the list to "
+"prioritise awareness training, MFA and priority-account protection."
+msgstr ""
+"Per meddelande: vikt för bedömning (BEC {bec}, skadlig {malicious}, nätfiske {phishing}, bedrägeri {scam}), teknikens"
+" allvarlighet {severity}, imitation {impersonation}, levererat före bedömning {retro}, ej åtgärdat {unremediated}; "
+"riktade meddelanden {targeted}, massutskick {mass}. Poängen summeras per mottagare med ett tak på 1000. Använd listan"
+" för att prioritera säkerhetsutbildning, MFA och skydd av prioriterade konton."
+
+msgid "Phishing"
+msgstr "Nätfiske"
+
+msgid "Points"
+msgstr "Poäng"
+
+msgid "Policy and configuration"
+msgstr "Policy och konfiguration"
+
+msgid "Possibly compromised counterparties"
+msgstr "Möjligen kapade motparter"
+
+msgid "Posture and effectiveness"
+msgstr "Säkerhetsläge och effektivitet"
+
+#, python-brace-format
+msgid "Posture and effectiveness · {period_label}"
+msgstr "Säkerhetsläge och effektivitet · {period_label}"
+
+msgid "Posture score (0-100)"
+msgstr "Säkerhetspoäng (0-100)"
+
+msgid "Pressure and requests - credentials, contact details, opening attachments."
+msgstr "Press och begäranden - inloggningsuppgifter, kontaktuppgifter, att öppna bilagor."
+
+msgid "Pretends to be a brand, colleague or the victim. Maintain High Impact Personnel and brand lists in ETD."
+msgstr ""
+"Utger sig för att vara ett varumärke, en kollega eller offret själv. Håll listorna High Impact Personnel och "
+"varumärken uppdaterade i ETD."
+
+msgid "Prev."
+msgstr "Föreg."
+
+msgid "Previous"
+msgstr "Föregående"
+
+msgid "Priorities"
+msgstr "Prioriteringar"
+
+msgid "Privileged changes"
+msgstr "Privilegierade ändringar"
+
+msgid "Protected domains"
+msgstr "Skyddade domäner"
+
+msgid "Publish MTA-STS and TLS-RPT so inbound TLS cannot be downgraded silently."
+msgstr "Publicera MTA-STS och TLS-RPT så att inkommande TLS inte kan nedgraderas obemärkt."
+
+msgid "Publish one SPF record per domain ending in -all or ~all, within 10 DNS lookups."
+msgstr "Publicera en SPF-post per domän som slutar med -all eller ~all och håller sig inom 10 DNS-uppslag."
+
+msgid "Published policy"
+msgstr "Publicerad policy"
+
+msgid "QR code"
+msgstr "QR-kod"
+
+msgid "QR codes and text-only lures"
+msgstr "QR-koder och lockbeten med enbart text"
+
+msgid ""
+"QR codes are counted from ETD's \"QR code\" technique and QR-origin URLs in urlMetadata. Text-only lures are scam, "
+"phishing or BEC messages with no link and at most PDF or image attachments - the shape of callback phishing (TOAD). "
+"ETD has no phone-number technique, so this is a heuristic."
+msgstr ""
+"QR-koder räknas från ETD:s teknik \"QR code\" och URL:er med QR-ursprung i urlMetadata. Lockbeten med enbart text är "
+"bedrägeri-, nätfiske- eller BEC-meddelanden utan länk och med högst PDF- eller bildbilagor - formen för "
+"återuppringningsbedrägeri (TOAD). ETD har ingen teknik för telefonnummer, så detta är en heuristik."
+
+msgid "Ranking by threats"
+msgstr "Rangordning efter antal hot"
+
+msgid "Rcpts"
+msgstr "Mott."
+
+msgid "Received"
+msgstr "Mottagna"
+
+msgid "Recipient"
+msgstr "Mottagare"
+
+msgid "Recipients"
+msgstr "Mottagare"
+
+msgid "Reclassification"
+msgstr "Omklassning"
+
+#, python-brace-format
+msgid "Reclassifications by method: {reclassifications}. Remediations by method: {remediations}."
+msgstr "Omklassningar per metod: {reclassifications}. Åtgärder per metod: {remediations}."
+
+msgid "Reclassified"
+msgstr "Omklassade"
+
+msgid "Recommendations"
+msgstr "Rekommendationer"
+
+msgid ""
+"Recommended handling: verify each sender below (recent sign-ins, mailbox rules, MFA state), reset credentials where "
+"compromise is confirmed, and check whether the messages were remediated in recipients' mailboxes."
+msgstr ""
+"Rekommenderad hantering: kontrollera varje avsändare nedan (senaste inloggningar, postlåderegler, MFA-status), "
+"återställ inloggningsuppgifter där intrång bekräftas och kontrollera att meddelandena har åtgärdats i mottagarnas "
+"postlådor."
+
+msgid "Region"
+msgstr "Region"
+
+msgid "Remediated"
+msgstr "Åtgärdade"
+
+msgid "Remediation"
+msgstr "Åtgärd"
+
+msgid "Remediation is automatic"
+msgstr "Åtgärden sker automatiskt"
+
+#, python-brace-format
+msgid "Reply-To to another domain ({reply_to_elsewhere})"
+msgstr "Reply-To till en annan domän ({reply_to_elsewhere})"
+
+msgid "Reply-To ≠ From"
+msgstr "Reply-To ≠ From"
+
+msgid "Retro"
+msgstr "Retroaktiva"
+
+msgid "Retro msgs"
+msgstr "Retroakt. medd."
+
+msgid "Retro threats remediated within 1 h"
+msgstr "Retroaktiva hot åtgärdade inom 1 h"
+
+msgid "Retro-convicted mail sits in inboxes too long - make sure retrospective verdicts trigger automatic remediation."
+msgstr ""
+"Retroaktivt hotklassad e-post ligger kvar för länge i inkorgarna - se till att retroaktiva bedömningar utlöser "
+"automatisk åtgärd."
+
+msgid "Retro-convicted messages"
+msgstr "Retroaktivt hotklassade meddelanden"
+
+msgid "Retrospective verdicts"
+msgstr "Retroaktiva bedömningar"
+
+msgid "Review allow-list rules: threats were delivered because a rule trusted the sender."
+msgstr "Se över tillåtelsereglerna: hot levererades för att en regel litade på avsändaren."
+
+msgid "Review what analysts release as neutral and tune policies or allow rules accordingly."
+msgstr "Se över vad analytikerna släpper som neutralt och justera policyer eller tillåtelseregler därefter."
+
+msgid "Risk"
+msgstr "Risk"
+
+msgid "Rule"
+msgstr "Regel"
+
+msgid "SPF"
+msgstr "SPF"
+
+msgid "SPF on own domains"
+msgstr "SPF på egna domäner"
+
+msgid "Scam"
+msgstr "Bedrägeri"
+
+msgid "Scanned"
+msgstr "Skannade"
+
+msgid "Script / shortcut"
+msgstr "Skript / genväg"
+
+msgid "Sender"
+msgstr "Avsändare"
+
+msgid "Sender reputation"
+msgstr "Avsändarens rykte"
+
+msgid "Senders"
+msgstr "Avsändare"
+
+msgid "Severity"
+msgstr "Allvarlighetsgrad"
+
+msgid "Share"
+msgstr "Andel"
+
+msgid "SharePoint / OneDrive"
+msgstr "SharePoint / OneDrive"
+
+msgid "Sign-in and session"
+msgstr "Inloggning och session"
+
+msgid "Signals"
+msgstr "Signaler"
+
+msgid "Site builders"
+msgstr "Webbplatsbyggare"
+
+msgid "Six-month trend"
+msgstr "Trend över sex månader"
+
+msgid "Social engineering"
+msgstr "Social manipulation"
+
+msgid "Some threat verdicts have no action - check for monitor-only policies and remediation errors in ETD."
+msgstr "Vissa hotbedömningar saknar åtgärd - leta efter policyer i övervakningsläge och misslyckade åtgärder i ETD."
+
+msgid "Spam + graymail"
+msgstr "Skräppost + gråpost"
+
+msgid "Spoofing of your domains"
+msgstr "Förfalskning av era domäner"
+
+msgid "Statistics collected"
+msgstr "Statistik insamlad"
+
+#, python-brace-format
+msgid "Statistics exist for {days_with_data} of {days} days in this period."
+msgstr "Statistik finns för {days_with_data} av {days} dagar under perioden."
+
+#, python-brace-format
+msgid "Statistics for {days_with_data} of {days} days"
+msgstr "Statistik för {days_with_data} av {days} dagar"
+
+msgid "Statistics last collected"
+msgstr "Statistik senast insamlad"
+
+msgid "Status"
+msgstr "Status"
+
+msgid "Still in inboxes - threats without remediation"
+msgstr "Fortfarande i inkorgar - hot utan åtgärd"
+
+msgid "Subject"
+msgstr "Ämne"
+
+msgid "Subjects"
+msgstr "Ämnen"
+
+msgid "Summary"
+msgstr "Sammanfattning"
+
+#, python-brace-format
+msgid "Summary · {period_label}"
+msgstr "Sammanfattning · {period_label}"
+
+msgid "TLS-RPT"
+msgstr "TLS-RPT"
+
+msgid "Technique"
+msgstr "Teknik"
+
+msgid "Technique families"
+msgstr "Teknikfamiljer"
+
+msgid "Techniques and business risk"
+msgstr "Tekniker och affärsrisk"
+
+msgid "Techniques seen against these people"
+msgstr "Tekniker som använts mot dessa personer"
+
+msgid "Tenant"
+msgstr "Tenant"
+
+msgid "Tenants"
+msgstr "Tenants"
+
+msgid "Text-only lures (possible callback)"
+msgstr "Lockbeten med enbart text (möjlig återuppringning)"
+
+msgid "The API returned no rule information for this period."
+msgstr "API:et returnerade ingen regelinformation för perioden."
+
+#, python-brace-format
+msgid "The daily statistics count {stats_threats} threat(s), but no convicted messages were collected for the period."
+msgstr "Den dagliga statistiken räknar {stats_threats} hot, men inga hotklassade meddelanden samlades in för perioden."
+
+#, python-format
+msgid ""
+"The score is the share of points earned on the checks that could be assessed. n/a means a check does not apply to the"
+" period (for example no threats); unknown means the data is missing and is never counted as a pass. With less than 80"
+" % of the weight assessed, no score or grade is given."
+msgstr ""
+"Betyget är andelen av möjliga poäng som uppnåtts i de kontroller som gick att bedöma. Ej tillämpligt betyder att en "
+"kontroll inte gäller perioden (till exempel inga hot); okänd betyder att data saknas och räknas aldrig som godkänt. "
+"Om mindre än 80 % av vikten kunde bedömas ges varken poäng eller betyg."
+
+#, python-brace-format
+msgid ""
+"The {threat_domains_checked} most frequent threat sender domains were checked in DNS. \"reject\" and \"quarantine\" "
+"are the policies these domains publish today. ETD does not include the SPF, DKIM or DMARC result of each message, and"
+" a policy may have changed since delivery, so this does not show that the messages passed authentication."
+msgstr ""
+"De {threat_domains_checked} vanligaste avsändardomänerna för hot kontrollerades i DNS. \"reject\" och \"quarantine\" "
+"är de policyer som domänerna publicerar i dag. ETD anger inte resultatet av SPF, DKIM eller DMARC för varje "
+"meddelande, och en policy kan ha ändrats sedan leveransen, så detta visar inte att meddelandena klarade "
+"autentiseringen."
+
+msgid "This period"
+msgstr "Den här perioden"
+
+msgid "Threat landscape in brief"
+msgstr "Hotbilden i korthet"
+
+msgid "Threat messages"
+msgstr "Hotmeddelanden"
+
+msgid "Threat rate"
+msgstr "Hotandel"
+
+#, python-brace-format, python-format
+msgid ""
+"Threat rate {threat_rate_pct} % of scanned mail. At this pace ETD would catch about {threats_per_year} threats and "
+"{unwanted_per_year} unwanted messages per year (daily average × 365, same method as the Impact Report)."
+msgstr ""
+"Hotandel {threat_rate_pct} % av skannad e-post. I den här takten skulle ETD fånga omkring {threats_per_year} hot och "
+"{unwanted_per_year} oönskade meddelanden per år (dagligt snitt × 365, samma metod som Impact Report)."
+
+msgid "Threat spike"
+msgstr "Topp i antal hot"
+
+msgid "Threat spikes"
+msgstr "Toppar i antal hot"
+
+msgid "Threats"
+msgstr "Hot"
+
+msgid "Threats and unwanted mail by verdict"
+msgstr "Hot och oönskad e-post per bedömning"
+
+msgid "Threats caught"
+msgstr "Fångade hot"
+
+msgid ""
+"Threats from a listed vendor, from a domain with a history of clean mail, or that ETD tags as a frequent sender for "
+"the recipient. Vendor email compromise usually looks like this: a real account, a plausible thread and a changed bank"
+" account."
+msgstr ""
+"Hot från en listad leverantör, från en domän med historik av ren e-post, eller som ETD märker som frekvent avsändare "
+"för mottagaren. Kapade leverantörskonton ser oftast ut så här: ett riktigt konto, en trovärdig tråd och ett ändrat "
+"bankkonto."
+
+msgid "Threats from domains with enforcing DMARC"
+msgstr "Hot från domäner med tillämpad DMARC"
+
+msgid "Threats from senders the recipient normally talks to - often a compromised partner account."
+msgstr "Hot från avsändare som mottagaren normalt har kontakt med - ofta ett kapat konto hos en partner."
+
+msgid "Threats remediated"
+msgstr "Åtgärdade hot"
+
+msgid "Threats spoofing your domains"
+msgstr "Hot som förfalskar era domäner"
+
+msgid "Threats still not remediated"
+msgstr "Hot som fortfarande inte åtgärdats"
+
+msgid "Threats stopped"
+msgstr "Stoppade hot"
+
+msgid ""
+"Threats using your own domains as sender arrived although your DMARC policy is p=reject - check paths that skip "
+"authentication, e.g. Microsoft 365 Direct Send or inbound connectors that trust the gateway."
+msgstr ""
+"Hot med era egna domäner som avsändare kom fram trots att er DMARC-policy är p=reject - kontrollera vägar som hoppar "
+"över autentiseringen, till exempel Direct Send i Microsoft 365 eller inkommande kopplingar som litar på gatewayen."
+
+msgid "Threats with QR codes"
+msgstr "Hot med QR-koder"
+
+msgid "Threats with Reply-To to another domain"
+msgstr "Hot med Reply-To till en annan domän"
+
+msgid "Time"
+msgstr "Tid"
+
+#, python-brace-format
+msgid ""
+"Time to verdict: median {median}, p90 {p90}, max {max} ({count} messages). Remediation: {auto_count} automatic, "
+"{manual_count} manual."
+msgstr ""
+"Tid till bedömning: median {median}, p90 {p90}, max {max} ({count} meddelande(n)). Åtgärder: automatiska "
+"{auto_count}, manuella {manual_count}."
+
+msgid "To"
+msgstr "Till"
+
+msgid "To neutral"
+msgstr "Till neutral"
+
+msgid "To threat"
+msgstr "Till hot"
+
+msgid "Top domains"
+msgstr "Vanligaste domänerna"
+
+msgid "Top external threat senders"
+msgstr "Vanligaste externa hotavsändarna"
+
+msgid "Top targets"
+msgstr "Mest utsatta mottagare"
+
+msgid "Top techniques"
+msgstr "Vanligaste teknikerna"
+
+msgid "Total"
+msgstr "Totalt"
+
+msgid "Traffic by direction"
+msgstr "Trafik per riktning"
+
+msgid "Tunnels / IPFS"
+msgstr "Tunnlar / IPFS"
+
+msgid "Type"
+msgstr "Typ"
+
+msgid "URL hosts:"
+msgstr "URL-värdar:"
+
+msgid "URL shorteners"
+msgstr "Länkförkortare"
+
+msgid "URLs"
+msgstr "URL:er"
+
+msgid "Unwanted"
+msgstr "Oönskad"
+
+msgid "Unwanted (spam + graymail)"
+msgstr "Oönskad (skräppost + gråpost)"
+
+msgid "User administration"
+msgstr "Användaradministration"
+
+msgid "VIP"
+msgstr "VIP"
+
+msgid "VIPs defined"
+msgstr "Inlagda VIP"
+
+msgid "VIPs under attack"
+msgstr "VIP under attack"
+
+msgid "Vendor domain"
+msgstr "Leverantörsdomän"
+
+msgid "Vendor risk"
+msgstr "Leverantörsrisk"
+
+msgid "Verdict"
+msgstr "Bedömning"
+
+msgid "Verdict changes and remediation"
+msgstr "Ändrade bedömningar och åtgärder"
+
+msgid "Verdicts"
+msgstr "Bedömningar"
+
+msgid "Very Attacked People"
+msgstr "Mest attackerade personer"
+
+msgid "Via"
+msgstr "Via"
+
+#, python-brace-format
+msgid "Volume {today_total} is {ratio:.0%} of the 30-day average ({baseline_avg:.0f})."
+msgstr "Volymen {today_total} är {ratio:.0%} av 30-dagarssnittet ({baseline_avg:.0f})."
+
+#, python-brace-format
+msgid "Volume {today_total} is {ratio:.0%} of the 30-day average ({baseline_avg:.0f}). Check journaling/connector."
+msgstr ""
+"Volymen {today_total} är {ratio:.0%} av 30-dagarssnittet ({baseline_avg:.0f}). Kontrollera journalregeln och "
+"kopplingen."
+
+#, python-brace-format
+msgid "Volume {today_total} vs 30-day average {baseline_avg:.0f} ({ratio:.0%})."
+msgstr "Volymen {today_total} jämfört med 30-dagarssnittet {baseline_avg:.0f} ({ratio:.0%})."
+
+#, python-brace-format
+msgid "Volume {today_total}; no baseline yet (fewer than one day of history)."
+msgstr "Volymen {today_total}; ingen baslinje ännu (mindre än en dags historik)."
+
+msgid "Web UI"
+msgstr "Webbgränssnitt"
+
+msgid "What it means"
+msgstr "Vad det betyder"
+
+msgid "Who"
+msgstr "Vem"
+
+msgid "Who did what"
+msgstr "Vem gjorde vad"
+
+msgid "Why"
+msgstr "Varför"
+
+msgid "Why trusted"
+msgstr "Varför betrodd"
+
+msgid "Without Log Export only listed vendors and ETD's frequent-sender signal are used."
+msgstr "Utan Log Export används bara listade leverantörer och ETD:s signal för frekventa avsändare."
+
+msgid "Your domains"
+msgstr "Era domäner"
+
+#, python-brace-format
+msgid "[ETD] Audit and compliance - {tenant} - {period}"
+msgstr "[ETD] Granskning och regelefterlevnad - {tenant} - {period}"
+
+#, python-brace-format
+msgid "[ETD] Authentication posture - {tenant} - {period}"
+msgstr "[ETD] E-postautentisering - {tenant} - {period}"
+
+#, python-brace-format
+msgid "[ETD] Campaigns - {tenant} - {period}"
+msgstr "[ETD] Kampanjer - {tenant} - {period}"
+
+#, python-brace-format
+msgid "[ETD] Compromise indicators - {tenant} - {period}"
+msgstr "[ETD] Tecken på kapade konton - {tenant} - {period}"
+
+#, python-brace-format
+msgid "[ETD] Cross-tenant roll-up - {period}"
+msgstr "[ETD] Sammanställning för alla tenants - {period}"
+
+#, python-brace-format
+msgid "[ETD] Executive summary - {tenant} - {period}"
+msgstr "[ETD] Ledningssammanfattning - {tenant} - {period}"
+
+#, python-brace-format
+msgid "[ETD] Exposure and dwell time - {tenant} - {period}"
+msgstr "[ETD] Exponering och uppehållstid - {tenant} - {period}"
+
+#, python-brace-format
+msgid "[ETD] Health check - {tenant} - {period}"
+msgstr "[ETD] Hälsokontroll - {tenant} - {period}"
+
+#, python-brace-format
+msgid "[ETD] Posture and effectiveness - {tenant} - {period}"
+msgstr "[ETD] Säkerhetsläge och effektivitet - {tenant} - {period}"
+
+#, python-brace-format
+msgid "[ETD] Techniques and business risk - {tenant} - {period}"
+msgstr "[ETD] Tekniker och affärsrisk - {tenant} - {period}"
+
+#, python-brace-format
+msgid "[ETD] Vendor risk - {tenant} - {period}"
+msgstr "[ETD] Leverantörsrisk - {tenant} - {period}"
+
+#, python-brace-format
+msgid "[ETD] Very Attacked People - {tenant} - {period}"
+msgstr "[ETD] Mest attackerade personer - {tenant} - {period}"
+
+#, python-brace-format
+msgid "as {seen_as}"
+msgstr "som {seen_as}"
+
+msgid "attack concentration"
+msgstr "koncentration av attacker"
+
+#, python-brace-format
+msgid "auto-remediated {auto_remediated} · retro {retro} ·"
+msgstr "automatiskt åtgärdade {auto_remediated} · retroaktiva {retro} ·"
+
+msgid "counterparty"
+msgstr "motpart"
+
+msgid "critical"
+msgstr "kritisk"
+
+msgid "critical severity"
+msgstr "kritisk allvarlighet"
+
+#, python-brace-format
+msgid "daily report for {period}"
+msgstr "dagsrapport för {period}"
+
+msgid "data covers UTC days as aggregated by ETD"
+msgstr "data avser UTC-dygn så som ETD aggregerar dem"
+
+msgid "delivered before verdict"
+msgstr "levererat före bedömning"
+
+msgid "domains auto-detected"
+msgstr "domäner upptäckta automatiskt"
+
+msgid "error"
+msgstr "fel"
+
+msgid "first seen this period"
+msgstr "först sedd under perioden"
+
+msgid "from inside the organisation"
+msgstr "inifrån organisationen"
+
+#, python-brace-format
+msgid "generated {when} ({tz})"
+msgstr "skapad {when} ({tz})"
+
+msgid "high severity"
+msgstr "hög allvarlighet"
+
+msgid "high-risk type"
+msgstr "högrisktyp"
+
+msgid "impersonation"
+msgstr "imitation"
+
+msgid "incoming"
+msgstr "inkommande"
+
+msgid "incomplete"
+msgstr "ofullständig"
+
+msgid "inherited"
+msgstr "ärvd"
+
+msgid "internal"
+msgstr "intern"
+
+msgid "listed vendor"
+msgstr "listad leverantör"
+
+msgid "low severity"
+msgstr "låg allvarlighet"
+
+msgid "mass mailing"
+msgstr "massutskick"
+
+msgid "medium severity"
+msgstr "medelhög allvarlighet"
+
+msgid "missing"
+msgstr "saknas"
+
+#, python-brace-format
+msgid "monthly report for {period}"
+msgstr "månadsrapport för {period}"
+
+msgid "multiple records (invalid)"
+msgstr "flera poster (ogiltigt)"
+
+msgid "multiple records (permerror)"
+msgstr "flera poster (permerror)"
+
+msgid "n/a"
+msgstr "ej tillämpligt"
+
+msgid "na"
+msgstr "ej tillämpligt"
+
+msgid "needs Log Export"
+msgstr "kräver Log Export"
+
+msgid "new"
+msgstr "ny"
+
+msgid "no"
+msgstr "nej"
+
+msgid "no all mechanism"
+msgstr "ingen all-mekanism"
+
+msgid "no rua"
+msgstr "ingen rua"
+
+msgid "none"
+msgstr "inga"
+
+msgctxt "action"
+msgid "none"
+msgstr "ingen"
+
+msgid "not collected"
+msgstr "inte insamlad"
+
+msgid "not remediated"
+msgstr "ej åtgärdade"
+
+#, python-brace-format
+msgid "not remediated {not_remediated}"
+msgstr "ej åtgärdade {not_remediated}"
+
+msgid "of threat deliveries went to the top 10"
+msgstr "av hotleveranserna gick till de 10 mest utsatta"
+
+msgid "ok"
+msgstr "ok"
+
+msgid "other"
+msgstr "övrigt"
+
+msgid "outgoing"
+msgstr "utgående"
+
+msgid "own domain"
+msgstr "egen domän"
+
+#, python-brace-format
+msgid "p90 {p90} · max {max}"
+msgstr "p90 {p90} · max {max}"
+
+#, python-brace-format
+msgid "quarterly report for {period}"
+msgstr "kvartalsrapport för {period}"
+
+msgid "redirect"
+msgstr "redirect"
+
+msgid "senders:"
+msgstr "avsändare:"
+
+msgid "spike"
+msgstr "topp"
+
+msgid "targeted"
+msgstr "riktad"
+
+msgid "techniques:"
+msgstr "tekniker:"
+
+msgid "unknown"
+msgstr "okänd"
+
+msgid "verdicts:"
+msgstr "bedömningar:"
+
+msgid "warning"
+msgstr "varning"
+
+#, python-brace-format
+msgid "weekly report for {period}"
+msgstr "veckorapport för {period}"
+
+msgid "yes"
+msgstr "ja"
+
+#, python-brace-format
+msgid "{allow_count} threat(s) matched an allow/safe rule."
+msgstr "{allow_count} hot matchade en tillåtelseregel."
+
+#, python-brace-format, python-format
+msgid "{auto:.0f} % of remediations were automatic."
+msgstr "{auto:.0f} % av åtgärderna skedde automatiskt."
+
+#, python-brace-format
+msgid "{auto_pct} % automatically"
+msgstr "{auto_pct} % automatiskt"
+
+#, python-brace-format
+msgid ""
+"{bec_nopayload_count} BEC message(s) carried no payload at all - payment-change requests need out-of-band "
+"verification."
+msgstr ""
+"{bec_nopayload_count} BEC-meddelande(n) saknade helt länk och bilaga - begäranden om ändrade betalningsuppgifter "
+"måste verifieras via en annan kanal."
+
+#, python-brace-format
+msgid ""
+"{callback_count} text-only lure(s) without a link look like callback phishing - teach finance and the service desk to"
+" verify phone numbers independently."
+msgstr ""
+"{callback_count} lockbete(n) med enbart text och utan länk liknar återuppringningsbedrägeri - lär ekonomi och "
+"servicedesk att verifiera telefonnummer på egen hand."
+
+#, python-brace-format
+msgid "{campaign_share} % belong to a campaign, {singletons} singletons"
+msgstr "{campaign_share} % tillhör en kampanj, {singletons} enstaka"
+
+#, python-brace-format
+msgid "{campaigns} campaign(s), {qr} QR-code threat(s), {callback} possible callback lure(s)"
+msgstr "{campaigns} kampanj(er), {qr} hot med QR-kod, {callback} lockbete(n) som kan gälla återuppringning"
+
+#, python-brace-format
+msgid "{clean_days} days of clean mail before"
+msgstr "{clean_days} dagar med ren e-post tidigare"
+
+#, python-brace-format
+msgid ""
+"{compromised} possibly compromised counterpart(ies), {lookalikes} look-alike domain(s), {spoofed} spoof(s) of own "
+"domains"
+msgstr ""
+"{compromised} motpart(er) med tecken på kapning, {lookalikes} förväxlingsdomän(er), {spoofed} förfalskning(ar) av "
+"egna domäner"
+
+#, python-brace-format
+msgid "{covered_hours} of {hours} hours"
+msgstr "{covered_hours} av {hours} timmar"
+
+#, python-brace-format
+msgid "{critical} critical"
+msgstr "kritiska: {critical}"
+
+#, python-brace-format
+msgid "{day_rows_count} day(s) of data present."
+msgstr "Data finns för {day_rows_count} dag(ar)."
+
+#, python-brace-format
+msgid "{days_with_data}/{days} days"
+msgstr "{days_with_data}/{days} dagar"
+
+#, python-brace-format
+msgid ""
+"{delivered_la_count} look-alike domain(s) delivered mail that was NOT convicted - search and remediate in ETD and "
+"block the domains."
+msgstr ""
+"{delivered_la_count} förväxlingsdomän(er) levererade e-post som INTE hotklassades - sök och åtgärda i ETD och "
+"blockera domänerna."
+
+#, python-brace-format
+msgid "{delivered_lookalikes} delivered mail"
+msgstr "{delivered_lookalikes} har levererat e-post"
+
+#, python-brace-format
+msgid ""
+"{disguised} attachment(s) disguised their real type (double extension or masqueraded extension) - show file "
+"extensions on endpoints."
+msgstr ""
+"Antal bilagor som dolde sin verkliga typ (dubbel eller maskerad filändelse): {disguised} - visa filändelser på "
+"klienterna."
+
+#, python-brace-format
+msgid "{domain}: DMARC is p=none and offers no protection - move towards p=quarantine and p=reject.{tail}"
+msgstr "{domain}: DMARC är p=none och ger inget skydd - gå mot p=quarantine och p=reject.{tail}"
+
+#, python-brace-format
+msgid "{domain}: DNS could not be checked ({error})."
+msgstr "{domain}: DNS kunde inte kontrolleras ({error})."
+
+#, python-brace-format
+msgid "{domain}: add rua= to the DMARC record so you receive aggregate reports."
+msgstr "{domain}: lägg till rua= i DMARC-posten så att ni får sammanställda rapporter."
+
+#, python-brace-format
+msgid "{domain}: finish DMARC enforcement ({status} -> p=reject, pct=100).{tail}"
+msgstr "{domain}: slutför DMARC-tillämpningen ({status} -> p=reject, pct=100).{tail}"
+
+#, python-brace-format
+msgid "{domain}: fix SPF ({status})."
+msgstr "{domain}: rätta SPF ({status})."
+
+#, python-brace-format
+msgid "{domain}: publish MTA-STS and TLS-RPT so inbound TLS cannot be downgraded silently."
+msgstr "{domain}: publicera MTA-STS och TLS-RPT så att inkommande TLS inte kan nedgraderas obemärkt."
+
+#, python-brace-format
+msgid "{domain}: publish a DMARC record (start with p=none and rua reporting, then move to p=reject).{tail}"
+msgstr "{domain}: publicera en DMARC-post (börja med p=none och rua-rapportering, gå sedan till p=reject).{tail}"
+
+#, python-brace-format
+msgid "{domain}: tighten SPF ({status}) - end with -all or ~all and stay under 10 DNS lookups."
+msgstr "{domain}: skärp SPF ({status}) - avsluta med -all eller ~all och håll er under 10 DNS-uppslag."
+
+#, python-brace-format, python-format
+msgid ""
+"{enforcing} % of the checked threats came from domains that publish an enforcing DMARC policy today. ETD does not "
+"show whether each message passed DMARC, and a policy may have changed since delivery, but the sending domain's DMARC "
+"did not keep these threats out - content and behaviour detection is what stops them."
+msgstr ""
+"{enforcing} % av de kontrollerade hoten kom från domäner som i dag publicerar en tillämpad DMARC-policy. ETD visar "
+"inte om varje meddelande klarade DMARC, och en policy kan ha ändrats sedan leveransen, men avsändardomänens DMARC "
+"höll inte ute dessa hot - det är analysen av innehåll och beteende som stoppar dem."
+
+#, python-brace-format, python-format
+msgid "{evidence} % of the scoring weight could be assessed"
+msgstr "{evidence} % av poängvikten kunde bedömas"
+
+#, python-brace-format
+msgid "{explicit} listed · {established_count} learned"
+msgstr "listade: {explicit} · inlärda: {established_count}"
+
+#, python-brace-format
+msgid "{family}: {messages} threat(s)"
+msgstr "{family}: {messages} hot"
+
+#, python-brace-format
+msgid "{financial} BEC/scam"
+msgstr "{financial} BEC/bedrägeri"
+
+#, python-brace-format, python-format
+msgid "{freemail_pct} % came from free-mail providers."
+msgstr "{freemail_pct} % kom från gratis e-posttjänster."
+
+#, python-brace-format
+msgid ""
+"{known_relationship} threat(s) came from senders ETD recognises as regular correspondents - see the Vendor risk "
+"report for possibly compromised partners."
+msgstr ""
+"{known_relationship} hot kom från avsändare som ETD känner igen som regelbundna kontakter - se rapporten "
+"Leverantörsrisk för möjligen kapade partner."
+
+#, python-brace-format, python-format
+msgid "{last_error} (at {when:%Y-%m-%d %H:%M} UTC)"
+msgstr "{last_error} ({when:%Y-%m-%d %H:%M} UTC)"
+
+#, python-brace-format
+msgid "{mailbox} · index {index} · {messages} msg"
+msgstr "{mailbox} · index {index} · {messages} medd."
+
+#, python-brace-format
+msgid ""
+"{messages_with_attachments} threat(s) carried attachments. Top extensions: {extensions}. ETD flagged "
+"{html_attachment} malicious HTML attachment(s) and {masqueraded} masqueraded extension(s)."
+msgstr ""
+"{messages_with_attachments} hot hade bilagor. Vanligaste filändelser: {extensions}. ETD flaggade skadliga HTML-"
+"bilagor: {html_attachment}, maskerade filändelser: {masqueraded}."
+
+#, python-brace-format
+msgid "{new_techniques} new vs previous period"
+msgstr "nya jämfört med föregående period: {new_techniques}"
+
+#, python-brace-format
+msgid ""
+"{partial_files} log file(s) in the period had {unreadable_lines} unreadable line(s); the events on those lines are "
+"missing."
+msgstr ""
+"{partial_files} loggfil(er) under perioden hade {unreadable_lines} rad(er) som inte gick att läsa; händelserna på de "
+"raderna saknas."
+
+#, python-brace-format, python-format
+msgid "{pct} % of the period's hours collected, {gap_count} gap(s)"
+msgstr "{pct} % av periodens timmar insamlade, antal luckor: {gap_count}"
+
+#, python-brace-format
+msgid "{previous_campaign_count} previous period"
+msgstr "{previous_campaign_count} föregående period"
+
+#, python-brace-format
+msgid "{previous_people_count} previous period"
+msgstr "{previous_people_count} föregående period"
+
+#, python-brace-format
+msgid "{previous_qr} previous period"
+msgstr "{previous_qr} föregående period"
+
+#, python-brace-format
+msgid "{previous_total} previous period"
+msgstr "{previous_total} föregående period"
+
+#, python-brace-format
+msgid "{previous_unremediated_count} previous period"
+msgstr "{previous_unremediated_count} föregående period"
+
+#, python-brace-format
+msgid "{privileged_changes} privileged change(s) in ETD"
+msgstr "privilegierade ändringar i ETD: {privileged_changes}"
+
+#, python-brace-format
+msgid "{qr_count} threat(s) used QR codes, which move the click to unmanaged phones - include quishing in awareness training."
+msgstr ""
+"{qr_count} hot använde QR-koder, som flyttar klicket till ohanterade telefoner - ta med quishing i "
+"säkerhetsutbildningen."
+
+#, python-brace-format
+msgid ""
+"{rare_financial} BEC/scam message(s) came from new or rare domains - require call-back verification for bank-detail "
+"changes."
+msgstr ""
+"{rare_financial} BEC- eller bedrägerimeddelande(n) kom från nya eller ovanliga domäner - kräv verifiering genom "
+"återuppringning vid ändrade bankuppgifter."
+
+#, python-brace-format
+msgid "{recipients} mailboxes · {messages} messages"
+msgstr "{recipients} mottagare · {messages} meddelande(n)"
+
+#, python-brace-format
+msgid "{remediated_count} of {threats_count} threats were moved or deleted ({cov:.1f} %)."
+msgstr "{remediated_count} av {threats_count} hot flyttades eller raderades ({cov:.1f} %)."
+
+#, python-brace-format, python-format
+msgid "{reply_to_pct_clean} % of clean mail"
+msgstr "{reply_to_pct_clean} % av ren e-post"
+
+#, python-brace-format, python-format
+msgid "{retro_share} % of {total_threats} threats · {previous_retro_count} previous period"
+msgstr "{retro_share} % av {total_threats} hot · {previous_retro_count} föregående period"
+
+#, python-brace-format
+msgid "{retro} retro-convicted"
+msgstr "hotklassade i efterhand: {retro}"
+
+#, python-brace-format
+msgid "{shortened} threat(s) used shortened URLs and {low_rep_tld} a low-reputation TLD. Most common TLDs:"
+msgstr "{shortened} hot använde förkortade URL:er och {low_rep_tld} en toppdomän med dåligt rykte. Vanligaste toppdomäner:"
+
+#, python-brace-format
+msgid "{spoofed_count} threat(s) used one of your domains in the From: header ({verdicts})."
+msgstr "{spoofed_count} hot använde en av era domäner i From:-huvudet ({verdicts})."
+
+#, python-brace-format
+msgid "{tenant}: {threats} vs {previous_threats}"
+msgstr "{tenant}: {threats} jämfört med {previous_threats}"
+
+#, python-brace-format
+msgid "{threat_messages_checked} of {threat_total} threats checked"
+msgstr "{threat_messages_checked} av {threat_total} hot kontrollerade"
+
+#, python-brace-format
+msgid "{threats_prev} previous period · {per_10k} per 10,000 messages"
+msgstr "{threats_prev} föregående period · {per_10k} per 10 000 meddelanden"
+
+#, python-brace-format
+msgid "{to_neutral} manual reclassification(s) to neutral against {threats} threats ({fp} %)."
+msgstr "Manuella omklassningar till neutral: {to_neutral}, mot {threats} hot ({fp} %)."
+
+#, python-brace-format
+msgid "{today_threats} threats vs 30-day average {baseline_threat_avg:.1f} - possible campaign."
+msgstr "{today_threats} hot jämfört med 30-dagarssnittet {baseline_threat_avg:.1f} - möjlig kampanj."
+
+#, python-brace-format
+msgid "{today_threats} threats vs 30-day average {baseline_threat_avg:.1f}."
+msgstr "{today_threats} hot jämfört med 30-dagarssnittet {baseline_threat_avg:.1f}."
+
+#, python-brace-format
+msgid ""
+"{total} threat-convicted message(s) sent {inside} (outgoing or internal) during {period_label}, from {sender_count} "
+"distinct sender(s). Previous period: {previous_total}."
+msgstr ""
+"{total} meddelande(n) som klassats som hot skickades {inside} (utgående eller interna) under {period_label}, från "
+"{sender_count} avsändare. Föregående period: {previous_total}."
+
+#, python-brace-format
+msgid "{vips_count} VIP mailbox(es) configured."
+msgstr "Inlagda VIP-postlådor: {vips_count}."
+
+#, python-brace-format
+msgid "{with_tls} of {own_checks_count} domain(s) publish both."
+msgstr "{with_tls} av {own_checks_count} domän(er) publicerar båda."
+
+#, python-brace-format
+msgid "· grade {grade}"
+msgstr "· betyg {grade}"
+
+#, python-brace-format
+msgid "· {unremediated} not remediated"
+msgstr "· ej åtgärdade: {unremediated}"
+
+#, python-brace-format
+msgid "×{factor} (≤{n} recipients)"
+msgstr "×{factor} (≤{n} mottagare)"
+
+#, python-brace-format
+msgid "×{factor} (≥{n} recipients)"
+msgstr "×{factor} (≥{n} mottagare)"
+
+msgid "→ remediation"
+msgstr "→ åtgärd"
+
+msgid "→ verdict"
+msgstr "→ bedömning"

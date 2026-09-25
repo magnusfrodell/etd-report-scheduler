@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ lang }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{ report.name }} – {{ ctx.tenant_name }} – {{ ctx.period.label }}</title>
+<title>{{ _(report.name) }} – {{ ctx.tenant_name }} – {{ ctx.period_label }}</title>
 <style>
   body { margin:0; padding:0; background:#f4f6f9; font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; color:#1d2733; }
   .wrap { max-width:860px; margin:0 auto; padding:24px 16px; }
@@ -16,7 +16,10 @@
   table { width:100%; border-collapse:collapse; margin-bottom:6px; }
   th, td { text-align:left; padding:7px 8px; border-bottom:1px solid #e6ebf1; vertical-align:top; font-size:13px; }
   th { color:#6b7a8c; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
-  td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  th.num { text-align:right; }
+  th { hyphens:auto; -webkit-hyphens:auto; }  /* long headers break (with the report's lang) instead of widening the table */
+  td { overflow-wrap:anywhere; }  /* a long address may break rather than push the table off the page */
   .kpis { width:100%; border-collapse:separate; border-spacing:8px 0; margin:0 -8px 8px; }
   .kpi { background:#f3f7fb; border:1px solid #dde3ea; border-radius:8px; padding:10px 12px; width:25%; }
   .kpi .v { font-size:22px; font-weight:600; }
@@ -40,7 +43,7 @@
   td { overflow-wrap:break-word; }
   .chip { white-space:nowrap; }
   @page { size:A4; margin:12mm 10mm; }
-  @media print { body { background:#fff; } .wrap { padding:0; max-width:none; } .head { border-radius:0; } .body { border:0; padding:14px 16px; }
+  @media print { body { background:#fff; } .wrap { padding:0; max-width:none; } .head { border-radius:0; } .body { border:0; padding:14px 16px; } .subj { white-space:normal; overflow:visible; }
     th, td { padding:5px 5px; } td { font-size:11px; } th { font-size:9px; letter-spacing:.03em; } .kpi .v { font-size:19px; } }
 </style>
 </head>
@@ -48,15 +51,15 @@
 <div class="wrap">
   <div class="head">
     {% if brand.name or brand.logo_src %}<table class="brandrow" role="presentation"><tr>
-      <td>{% if brand.name %}<div class="by">{{ brand.name }}</div>{% endif %}<h1>{{ report.name }}</h1></td>
+      <td>{% if brand.name %}<div class="by">{{ brand.name }}</div>{% endif %}<h1>{{ _(report.name) }}</h1></td>
       {% if brand.logo_src %}<td class="logo-cell"><img class="brand-logo" src="{{ brand.logo_src }}" alt="{{ brand.name }}"></td>{% endif %}
-    </tr></table>{% else %}<h1>{{ report.name }}</h1>{% endif %}
-    <div class="meta">{{ ctx.tenant_name }} · {{ ctx.period.kind }} report for {{ ctx.period.label }} · generated {{ generated_at|fmt_dt(tz) }} ({{ tz }})</div>
+    </tr></table>{% else %}<h1>{{ _(report.name) }}</h1>{% endif %}
+    <div class="meta">{{ ctx.tenant_name }} · {{ _(ctx.period.kind ~ " report for {period}", period=ctx.period_label) }} · {{ _("generated {when} ({tz})", when=generated_at|fmt_dt(tz), tz=tz) }}</div>
   </div>
   <div class="body">
     {% block body %}{% endblock %}
   </div>
-  <div class="foot">{% if brand.footer %}<div class="brand-foot">{{ brand.footer }}</div>{% endif %}{% if brand.show_credit %}ETD Report Scheduler v{{ app_version }} · {% endif %}Cisco Secure Email Threat Defense · data covers UTC days as aggregated by ETD</div>
+  <div class="foot">{% if brand.footer %}<div class="brand-foot">{{ brand.footer }}</div>{% endif %}{% if brand.show_credit %}ETD Report Scheduler v{{ app_version }} · {% endif %}Cisco Secure Email Threat Defense · {{ _("data covers UTC days as aggregated by ETD") }}</div>
 </div>
 </body>
 </html>

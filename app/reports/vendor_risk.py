@@ -61,6 +61,7 @@ def _techs(m: ConvictedMessage) -> set[str]:
 
 
 def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
+    tr = ctx.tr
     assert ctx.tenant is not None, "vendor_risk is a per-tenant report"
     p = ctx.period
     tid = ctx.tenant.id
@@ -113,11 +114,11 @@ def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
         frequent = [m for m in ms if _techs(m) & FREQUENT]
         reasons = []
         if reg in explicit_regs:
-            reasons.append("listed vendor")
+            reasons.append(tr("listed vendor"))
         if reg in established:
-            reasons.append(f"{len(established[reg]['days_before'])} days of clean mail before")
+            reasons.append(tr("{clean_days} days of clean mail before", clean_days=len(established[reg]['days_before'])))
         if frequent:
-            reasons.append(f"ETD: frequent sender ({len(frequent)})")
+            reasons.append(tr("ETD: frequent sender ({frequent_count})", frequent_count=len(frequent)))
         if not reasons:
             continue
         verdicts = Counter(m.verdict or "unknown" for m in ms)
@@ -176,7 +177,7 @@ def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
                 "domain": dom, "seen_as": seen_as, "protected": hit.protected, "method": hit.method, "distance": hit.distance,
                 "threats": c["threats"], "delivered": c["delivered"], "reply_to": c["reply_to"],
                 "recipients": len(c["recipients"]), "verdicts": dict(c["verdicts"]),
-                "target": "own domain" if hit.protected in own_regs else ("listed vendor" if hit.protected in explicit_regs else "counterparty"),
+                "target": tr("own domain") if hit.protected in own_regs else (tr("listed vendor") if hit.protected in explicit_regs else tr("counterparty")),
                 "severity": "critical" if c["delivered"] > 0 or c["reply_to"] > 0 else "warning",
             })
     lookalikes.sort(key=lambda r: (r["severity"] != "critical", -(r["delivered"] + r["threats"])))
@@ -190,7 +191,7 @@ def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
                 rare_by_reg[reg].append(m)
     rare_rows = sorted(
         ({"domain": reg, "messages": len(ms), "verdicts": dict(Counter(m.verdict for m in ms)),
-          "signals": sorted({t for m in ms for t in _techs(m) & RARE}) or (["first seen this period"] if has_logs else []),
+          "signals": sorted({t for m in ms for t in _techs(m) & RARE}) or ([tr("first seen this period")] if has_logs else []),
           "recipients": len({r for m in ms for r in recipients_of(m)}), "subjects": [m.subject for m in ms[:2]]}
          for reg, ms in rare_by_reg.items()),
         key=lambda r: -r["messages"],
@@ -212,18 +213,18 @@ def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
     recs: list[str] = []
     crit = [r for r in compromised if r["severity"] == "critical"]
     if crit:
-        recs.append(f"Contact {', '.join(r['domain'] for r in crit[:3])} out of band: threats came from accounts you normally trust - treat as a possible compromise and hold any payment changes.")
+        recs.append(tr("Contact {vendors} out of band: threats came from accounts you normally trust - treat as a possible compromise and hold any payment changes.", vendors=', '.join(r['domain'] for r in crit[:3])))
     delivered_la = [r for r in lookalikes if r["delivered"] > 0]
     if delivered_la:
-        recs.append(f"{len(delivered_la)} look-alike domain(s) delivered mail that was NOT convicted - search and remediate in ETD and block the domains.")
+        recs.append(tr("{delivered_la_count} look-alike domain(s) delivered mail that was NOT convicted - search and remediate in ETD and block the domains.", delivered_la_count=len(delivered_la)))
     if lookalikes:
-        recs.append("Add the look-alike domains to your block lists and ask the registrar or vendor to act on typosquats.")
+        recs.append(tr("Add the look-alike domains to your block lists and ask the registrar or vendor to act on typosquats."))
     if rare_rows:
-        recs.append(f"{sum(r['messages'] for r in rare_rows)} BEC/scam message(s) came from new or rare domains - require call-back verification for bank-detail changes.")
+        recs.append(tr("{rare_financial} BEC/scam message(s) came from new or rare domains - require call-back verification for bank-detail changes.", rare_financial=sum(r['messages'] for r in rare_rows)))
     if not explicit:
-        recs.append("List your key suppliers and partners in the tenant's reporting profile to get look-alike and compromise monitoring for them.")
+        recs.append(tr("List your key suppliers and partners in the tenant's reporting profile to get look-alike and compromise monitoring for them."))
     if not has_logs:
-        recs.append("Enable Log Export in ETD (Administration > Business > Export Log Preferences) to learn counterparties from clean mail and to detect delivered look-alikes.")
+        recs.append(tr("Enable Log Export in ETD (Administration > Business > Export Log Preferences) to learn counterparties from clean mail and to detect delivered look-alikes."))
 
     return {
         "has_logs": has_logs, "own_domains": sorted(own_regs), "own_auto": own_auto, "explicit": explicit,

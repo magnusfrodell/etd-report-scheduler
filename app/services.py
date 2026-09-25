@@ -22,7 +22,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+from jinja2 import Environment, FileSystemLoader, pass_context, select_autoescape
+from markupsafe import Markup
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -32,6 +33,7 @@ from app.config import get_config
 from app.db import session_scope
 from app.delivery import archive, pdf
 from app.delivery.email import send_email
+from app.i18n import LANGUAGES, Translator, normalize, use_language
 from app.models import ReportRun, ReportSchedule, Tenant, utcnow
 from app.reports import repo
 from app.reports.base import SCOPE_ALL, ReportContext, ReportDefinition
@@ -50,10 +52,13 @@ _env: Environment | None = None
 def template_env() -> Environment:
     global _env
     if _env is None:
-        _env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)), autoescape=select_autoescape(["html"]))
+        _env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)), autoescape=select_autoescape(["html"]), finalize=_finalize)
         _env.filters["fmt_dt"] = _fmt_dt
         _env.filters["fmt_int"] = _fmt_int
         _env.filters["fmt_pct"] = _fmt_pct
+        _env.filters["dec"] = _dec
+        _env.filters["pairs"] = _pairs
+        _env.filters["strong"] = _strong
         _env.globals["app_version"] = __version__
     return _env
 
@@ -75,31 +80,76 @@ def _fmt_int(value: int | float | None) -> str:
     return f"{int(value):,}".replace(",", " ")
 
 
-def _fmt_pct(value: float | None) -> str:
+@pass_context
+def _finalize(context: Any, value: Any) -> Any:
+    """Numbers printed by a template get the report language's decimal separator (12,5 in Swedish).
+    CSS values must not: format them explicitly (``|string``) so they reach the page as text."""
+    if isinstance(value, float):
+        return Translator(context.get("lang")).decimal(str(value))
+    return value
+
+
+@pass_context
+def _dec(context: Any, value: float | int | None) -> str:
+    """A number as the template would print it, with the decimal separator of the report language."""
+    return Translator(context.get("lang")).decimal(str(value))
+
+
+def _pairs(value: Any, fmt: str = "{k} {v}", sep: str = ", ") -> str:
+    """'manual 3, auto 5' from a dict or (key, count) pairs, as plain text for a translated sentence."""
+    items = value.items() if isinstance(value, dict) else (value or [])
+    return sep.join(fmt.format(k=k, v=v) for k, v in items)
+
+
+def _strong(value: Any) -> Markup:
+    return Markup("<strong>{}</strong>").format(value)
+
+
+@pass_context
+def _fmt_pct(context: Any, value: float | None) -> str:
+    tr = Translator(context.get("lang"))
     if value is None:
-        return "new"
+        return tr("new")
     sign = "+" if value > 0 else ""
-    return f"{sign}{value:.1f} %"
+    return tr.decimal(f"{sign}{value:.1f} %")
+
+
+def build_report(session: Session, definition: ReportDefinition, ctx: ReportContext) -> dict[str, Any]:
+    """Build a report's data with its language active, so numbers formatted deep inside the report code
+    (durations, factors) get the right decimal separator."""
+    with use_language(ctx.lang):
+        return definition.build(session, ctx)
+
+
+def resolve_language(settings: RuntimeSettings, tenant: Tenant | None, requested: str | None = None) -> str:
+    """The report language: an explicit choice (schedule, Run now, API) first, then the tenant's
+    profile, then the installation default."""
+    if requested and requested in LANGUAGES:
+        return requested
+    profile_lang = get_profile(tenant)["language"] if tenant is not None else ""
+    return normalize(profile_lang or settings.report_language)
 
 
 def render_report(session: Session, definition: ReportDefinition, ctx: ReportContext, data: dict[str, Any] | None = None,
                   brand: BrandView | None = None) -> str:
-    data = definition.build(session, ctx) if data is None else data
-    template = template_env().get_template(definition.template)
-    return template.render(report=definition, ctx=ctx, data=data, generated_at=ctx.generated_at, tz=ctx.timezone, brand=brand or NEUTRAL)
+    with use_language(ctx.lang):
+        data = build_report(session, definition, ctx) if data is None else data
+        template = template_env().get_template(definition.template)
+        return template.render(report=definition, ctx=ctx, data=data, generated_at=ctx.generated_at, tz=ctx.timezone,
+                               brand=brand or NEUTRAL, lang=ctx.lang, _=ctx.tr.markup)
 
 
 def build_context(session: Session, definition: ReportDefinition, tenant: Tenant | None, now: datetime, tz_name: str, period_kind: str | None = None,
-                  reference: datetime | None = None) -> ReportContext:
+                  reference: datetime | None = None, lang: str | None = None) -> ReportContext:
     from zoneinfo import ZoneInfo
 
     tz = ZoneInfo(tz_name)
     period = period_for(period_kind or definition.period_kind, reference or now, tz)
     if definition.scope == SCOPE_ALL:
-        return ReportContext(period=period, generated_at=now, timezone=tz_name, tenants=repo.enabled_tenants(session))
+        return ReportContext(period=period, generated_at=now, timezone=tz_name, tenants=repo.enabled_tenants(session), lang=normalize(lang))
     if tenant is None:
         raise ValueError(f"Report {definition.key!r} needs a tenant")
-    return ReportContext(period=period, generated_at=now, timezone=tz_name, tenant=tenant)
+    return ReportContext(period=period, generated_at=now, timezone=tz_name, tenant=tenant, lang=normalize(lang))
 
 
 class DeliveryFailed(RuntimeError):
@@ -129,6 +179,7 @@ def run_report(
     only_with_findings: bool = False,
     delivery_note: str | None = None,
     alert: bool = True,
+    language: str | None = None,
 ) -> int:
     """Generate one report. Returns the ``ReportRun`` id. Never raises - failures are recorded.
 
@@ -169,13 +220,15 @@ def run_report(
         with session_scope() as session:
             settings = load_settings(session)
             tenant = session.get(Tenant, tenant_id) if tenant_id else None
-            ctx = build_context(session, definition, tenant, now, settings.timezone, period_kind, reference)
-            data = definition.build(session, ctx)
+            lang = resolve_language(settings, tenant, language)
+            ctx = build_context(session, definition, tenant, now, settings.timezone, period_kind, reference, lang=lang)
+            data = build_report(session, definition, ctx)
+            result["language"] = lang
             brand = brand_for(session, tenant)
             html = render_report(session, definition, ctx, data, brand)
             findings = definition.has_findings(data) if definition.has_findings else True
             tenant_name = tenant.name if tenant else None
-            subject = definition.subject.format(tenant=ctx.tenant_name, period=ctx.period.label)
+            subject = ctx.tr(definition.subject, tenant=ctx.tenant_name, period=ctx.period_label)
             if brand.subject_prefix:
                 subject = f"{brand.subject_prefix} {subject}"
             result["period_start"], result["period_end"] = ctx.period.start, ctx.period.end
@@ -232,7 +285,8 @@ def _finalize_run(run_id: int, schedule_id: int | None, result: dict[str, object
                 run = session.get(ReportRun, run_id)
                 if run is None:
                     return
-                for key in ("period_start", "period_end", "html_path", "pdf_path", "delivered_to", "error", "delivery_error", "delivery_note"):
+                for key in ("period_start", "period_end", "html_path", "pdf_path", "delivered_to", "error", "delivery_error", "delivery_note",
+                            "language"):
                     if key in result:
                         setattr(run, key, result[key])
                 run.status = str(result["status"])
@@ -303,10 +357,11 @@ def run_schedule(schedule_id: int, *, reference: datetime | None = None, trigger
         jobs = [(t.id if t is not None else None, *schedule_recipients(schedule, definition, t, settings)) for t in targets]
         fan_out = schedule.target in ("all", "group") and definition.scope != SCOPE_ALL
         output_format, only_findings = output_format or schedule.output_format, schedule.only_with_findings
+        language = schedule.language or None  # None = each tenant's own language
     run_ids = [
         run_report(definition.key, tenant_id=tid, schedule_id=schedule_id, recipients=to, output_format=output_format,
                    reference=reference, triggered_by=triggered_by, only_with_findings=only_findings, delivery_note=note,
-                   alert=not fan_out, deliver=deliver, now=now)
+                   alert=not fan_out, deliver=deliver, now=now, language=language)
         for tid, to, note in jobs
     ]
     if fan_out:

@@ -28,6 +28,7 @@ from app import __version__
 from app.collectors import runner
 from app.config import get_config
 from app.db import get_db
+from app.i18n import LANGUAGES
 from app.models import Tenant, User
 from app.reports.base import SCOPE_ALL
 from app.reports.registry import REPORTS, get_report
@@ -118,11 +119,14 @@ def api_backfill(tenant_id: int, background: BackgroundTasks, db: Session = Depe
 
 
 @router.post("/reports/{report_key}/run")
-def api_run_report(report_key: str, background: BackgroundTasks, tenant_id: int | None = None, deliver: bool = False, db: Session = Depends(get_db), p: Principal = Depends(get_principal)) -> dict:
+def api_run_report(report_key: str, background: BackgroundTasks, tenant_id: int | None = None, deliver: bool = False,
+                   language: str | None = None, db: Session = Depends(get_db), p: Principal = Depends(get_principal)) -> dict:
     try:
         definition = get_report(report_key)
     except KeyError as exc:
         raise HTTPException(404, str(exc)) from exc
+    if language and language not in LANGUAGES:
+        raise HTTPException(400, f"Unknown report language {language!r}; use one of: {', '.join(LANGUAGES)}")
     if definition.scope == SCOPE_ALL:
         if not p.can_cross_tenant:
             raise forbid("Cross-tenant reports need the tenant administrator role.")
@@ -131,8 +135,8 @@ def api_run_report(report_key: str, background: BackgroundTasks, tenant_id: int 
         if tenant_id is None or db.get(Tenant, tenant_id) is None:
             raise HTTPException(400, "tenant_id is required for a per-tenant report")
         ensure(p, tenant_id, "operator")
-    background.add_task(run_report, report_key, tenant_id=tenant_id, deliver=deliver, triggered_by="api")
-    return {"status": "started", "report": report_key, "tenant_id": tenant_id}
+    background.add_task(run_report, report_key, tenant_id=tenant_id, deliver=deliver, triggered_by="api", language=language or None)
+    return {"status": "started", "report": report_key, "tenant_id": tenant_id, "language": language or None}
 
 
 @router.get("/scheduler")

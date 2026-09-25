@@ -36,6 +36,7 @@ MAX_MESSAGES = 200
 
 
 def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
+    tr = ctx.tr
     assert ctx.tenant is not None, "compromise_indicators is a per-tenant report"
     p = ctx.period
     messages = repo.convicted_messages(
@@ -47,7 +48,7 @@ def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
 
     by_sender: dict[str, dict[str, Any]] = {}
     for m in messages:
-        sender = (m.from_address or m.envelope_from or "(unknown sender)").lower()
+        sender = (m.from_address or m.envelope_from or tr("(unknown sender)")).lower()
         entry = by_sender.setdefault(
             sender,
             {

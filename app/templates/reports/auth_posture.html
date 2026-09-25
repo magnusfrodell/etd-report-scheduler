@@ -1,53 +1,53 @@
 {% extends "email/base_report.html" %}
 {% block body %}
-<h2>Summary · {{ ctx.period.label }}</h2>
+<h2>{{ _("Summary · {period_label}", period_label=ctx.period_label) }}</h2>
 <table class="kpis"><tr>
-  <td class="kpi"><div class="v">{{ data.enforcing_own }} / {{ data.own_checks|length }}</div><div class="l">Own domains with DMARC p=reject</div>{% if data.own_auto %}<div class="d"><span class="note">domains auto-detected</span></div>{% endif %}</td>
-  <td class="kpi"><div class="v">{{ data.spoofed_count }}</div><div class="l">Threats spoofing your domains</div></td>
-  <td class="kpi"><div class="v">{% if data.threat_enforcing_pct is not none %}{{ data.threat_enforcing_pct }} %{% else %}–{% endif %}</div><div class="l">Threats from domains with enforcing DMARC</div><div class="d"><span class="note">{{ data.threat_messages_checked }} of {{ data.threat_total }} threats checked</span></div></td>
-  <td class="kpi"><div class="v">{% if data.alignment.reply_to_pct_threats is not none %}{{ data.alignment.reply_to_pct_threats }} %{% else %}–{% endif %}</div><div class="l">Threats with Reply-To to another domain</div><div class="d"><span class="note">{% if data.alignment.reply_to_pct_clean is not none %}{{ data.alignment.reply_to_pct_clean }} % of clean mail{% else %}needs Log Export{% endif %}</span></div></td>
+  <td class="kpi"><div class="v">{{ data.enforcing_own }} / {{ data.own_checks|length }}</div><div class="l">{{ _("Own domains with DMARC p=reject") }}</div>{% if data.own_auto %}<div class="d"><span class="note">{{ _("domains auto-detected") }}</span></div>{% endif %}</td>
+  <td class="kpi"><div class="v">{{ data.spoofed_count }}</div><div class="l">{{ _("Threats spoofing your domains") }}</div></td>
+  <td class="kpi"><div class="v">{% if data.threat_enforcing_pct is not none %}{{ data.threat_enforcing_pct }} %{% else %}–{% endif %}</div><div class="l">{{ _("Threats from domains with enforcing DMARC") }}</div><div class="d"><span class="note">{{ _("{threat_messages_checked} of {threat_total} threats checked", threat_messages_checked=data.threat_messages_checked, threat_total=data.threat_total) }}</span></div></td>
+  <td class="kpi"><div class="v">{% if data.alignment.reply_to_pct_threats is not none %}{{ data.alignment.reply_to_pct_threats }} %{% else %}–{% endif %}</div><div class="l">{{ _("Threats with Reply-To to another domain") }}</div><div class="d"><span class="note">{% if data.alignment.reply_to_pct_clean is not none %}{{ _("{reply_to_pct_clean} % of clean mail", reply_to_pct_clean=data.alignment.reply_to_pct_clean) }}{% else %}{{ _("needs Log Export") }}{% endif %}</span></div></td>
 </tr></table>
 
-<h2>Your domains</h2>
+<h2>{{ _("Your domains") }}</h2>
 {% if data.own_checks %}
 <table>
-  <tr><th>Domain</th><th>Grade</th><th>DMARC</th><th>SPF</th><th>MTA-STS</th><th>TLS-RPT</th><th>BIMI</th></tr>
+  <tr><th>{{ _("Domain") }}</th><th>{{ _("Grade") }}</th><th>{{ _("DMARC") }}</th><th>{{ _("SPF") }}</th><th>{{ _("MTA-STS") }}</th><th>{{ _("TLS-RPT") }}</th><th>{{ _("BIMI") }}</th></tr>
   {% for c in data.own_checks %}
   <tr>
     <td>{{ c.domain }}</td>
     <td><span class="chip {{ 'ok' if c.grade in ('A', 'B') else ('warning' if c.grade in ('C', '?') else 'critical') }}">{{ c.grade }}</span></td>
-    <td>{% if c.error %}<span class="note">{{ c.error }}</span>{% else %}<span class="chip {{ c.dmarc.level }}">{{ c.dmarc.status }}</span>{% if c.dmarc.inherited %} <span class="note">inherited</span>{% endif %}{% if c.dmarc.present and not c.dmarc.rua %} <span class="note">no rua</span>{% endif %}{% endif %}</td>
-    <td>{% if not c.error %}<span class="chip {{ c.spf.level }}">{{ c.spf.status }}</span>{% endif %}</td>
-    <td>{{ 'yes' if c.mta_sts else 'no' }}</td><td>{{ 'yes' if c.tls_rpt else 'no' }}</td><td>{{ 'yes' if c.bimi else 'no' }}</td>
+    <td>{% if c.error %}<span class="note">{{ c.error }}</span>{% else %}<span class="chip {{ c.dmarc.level }}">{{ _(c.dmarc.status) }}</span>{% if c.dmarc.inherited %} <span class="note">{{ _("inherited") }}</span>{% endif %}{% if c.dmarc.present and not c.dmarc.rua %} <span class="note">{{ _("no rua") }}</span>{% endif %}{% endif %}</td>
+    <td>{% if not c.error %}<span class="chip {{ c.spf.level }}">{{ _(c.spf.status) }}</span>{% endif %}</td>
+    <td>{{ _('yes') if c.mta_sts else _('no') }}</td><td>{{ _('yes') if c.tls_rpt else _('no') }}</td><td>{{ _('yes') if c.bimi else _('no') }}</td>
   </tr>
   {% endfor %}
 </table>
-{% if data.own_auto %}<p class="note">Own domains were auto-detected from outgoing mail and recipient addresses. Set them in the tenant's reporting profile for an exact list.</p>{% endif %}
+{% if data.own_auto %}<p class="note">{{ _("Own domains were auto-detected from outgoing mail and recipient addresses. Set them in the tenant's reporting profile for an exact list.") }}</p>{% endif %}
 {% else %}
-<p class="note">No own domains known yet. Add them in the tenant's reporting profile, or enable Log Export so they can be detected from outgoing mail.</p>
+<p class="note">{{ _("No own domains known yet. Add them in the tenant's reporting profile, or enable Log Export so they can be detected from outgoing mail.") }}</p>
 {% endif %}
 
-<h2>Spoofing of your domains</h2>
+<h2>{{ _("Spoofing of your domains") }}</h2>
 {% if data.spoofed_count %}
-<p>{{ data.spoofed_count }} threat(s) used one of your domains in the From: header ({% for v, n in data.spoof_verdicts.items() %}{{ v }} {{ n }}{% if not loop.last %}, {% endif %}{% endfor %}).</p>
+<p>{{ _("{spoofed_count} threat(s) used one of your domains in the From: header ({verdicts}).", spoofed_count=data.spoofed_count, verdicts=data.spoof_verdicts|pairs) }}</p>
 <table>
-  <tr><th>Received</th><th>From</th><th>To</th><th>Subject</th><th>Verdict</th></tr>
+  <tr><th>{{ _("Received") }}</th><th>{{ _("From") }}</th><th>{{ _("To") }}</th><th>{{ _("Subject") }}</th><th>{{ _("Verdict") }}</th></tr>
   {% for m in data.spoof_samples %}<tr><td>{{ m.timestamp|fmt_dt }}</td><td>{{ m.from }}</td><td>{{ m.to|join(', ') }}</td><td>{{ m.subject or '' }}</td><td>{{ m.verdict }}</td></tr>{% endfor %}
 </table>
-{% else %}<p class="note">No threats spoofed your domains in this period.</p>{% endif %}
+{% else %}<p class="note">{{ _("No threats spoofed your domains in this period.") }}</p>{% endif %}
 {% if data.has_logs %}
-<p class="note">All incoming mail (Log Export): {{ data.alignment.claimed_own|fmt_int }} message(s) claimed one of your domains in From:, {{ data.alignment.claimed_own_convicted|fmt_int }} of them convicted. The Return-Path domain differed from the From: domain in {{ data.alignment.rp_mismatch_pct if data.alignment.rp_mismatch_pct is not none else '–' }} % of {{ data.alignment.incoming|fmt_int }} incoming messages.</p>
+<p class="note">{{ _("All incoming mail (Log Export): {claimed_own} message(s) claimed one of your domains in From:, {claimed_own_convicted} of them convicted. The Return-Path domain differed from the From: domain in {mismatch_pct} % of {incoming} incoming messages.", claimed_own=data.alignment.claimed_own|fmt_int, claimed_own_convicted=data.alignment.claimed_own_convicted|fmt_int, mismatch_pct=data.alignment.rp_mismatch_pct if data.alignment.rp_mismatch_pct is not none else '–', incoming=data.alignment.incoming|fmt_int) }}</p>
 {% endif %}
 
-<h2>DMARC policy of the domains that sent threats</h2>
+<h2>{{ _("DMARC policy of the domains that sent threats") }}</h2>
 {% if data.policy_rows %}
 <table>
-  <tr><th>Published policy</th><th class="num">Threats</th><th class="num">Share</th><th>Top domains</th></tr>
+  <tr><th>{{ _("Published policy") }}</th><th class="num">{{ _("Threats") }}</th><th class="num">{{ _("Share") }}</th><th>{{ _("Top domains") }}</th></tr>
   {% for r in data.policy_rows %}<tr><td>{{ r.policy }}</td><td class="num">{{ r.messages }}</td><td class="num">{{ r.share }} %</td><td>{% for d, n in r.domains %}{{ d }} ({{ n }}){% if not loop.last %}, {% endif %}{% endfor %}</td></tr>{% endfor %}
 </table>
-<p class="note">The {{ data.threat_domains_checked }} most frequent threat sender domains were checked in DNS. "reject" and "quarantine" are the policies these domains publish today. ETD does not include the SPF, DKIM or DMARC result of each message, and a policy may have changed since delivery, so this does not show that the messages passed authentication.{% if data.freemail_pct %} {{ data.freemail_pct }} % came from free-mail providers.{% endif %}</p>
-{% else %}<p class="note">No external threat senders in this period.</p>{% endif %}
+<p class="note">{{ _("The {threat_domains_checked} most frequent threat sender domains were checked in DNS. \"reject\" and \"quarantine\" are the policies these domains publish today. ETD does not include the SPF, DKIM or DMARC result of each message, and a policy may have changed since delivery, so this does not show that the messages passed authentication.", threat_domains_checked=data.threat_domains_checked) }}{% if data.freemail_pct %} {{ _("{freemail_pct} % came from free-mail providers.", freemail_pct=data.freemail_pct) }}{% endif %}</p>
+{% else %}<p class="note">{{ _("No external threat senders in this period.") }}</p>{% endif %}
 
-<h2>Recommendations</h2>
-{% if data.recommendations %}<ul>{% for r in data.recommendations %}<li>{{ r }}</li>{% endfor %}</ul>{% else %}<p class="note">Nothing to add - the authentication posture looks good.</p>{% endif %}
+<h2>{{ _("Recommendations") }}</h2>
+{% if data.recommendations %}<ul>{% for r in data.recommendations %}<li>{{ r }}</li>{% endfor %}</ul>{% else %}<p class="note">{{ _("Nothing to add - the authentication posture looks good.") }}</p>{% endif %}
 {% endblock %}

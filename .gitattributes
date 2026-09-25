@@ -1,0 +1,3 @@
+# Message catalogs are written by Babel, which ends them with a blank line - no whitespace warnings for them.
+*.po  -whitespace
+*.pot -whitespace
