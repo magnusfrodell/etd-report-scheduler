@@ -53,6 +53,7 @@ class AppConfig(BaseSettings):
     scheduler_enabled: bool = True
     session_max_age_seconds: int = 12 * 3600
     cookie_secure: bool = False  # set true behind an HTTPS reverse proxy
+    demo_mode: bool = False  # invented tenants from a simulated ETD API; e-mails go to DATA_DIR/demo-outbox
     trusted_origins: str = ""  # extra origins allowed to submit forms, e.g. behind a proxy that rewrites Host
 
     @field_validator("log_level")

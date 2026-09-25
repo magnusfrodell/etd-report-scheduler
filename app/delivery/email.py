@@ -19,9 +19,11 @@ from __future__ import annotations
 import logging
 import smtplib
 import ssl
+from datetime import UTC, datetime
 from email.message import EmailMessage
 from email.utils import formataddr, formatdate, make_msgid, parseaddr
 
+from app.config import get_config
 from app.settings_store import RuntimeSettings
 
 log = logging.getLogger(__name__)
@@ -71,9 +73,26 @@ def tls_context(settings: RuntimeSettings) -> ssl.SSLContext:
     return context
 
 
+def _demo_outbox(msg: EmailMessage) -> dict[str, tuple[int, bytes]]:
+    """Demo mode never sends mail: the message is saved as an .eml file (the newest 200 are kept)."""
+    folder = get_config().data_dir / "demo-outbox"
+    folder.mkdir(parents=True, exist_ok=True)
+    path = folder / f"{datetime.now(UTC):%Y%m%d-%H%M%S-%f}.eml"
+    path.write_bytes(msg.as_bytes())
+    for old in sorted(folder.glob("*.eml"))[:-200]:
+        old.unlink(missing_ok=True)
+    log.info("Demo mode: '%s' saved to %s instead of being sent", msg["Subject"], path)
+    return {}
+
+
 def send_email(settings: RuntimeSettings, to: list[str], subject: str, html: str, attachments: list[tuple[str, bytes, str]] | None = None,
                *, inline_images: list[tuple[str, bytes, str]] | None = None, from_name: str | None = None,
                reply_to: str | None = None) -> dict[str, tuple[int, bytes]]:
+    if get_config().demo_mode:
+        if not to:
+            raise ValueError("No recipients")
+        return _demo_outbox(build_message(settings, to, subject, html, attachments, inline_images=inline_images,
+                                          from_name=from_name, reply_to=reply_to))
     if not settings.smtp_configured:
         raise EmailNotConfigured("SMTP host and sender address are not configured (Settings > E-mail)")
     if not to:

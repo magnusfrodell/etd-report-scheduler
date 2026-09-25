@@ -128,6 +128,8 @@ def _base_ctx(request: Request, db: Session, p: Principal, **extra: Any) -> dict
         "selection": current_tenant_selection(request),
         "msg": request.query_params.get("msg"),
         "key_problem": getattr(request.app.state, "key_problem", None),
+        "demo_mode": get_config().demo_mode,
+        "demo_warming": getattr(request.app.state, "demo_warming", False),
         "ui_brand": view(default_brand(db)),
         "err": request.query_params.get("err"),
         "reports": REPORTS,

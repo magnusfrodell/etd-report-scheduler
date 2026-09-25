@@ -304,3 +304,6 @@ a.badge:hover { filter: brightness(0.96); }
 input[type=color] { height: 38px; padding: 2px 4px; width: 100%; }
 .ui-logo { display: block; max-width: 150px; max-height: 36px; background: #fff; border-radius: 6px; padding: 4px 6px; margin-bottom: 8px; }
 .login-logo { display: block; max-width: 200px; max-height: 60px; margin: 0 auto 12px; background: #fff; border-radius: 8px; padding: 6px 10px; }
+
+/* Demo mode */
+.demo-banner { background: #fff7e0; border: 1px solid #f0d58a; color: #6b5200; border-radius: var(--radius-ctl); padding: 8px 12px; font-size: 13px; }

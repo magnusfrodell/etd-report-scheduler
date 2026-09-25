@@ -3,6 +3,18 @@
 Database migrations run automatically at start-up. Every version runs as a single container
 with its state in the `/data` volume.
 
+## 0.9.0 - Demo mode
+
+### Added
+- **Demo mode** - `DEMO_MODE=true` starts the tool with four invented Nordic and Baltic tenants served by a simulated ETD API. The real collectors, reports, schedules and alerts run against it. Each tenant has a story: a compromised supplier, a look-alike domain that got through, QR-code and callback campaigns, attacks on executives, slow remediation, a hijacked mailbox, weak DMARC and a failing Log Export. The archive is filled with the reports the schedules would have produced, generated at the times they would have run, and e-mails are saved as `.eml` files in `DATA_DIR/demo-outbox`. Demo mode only seeds an empty database and never contacts Cisco or a mail relay.
+- Screenshots in the README.
+
+### Fixed
+- **Vendor risk** - a look-alike domain that had delivered harmless mail for a while counted as an established counterparty. It was then protected itself and escaped look-alike detection, which is exactly how attackers warm up look-alike domains. Look-alikes of your own domains and listed vendors can no longer become established counterparties.
+
+### Upgrade notes
+- No migration.
+
 ## 0.8.0 - Branding
 
 ### Added

@@ -8,6 +8,7 @@ What it adds on top of the built-in ETD console:
 
 * **Scheduling and delivery** – cron-based schedules per tenant, for a group of tenants or for all tenants (including tenants added later), sent to fixed recipients and/or each customer's own contacts, optionally only when a report has findings; HTML e-mail with optional PDF attachment and an archive of every generated report.
 * **Branding** – a partner's name, logo, colours and footer on reports, PDFs and e-mails, with the e-mail sender name, Reply-To and subject prefix; one default brand and, where needed, another brand per tenant.
+* **Demo mode** – `DEMO_MODE=true` runs the tool against a simulated ETD API with four invented tenants, for demos, evaluation and screenshots; nothing contacts Cisco or a mail relay.
 * **History and comparison** – daily statistics are kept as long as you like (retention is configurable, ETD keeps 90 days), so every report compares the period with the previous one.
 * **Reports built on message data** – threat-convicted messages are collected through the Message Search API, which enables reports ETD does not offer: compromise indicators on outgoing/internal mail, a Very Attacked People index, campaign clustering and dwell-time/exposure analysis.
 * **Posture, risk and compliance** – with ETD's Log Export and DNS: authentication posture of own domains, vendor and look-alike risk, technique and attachment trends, an audit trail kept beyond ETD's 30 days, and a quarterly posture score for management.
@@ -33,7 +34,7 @@ Bundled reports:
 
 **Technology stack:** Python 3.12, FastAPI, SQLAlchemy 2 + Alembic (SQLite by default, PostgreSQL optional), APScheduler, Jinja2, WeasyPrint for PDF, httpx for the ETD API. Standalone application, delivered as a Docker image; no external services other than the ETD API and an SMTP relay.
 
-**Status:** 0.8.0, alpha. The collectors (including Log Export), scheduler, twelve reports and the admin UI work end to end against a fake ETD API in the test-suite (`pytest`, 120 tests) and have been smoke-tested as a running application. Validation against production ETD tenants in all five regions is the next step - please open an issue with what you find. This is community sample code, not a Cisco product, and is not supported by Cisco TAC.
+**Status:** 0.9.0, alpha. The collectors (including Log Export), scheduler, twelve reports and the admin UI work end to end against a fake ETD API in the test-suite (`pytest`, 125 tests) and have been smoke-tested as a running application. Validation against production ETD tenants in all five regions is the next step - please open an issue with what you find. This is community sample code, not a Cisco product, and is not supported by Cisco TAC.
 
 <!-- Add a screenshot of the dashboard here once you run it against a real tenant: ![Dashboard](docs/dashboard.png) -->
 
@@ -54,6 +55,35 @@ Challenges solved along the way: ETD's API only exposes UTC days and 32-day sear
 
 Ideas for extending the solution: "caught behind the gateway" with SMA cross-referencing, user-reported-vs-verdict, department enrichment from Entra ID for the VAP index, DKIM selector discovery, an OIDC login, webhook delivery to Teams/Slack.
 
+## Try it first: demo mode
+
+`DEMO_MODE=true` starts the tool with four invented Nordic and Baltic tenants served by a simulated ETD API - no Cisco account and no mail relay needed. The real collectors, reports, schedules and alerts run against the simulation, so what you see is what the tool does with real data:
+
+```bash
+docker run -d --name etd-demo -p 8080:8080 \
+  -e DEMO_MODE=true -e ADMIN_PASSWORD=choose-a-password \
+  -e SECRET_KEY="$(openssl rand -hex 32)" \
+  -e ENCRYPTION_KEY="$(python3 -c 'import base64, os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())')" \
+  ghcr.io/magnusfrodell/etd-report-scheduler:0.9.0
+```
+
+Sign in at http://localhost:8080 as `admin`. Within a minute the demo has collected 90 days of history and filled the archive with the reports its schedules would have produced. Each tenant has a story:
+
+* **Nordic Freight AB** – a supplier's real accounts ask for new bank details, a look-alike of the company's own domain has been delivering mail, and a weekly QR-code campaign.
+* **Baltic Pharma AS** – attacks aimed at the management team and retrospective verdicts that are cleaned up late, or never.
+* **Helios Energy Oy** – a hijacked mailbox sending phishing to customers, and `p=none` in DMARC.
+* **Aurora Retail ApS** – Log Export fails, as seen on the Data quality page, and no report recipients are set.
+
+E-mails are saved as `.eml` files in `/data/demo-outbox` instead of being sent. Demo mode only seeds an empty database and routes every ETD call to the simulator, so give it its own data volume rather than pointing it at real data.
+
+![Report cards](docs/images/reports.png)
+
+![Archive with a branded vendor-risk report](docs/images/archive.png)
+
+![Data quality](docs/images/data-quality.png)
+
+![Vendor risk as PDF](docs/images/vendor-risk-pdf.png)
+
 ## Installation
 
 ### Option A: Docker (recommended)
@@ -63,7 +93,7 @@ Prerequisites: Docker 24+ with Compose, network access from the container to `ap
 A pre-built multi-arch image (amd64/arm64) is published for every release tag:
 
 ```bash
-docker pull ghcr.io/magnusfrodell/etd-report-scheduler:0.8.0
+docker pull ghcr.io/magnusfrodell/etd-report-scheduler:0.9.0
 ```
 
 To use it, set `image:` instead of `build:` in `docker-compose.yml` (the line is there, commented out). To build yourself instead:
@@ -139,6 +169,7 @@ pytest
 | `COOKIE_SECURE` | no | `false` | Set `true` behind HTTPS |
 | `FORWARDED_ALLOW_IPS` | no | `127.0.0.1` | Proxies whose `X-Forwarded-*` headers are trusted (comma-separated addresses or networks) |
 | `TRUSTED_ORIGINS` | no | – | Extra origins allowed to submit forms, e.g. `https://reports.example.com` behind a proxy that rewrites the `Host` header |
+| `DEMO_MODE` | no | `false` | Invented tenants from a simulated ETD API; e-mails are saved in `DATA_DIR/demo-outbox`. Use its own data volume |
 
 ### In the UI (stored in the database)
 
@@ -242,7 +273,7 @@ Generated files are stored under `/data/reports/<tenant>/<report>/<timestamp>-ru
 `.github/workflows/ci.yml` runs ruff, the test-suite and an Alembic consistency check on every push and pull request. `.github/workflows/docker.yml` builds and publishes the container image to GitHub Container Registry when a `v*` tag is pushed:
 
 ```bash
-git tag v0.8.0 && git push origin v0.8.0
+git tag v0.9.0 && git push origin v0.9.0
 ```
 
 ### Architecture

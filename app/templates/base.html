@@ -45,6 +45,7 @@
       </form>
     </header>
     <main class="content">
+      {% if demo_mode %}<div class="demo-banner">Demo mode - invented tenants and data from a simulated ETD API. E-mails are saved in the demo outbox, never sent.{% if demo_warming %} <strong>Collecting the demo history - reports appear over the next few minutes.</strong>{% endif %}</div>{% endif %}
       {% if key_problem and principal and principal.is_admin %}<div class="flash error">{{ key_problem }}</div>{% endif %}
       {% if msg %}<div class="flash">{{ msg }}</div>{% endif %}
       {% if err %}<div class="flash error">{{ err }}</div>{% endif %}

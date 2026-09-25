@@ -89,8 +89,13 @@ def build(session: Session, ctx: ReportContext) -> dict[str, Any]:
             h["period_msgs"] += r.messages
             h["period_convicted"] += r.convicted
             h["period_rt"] += r.reply_to_mismatch
+    # A domain that imitates one of your own domains or a listed vendor never becomes an established
+    # counterparty, however long it has delivered mail - attackers warm look-alike domains up with
+    # harmless mail first. Otherwise it would be protected itself and escape look-alike detection.
+    anchors = sorted(own_regs | explicit_regs)
     established = {reg: h for reg, h in history.items()
-                   if len(h["days_before"]) >= ESTABLISHED_MIN_DAYS and reg not in FREEMAIL and reg not in own_regs}
+                   if len(h["days_before"]) >= ESTABLISHED_MIN_DAYS and reg not in FREEMAIL and reg not in own_regs
+                   and find_lookalike(reg, anchors) is None}
 
     threats = [m for m in repo.convicted_messages(session, tid, p.start, p.end, verdicts=list(THREAT_VERDICTS))
                if (m.direction or "incoming") == "incoming"]

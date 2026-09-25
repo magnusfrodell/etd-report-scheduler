@@ -280,7 +280,8 @@ def schedule_recipients(schedule: ReportSchedule, definition: ReportDefinition, 
 
 
 def run_schedule(schedule_id: int, *, reference: datetime | None = None, triggered_by: str = "schedule",
-                 only_missing: bool = False, force: bool = False) -> int | None:
+                 only_missing: bool = False, force: bool = False, deliver: bool = True, output_format: str | None = None,
+                 now: datetime | None = None) -> int | None:
     """Run a schedule for every tenant it covers. ``reference`` is when it fell due (catch-up), and
     ``only_missing`` skips tenants that already have a run for that period. Returns the last run id."""
     from zoneinfo import ZoneInfo
@@ -301,11 +302,11 @@ def run_schedule(schedule_id: int, *, reference: datetime | None = None, trigger
             targets = [t for t in targets if (t.id if t is not None else None) not in done]
         jobs = [(t.id if t is not None else None, *schedule_recipients(schedule, definition, t, settings)) for t in targets]
         fan_out = schedule.target in ("all", "group") and definition.scope != SCOPE_ALL
-        output_format, only_findings = schedule.output_format, schedule.only_with_findings
+        output_format, only_findings = output_format or schedule.output_format, schedule.only_with_findings
     run_ids = [
         run_report(definition.key, tenant_id=tid, schedule_id=schedule_id, recipients=to, output_format=output_format,
                    reference=reference, triggered_by=triggered_by, only_with_findings=only_findings, delivery_note=note,
-                   alert=not fan_out)
+                   alert=not fan_out, deliver=deliver, now=now)
         for tid, to, note in jobs
     ]
     if fan_out:

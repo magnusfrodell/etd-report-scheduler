@@ -55,6 +55,11 @@ def create_app() -> FastAPI:
         _app.state.key_problem = encryption_key_problem()
         if _app.state.key_problem:
             log.error(_app.state.key_problem)
+        _app.state.demo_warming = False
+        if cfg.demo_mode:
+            from app.demo import activate
+
+            activate(_app)
         interrupted = recover_interrupted_runs()
         if interrupted:
             log.warning("Marked %d report run(s) interrupted by a restart as failed", interrupted)

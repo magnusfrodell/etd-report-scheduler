@@ -26,6 +26,7 @@ from sqlalchemy.orm import Session
 
 from app import __version__
 from app.collectors import runner
+from app.config import get_config
 from app.db import get_db
 from app.models import Tenant, User
 from app.reports.base import SCOPE_ALL
@@ -41,7 +42,8 @@ router = APIRouter(prefix="/api")
 def health(request: Request, db: Session = Depends(get_db)) -> dict:
     tenant_count = len(db.execute(select(Tenant.id)).scalars().all())
     return {"status": "ok", "version": __version__, "scheduler_running": scheduler.running, "tenants": tenant_count,
-            "encryption_key": "mismatch" if getattr(request.app.state, "key_problem", None) else "ok"}
+            "encryption_key": "mismatch" if getattr(request.app.state, "key_problem", None) else "ok",
+            "demo_mode": get_config().demo_mode}
 
 
 @router.get("/me")
