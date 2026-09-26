@@ -3,4 +3,4 @@
 pytest>=8.0
 ruff>=0.5
 aiosmtpd>=1.4
-pip-audit>=2.7
+pip-audit>=2.10.1
