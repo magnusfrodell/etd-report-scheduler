@@ -34,7 +34,7 @@ Bundled reports:
 
 **Technology stack:** Python 3.12, FastAPI, SQLAlchemy 2 + Alembic (SQLite by default, PostgreSQL optional), APScheduler, Jinja2, WeasyPrint for PDF, httpx for the ETD API. Standalone application, delivered as a Docker image; no external services other than the ETD API and an SMTP relay.
 
-**Status:** 0.12.0, alpha. The collectors (including Log Export), scheduler, twelve reports (in English and Swedish) and the admin UI work end to end against a fake ETD API in the test-suite (`pytest`, 172 tests) and have been smoke-tested as a running application. Validation against production ETD tenants in all five regions is the next step - please open an issue with what you find. This is community sample code, not a Cisco product, and is not supported by Cisco TAC.
+**Status:** 0.13.0, alpha. The collectors (including Log Export), scheduler, twelve reports (in English and Swedish) and the admin UI work end to end against a fake ETD API in the test-suite (`pytest`, 180 tests) and have been smoke-tested as a running application. Validation against production ETD tenants in all five regions is the next step - please open an issue with what you find. This is community sample code, not a Cisco product, and is not supported by Cisco TAC.
 
 <!-- Add a screenshot of the dashboard here once you run it against a real tenant: ![Dashboard](docs/dashboard.png) -->
 
@@ -64,7 +64,7 @@ docker run -d --name etd-demo -p 8080:8080 \
   -e DEMO_MODE=true -e ADMIN_PASSWORD=choose-a-password \
   -e SECRET_KEY="$(openssl rand -hex 32)" \
   -e ENCRYPTION_KEY="$(python3 -c 'import base64, os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())')" \
-  ghcr.io/magnusfrodell/etd-report-scheduler:0.12.0
+  ghcr.io/magnusfrodell/etd-report-scheduler:0.13.0
 ```
 
 Sign in at http://localhost:8080 as `admin`. Within a minute the demo has collected 90 days of history and filled the archive with the reports its schedules would have produced. Each tenant has a story:
@@ -95,7 +95,7 @@ Prerequisites: Docker 24+ with Compose, network access from the container to `ap
 A pre-built multi-arch image (amd64/arm64) is published for every release tag:
 
 ```bash
-docker pull ghcr.io/magnusfrodell/etd-report-scheduler:0.12.0
+docker pull ghcr.io/magnusfrodell/etd-report-scheduler:0.13.0
 ```
 
 To use it, set `image:` instead of `build:` in `docker-compose.yml` (the line is there, commented out). To build yourself instead:
@@ -250,26 +250,29 @@ Sign in as the bootstrap admin, add a tenant, then add users:
 8. **Branding** (administrators) – add a brand with a name, a PNG or JPEG logo, header and accent colours and a footer, and optionally the e-mail sender name, Reply-To and a subject prefix. The first brand becomes the default; a tenant can use another one from its reporting profile. **Preview a report** shows the brand on a real report, as HTML or PDF. In e-mails the logo is embedded as an inline image, because mail clients block data: images. Without a brand, reports keep the neutral look.
 9. **Report languages** – reports, PDFs and report e-mails in English or Swedish. Set the default under **Settings**, a customer's language in the tenant's reporting profile, or pick one for a schedule or a single **Run now**. See [Report languages](#report-languages).
 10. **Chat** (administrators) – add the SOC's Webex space or Teams channel, then pick it as *Post to* in a schedule or a Run now; alerts can be posted there too.
-11. **Activity log** (administrators) – who did what in the tool, sign-ins and opened reports, with filters and CSV/JSON export. **Users** shows who is signed in and ends sessions; **Your account** shows your own. See [Activity log and sessions](#activity-log-and-sessions).
+11. **Activity log** (administrators) – who did what in the tool, sign-ins and opened reports, with filters and CSV/JSON export. **Users** shows who is signed in, ends sessions and manages every API key; **Your account** shows your own sessions and API keys. See [Activity log and sessions](#activity-log-and-sessions).
 
 The tenant switcher in the header filters the dashboard, schedules and report cards to one tenant, or shows all; the archive starts from it and has its own tenant filter. Times in the archive are shown in the timezone from Settings.
 
-The same actions are available as JSON for automation (session cookie required, interactive documentation at `/api/docs`):
+The same actions are available as JSON for automation, with an API key (interactive documentation at `/api/docs`, where **Authorize** takes a key). Create a key under **Your account** - or, for an integration, create a user for it with only the access it needs and give it a key on the **Users** page. A key acts as its user and can only narrow what the user may do: *Read* allows GET requests, *Read and run* also starts reports and collection where the user's role on the tenant allows it. Keys work with `/api` only, are shown once, stored as a hash, and stop working when revoked, when they expire (30 days to never; 90 by default) or when their user is disabled.
 
 ```bash
 # health (no authentication)
 curl http://localhost:8080/api/health
 
-# sign in and keep the cookie
-curl -c cookies.txt -d "username=admin&password=<ADMIN_PASSWORD>" http://localhost:8080/login
+# an API key from Your account (etd_<key id>_<secret>)
+export ETD_KEY="etd_..."
 
-# who am I and which tenants can I see; list tenants, start a collection, generate a report
-curl -b cookies.txt http://localhost:8080/api/me
-curl -b cookies.txt http://localhost:8080/api/tenants
-curl -b cookies.txt -X POST http://localhost:8080/api/tenants/1/collect
-curl -b cookies.txt -X POST "http://localhost:8080/api/reports/executive_summary/run?tenant_id=1&deliver=false"
+# who am I and which tenants can I see; list tenants
+curl -H "Authorization: Bearer $ETD_KEY" http://localhost:8080/api/me
+curl -H "Authorization: Bearer $ETD_KEY" http://localhost:8080/api/tenants
+# start a collection and generate a report (a key that may run)
+curl -H "Authorization: Bearer $ETD_KEY" -X POST http://localhost:8080/api/tenants/1/collect
+curl -H "Authorization: Bearer $ETD_KEY" -X POST "http://localhost:8080/api/reports/executive_summary/run?tenant_id=1&deliver=false"
 # the same report in Swedish (en, sv; leave it out for the tenant's own language)
-curl -b cookies.txt -X POST "http://localhost:8080/api/reports/executive_summary/run?tenant_id=1&deliver=false&language=sv"
+curl -H "Authorization: Bearer $ETD_KEY" -X POST "http://localhost:8080/api/reports/executive_summary/run?tenant_id=1&deliver=false&language=sv"
+# the activity log for a SIEM (an administrator's key), newest first
+curl -H "Authorization: Bearer $ETD_KEY" "http://localhost:8080/api/activity?since=2026-09-01&limit=500"
 ```
 
 Generated files are stored under `/data/reports/<tenant>/<report>/<timestamp>-run<id>.html|pdf` in the volume; the run id keeps every run's files distinct.
@@ -311,7 +314,7 @@ Pick the channel as **Post to** in a schedule (a schedule for all tenants posts 
 `.github/workflows/ci.yml` runs ruff, the test-suite and an Alembic consistency check on every push and pull request. `.github/workflows/docker.yml` builds and publishes the container image to GitHub Container Registry when a `v*` tag is pushed:
 
 ```bash
-git tag v0.12.0 && git push origin v0.12.0
+git tag v0.13.0 && git push origin v0.13.0
 ```
 
 ### Architecture

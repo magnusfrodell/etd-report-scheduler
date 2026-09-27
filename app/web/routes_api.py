@@ -22,7 +22,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Security
+from fastapi.security import HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -38,7 +39,9 @@ from app.scheduler import scheduler
 from app.services import run_report
 from app.web.authz import Principal, ensure, forbid, get_principal, require_admin, require_tenant_admin
 
-router = APIRouter(prefix="/api", dependencies=[Depends(activity.prepare)])
+# HTTPBearer only describes the scheme to /api/docs ("Authorize"); get_principal checks the key.
+router = APIRouter(prefix="/api", dependencies=[Depends(activity.prepare), Security(HTTPBearer(auto_error=False, description=(
+    "An API key from Your account: etd_<key id>_<secret>")))])
 
 
 @router.get("/health")

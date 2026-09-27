@@ -33,7 +33,17 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.responses import Response
 
 from app.db import session_scope
-from app.models import ActivityEvent, Brand, ChatChannel, ReportRun, ReportSchedule, Tenant, User, UserSession
+from app.models import (
+    ActivityEvent,
+    ApiKey,
+    Brand,
+    ChatChannel,
+    ReportRun,
+    ReportSchedule,
+    Tenant,
+    User,
+    UserSession,
+)
 
 log = logging.getLogger(__name__)
 
@@ -58,6 +68,8 @@ ACTIONS: dict[str, str | None] = {
     "user_create": "user.create", "user_role": "user.role", "user_password": "user.password", "user_toggle": "user.toggle",
     "user_delete": "user.delete",
     "api_collect": "tenant.collect", "api_logs": "tenant.collect_logs", "api_backfill": "tenant.backfill", "api_run_report": "report.run",
+    "account_api_key_create": "api_key.create", "account_api_key_revoke": "api_key.revoke",
+    "user_api_key_create": "api_key.create", "api_key_revoke": "api_key.revoke",
 }
 # Reads that are worth a line: an archived report holds customer data, an export holds the log itself.
 READ_ACTIONS: dict[str, str] = {"report_file": "report.view", "activity_export": "activity.export", "api_activity": "activity.export"}
@@ -66,7 +78,7 @@ READ_ACTIONS: dict[str, str] = {"report_file": "report.view", "activity_export":
 _TARGETS: dict[str, tuple[str, Any, str | None]] = {
     "tenant_id": ("tenant", Tenant, "name"), "schedule_id": ("schedule", ReportSchedule, None), "user_id": ("user", User, "username"),
     "brand_id": ("brand", Brand, "name"), "channel_id": ("chat_channel", ChatChannel, "name"), "run_id": ("report_run", ReportRun, None),
-    "session_id": ("session", UserSession, None), "report_key": ("report", None, None),
+    "session_id": ("session", UserSession, None), "report_key": ("report", None, None), "api_key_id": ("api_key", ApiKey, "name"),
 }
 
 _note: ContextVar[dict[str, Any] | None] = ContextVar("activity_note", default=None)
@@ -211,7 +223,7 @@ class ActivityMiddleware(BaseHTTPMiddleware):
         finally:
             noted = _note.get() or {}
             _note.reset(token)
-        action = action_for(request)
+        action = noted.get("force_action") or action_for(request)
         if action:
             await run_in_threadpool(record, request, action, response.status_code, response.headers.get("location", ""), noted)
         return response

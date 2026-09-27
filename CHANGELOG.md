@@ -3,6 +3,20 @@
 Database migrations run automatically at start-up. Every version runs as a single container
 with its state in the `/data` volume.
 
+## 0.13.0 - API keys
+
+### Added
+- **API keys** for scripts and integrations: `Authorization: Bearer etd_<key id>_<secret>` on `/api`. A key acts as its user and can only narrow what the user may do - *Read* allows GET requests, *Read and run* also starts reports and collection where the user's role on the tenant allows it. Create keys under **Your account**; administrators see and revoke every key on **Users** and create keys for service accounts there.
+- Keys are shown once and stored only as a SHA-256 hash; the public key id appears in lists and in the activity log. A key stops working at once when it is revoked, when it expires (30, 90 or 365 days, or never; 90 by default), or when its user is disabled or deleted. Keys never work with the web interface.
+- The activity log names the key behind every change made through the API, and records refused keys (unknown, revoked, expired, read-only) even on read requests.
+- `/api/docs` offers **Authorize** with a key.
+
+### Changed
+- The README's API examples use a key instead of a signed-in session cookie. Session cookies still work for `/api` in the browser.
+
+### Upgrade notes
+- Migration 0012 adds the API keys. Nothing changes until someone creates a key.
+
 ## 0.12.0 - Activity log and server-side sessions
 
 ### Added

@@ -467,6 +467,28 @@ class UserSession(Base):
     revoked_reason: Mapped[str | None] = mapped_column(String(60), nullable=True)
 
 
+class ApiKey(Base):
+    """A key for scripts and integrations. It acts as its user, narrowed to reading ("read") or to reading
+    and starting reports and collection ("run"), and works with /api only. Only a SHA-256 of the key is
+    stored; the key itself is shown once, when it is created."""
+
+    __tablename__ = "api_keys"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    key_id: Mapped[str] = mapped_column(String(16), nullable=False, unique=True)  # the public part: etd_<key_id>_...
+    secret_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    scope: Mapped[str] = mapped_column(String(10), nullable=False, default="read", server_default="read")  # read | run
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=utcnow)
+    created_by: Mapped[str] = mapped_column(String(120), nullable=False, default="", server_default="")
+    expires_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    last_used_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    last_used_ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    revoked_by: Mapped[str | None] = mapped_column(String(120), nullable=True)
+
+
 class ActivityEvent(Base):
     """Who did what in this tool, when, from where, and whether it was allowed. Names are copied at the
     time, so the history stays readable after a user, tenant or schedule is deleted."""

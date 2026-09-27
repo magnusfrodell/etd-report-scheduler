@@ -66,6 +66,7 @@ from app.models import (
     GLOBAL_ROLES,
     TENANT_ROLES,
     ActivityEvent,
+    ApiKey,
     Brand,
     ChatChannel,
     ConvictedMessage,
@@ -86,6 +87,7 @@ from app.scheduler import scheduler, validate_cron
 from app.services import build_context, render_report, run_report, run_schedule, schedule_targets
 from app.settings_store import ALL_VERDICTS, load_settings, save_settings
 from app.tenant_profile import get_profile, parse_addresses, parse_domains, parse_labels
+from app.web import api_keys
 from app.web.auth import (
     SESSION_COOKIE,
     TENANT_COOKIE,
@@ -1276,6 +1278,10 @@ def _admin_count(db: Session, exclude_id: int | None = None) -> int:
 
 @router.get("/users", response_class=HTMLResponse)
 def users_page(request: Request, db: Session = Depends(get_db), p: Principal = Depends(require_admin)) -> Response:
+    return _users_response(request, db, p)
+
+
+def _users_response(request: Request, db: Session, p: Principal, **extra: Any) -> Response:
     users = list(db.execute(select(User).order_by(User.username)).scalars())
     grants: dict[int, list[TenantGrant]] = {u.id: [] for u in users}
     for g in db.execute(select(TenantGrant)).scalars():
@@ -1283,8 +1289,34 @@ def users_page(request: Request, db: Session = Depends(get_db), p: Principal = D
     tenant_names = {t.id: t.name for t in db.execute(select(Tenant)).scalars()}
     sessions = _session_rows(db, active_sessions(db), zone(load_settings(db).timezone), getattr(request.state, "session_id", None))
     session_counts = Counter(s["user_id"] for s in sessions)
+    keys = _key_rows(db, list(db.execute(select(ApiKey).order_by(ApiKey.id.desc())).scalars()), zone(load_settings(db).timezone))
     return templates.TemplateResponse(request, "users.html", _base_ctx(request, db, p, users=users, grants=grants, tenant_names=tenant_names,
-                                                                        sessions=sessions, session_counts=session_counts))
+                                                                        sessions=sessions, session_counts=session_counts, keys=keys,
+                                                                        scopes=api_keys.SCOPES, **extra))
+
+
+@router.post("/api-keys", response_class=HTMLResponse)
+def user_api_key_create(request: Request, user_id: int = Form(...), name: str = Form(""), scope: str = Form("read"), expires: str = Form("90"),
+                        db: Session = Depends(get_db), p: Principal = Depends(require_admin)) -> Response:
+    """For a service account: the key acts as that user, with that user's roles."""
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(404, "No such user")
+    key, raw = api_keys.create(db, user, name, scope, expires, created_by=p.user.username)
+    db.commit()
+    activity.note(target=key.name, target_type="api_key", target_id=str(key.id),
+                  details={"key": f"etd_{key.key_id}", "for_user": user.username, "scope": key.scope, "expires": expires})
+    return _users_response(request, db, p, new_key=raw, new_key_user=user.username, msg=f"API key '{key.name}' created for {user.username}.")
+
+
+@router.post("/api-keys/{api_key_id}/revoke")
+def api_key_revoke(api_key_id: int, db: Session = Depends(get_db), p: Principal = Depends(require_admin)) -> Response:
+    key = db.get(ApiKey, api_key_id)
+    if key is None:
+        raise HTTPException(404, "No such API key")
+    api_keys.revoke(db, key, by=p.user.username)
+    db.commit()
+    return _redirect("/users", f"API key '{key.name}' revoked - it stops working at once.")
 
 
 @router.post("/users")
@@ -1506,12 +1538,49 @@ def activity_export(request: Request, format: str = "csv", db: Session = Depends
                     headers={"Content-Disposition": f'attachment; filename="activity-{stamp}.csv"'})
 
 
-@router.get("/account", response_class=HTMLResponse)
-def account_page(request: Request, db: Session = Depends(get_db), p: Principal = Depends(get_principal)) -> Response:
+def _key_rows(db: Session, keys: list[ApiKey], tz: Any) -> list[dict[str, Any]]:
+    names = {u.id: u.username for u in db.execute(select(User)).scalars()}
+    return [{"id": k.id, "name": k.name, "key": f"etd_{k.key_id}", "user": names.get(k.user_id, "?"), "scope": api_keys.SCOPES.get(k.scope, k.scope),
+             "created": local_dt(k.created_at, tz), "created_by": k.created_by, "expires": local_dt(k.expires_at, tz) if k.expires_at else "never",
+             "last_used": ago(k.last_used_at) if k.last_used_at else "never", "last_ip": k.last_used_ip or "", "status": api_keys.status(k)}
+            for k in keys]
+
+
+def _account_response(request: Request, db: Session, p: Principal, **extra: Any) -> Response:
     tenant_names = {t.id: t.name for t in p.visible_tenants(db)}
     tz = zone(load_settings(db).timezone)
     sessions = _session_rows(db, active_sessions(db, p.user.id), tz, getattr(request.state, "session_id", None))
-    return templates.TemplateResponse(request, "account.html", _base_ctx(request, db, p, tenant_names=tenant_names, sessions=sessions))
+    keys = _key_rows(db, list(db.execute(select(ApiKey).where(ApiKey.user_id == p.user.id).order_by(ApiKey.id.desc())).scalars()), tz)
+    return templates.TemplateResponse(request, "account.html", _base_ctx(
+        request, db, p, tenant_names=tenant_names, sessions=sessions, keys=keys, scopes=api_keys.SCOPES, **extra))
+
+
+@router.get("/account", response_class=HTMLResponse)
+def account_page(request: Request, db: Session = Depends(get_db), p: Principal = Depends(get_principal)) -> Response:
+    return _account_response(request, db, p)
+
+
+@router.post("/account/api-keys", response_class=HTMLResponse)
+def account_api_key_create(request: Request, name: str = Form(""), scope: str = Form("read"), expires: str = Form("90"),
+                           db: Session = Depends(get_db), p: Principal = Depends(get_principal)) -> Response:
+    user = db.get(User, p.user.id)
+    assert user is not None
+    key, raw = api_keys.create(db, user, name, scope, expires, created_by=p.user.username)
+    db.commit()
+    activity.note(target=key.name, target_type="api_key", target_id=str(key.id),
+                  details={"key": f"etd_{key.key_id}", "scope": key.scope, "expires": expires})
+    # The key is shown in this answer only - never in a redirect URL, which browsers and proxies log.
+    return _account_response(request, db, p, new_key=raw, msg=f"API key '{key.name}' created.")
+
+
+@router.post("/account/api-keys/{api_key_id}/revoke")
+def account_api_key_revoke(api_key_id: int, db: Session = Depends(get_db), p: Principal = Depends(get_principal)) -> Response:
+    key = db.get(ApiKey, api_key_id)
+    if key is None or key.user_id != p.user.id:
+        raise forbid("That is not one of your API keys.")
+    api_keys.revoke(db, key, by=p.user.username)
+    db.commit()
+    return _redirect("/account", f"API key '{key.name}' revoked - it stops working at once.")
 
 
 @router.post("/account/password")

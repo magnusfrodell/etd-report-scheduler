@@ -32,7 +32,8 @@ from sqlalchemy.orm import Session
 
 from app import activity
 from app.db import get_db
-from app.models import Tenant, TenantGrant, User
+from app.models import ApiKey, Tenant, TenantGrant, User
+from app.web import api_keys
 from app.web.auth import user_from_session
 
 ROLE_LEVELS = {"viewer": 1, "operator": 2, "manager": 3}
@@ -42,6 +43,7 @@ ROLE_LEVELS = {"viewer": 1, "operator": 2, "manager": 3}
 class Principal:
     user: User
     grants: dict[int, str]  # tenant_id -> role
+    api_key: ApiKey | None = None  # set when the request came with an API key instead of a session
 
     # ---------------------------------------------------------------- global
     @property
@@ -104,7 +106,43 @@ def build_principal(db: Session, user: User) -> Principal:
     return Principal(user=user, grants=grants)
 
 
+def _bearer(request: Request) -> str | None:
+    auth = request.headers.get("authorization") or ""
+    return auth[7:].strip() if auth[:7].lower() == "bearer " else None
+
+
+def _key_refused(request: Request, raw: str, status_code: int, message: str) -> HTTPException:
+    key_id = api_keys.key_id_of(raw)
+    activity.note(actor=f"etd_{key_id}" if key_id else "API key", force_action="auth.api_key", outcome="denied",
+                  details={"message": message})
+    return HTTPException(status_code, message, headers={"WWW-Authenticate": "Bearer"} if status_code == 401 else None)
+
+
+def principal_from_key(request: Request, db: Session, raw: str) -> Principal:
+    key, why = api_keys.check(db, raw)
+    if key is None:
+        raise _key_refused(request, raw, 401, f"Not signed in: {why}.")
+    user = db.get(User, key.user_id)
+    if user is None or not user.enabled:
+        raise _key_refused(request, raw, 401, "Not signed in: the API key's user is disabled.")
+    activity.note(actor=user.username, actor_id=user.id, details={"api_key": api_keys.label(key)})
+    if not request.url.path.startswith("/api/"):
+        raise _key_refused(request, raw, 401, "API keys work with /api only - sign in to use the web interface.")
+    if key.scope == "read" and request.method not in ("GET", "HEAD"):
+        activity.note(outcome="denied", details={"message": "this API key can only read"})
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "This API key can only read. Create a key with the 'run' scope to start "
+                                                       "reports or collection.")
+    api_keys.touch(key, request)
+    principal = build_principal(db, user)
+    principal.api_key = key
+    request.state.principal = principal
+    return principal
+
+
 def get_principal(request: Request, db: Session = Depends(get_db)) -> Principal:
+    raw = _bearer(request)
+    if raw is not None:
+        return principal_from_key(request, db, raw)  # a key that does not work never falls back to a cookie
     user = user_from_session(db, request)
     if user is None:
         if request.url.path.startswith("/api/"):

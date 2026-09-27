@@ -38,4 +38,33 @@
   {% if sessions|length > 1 %}<form method="post" action="/account/sessions/end-others"><button class="small secondary">Sign out all other sessions</button></form>{% endif %}
 </section>
 
+<section class="panel">
+  <h2>API keys</h2>
+  <p class="muted small">For scripts and integrations: send <code>Authorization: Bearer &lt;key&gt;</code> to <code>/api</code> - see the <a href="/api/docs">API documentation</a>. A key acts as you and can only narrow what you may do: <strong>Read</strong> lets it read, <strong>Read and run</strong> also starts reports and collection where your role allows it. It never works with the web interface.</p>
+  {% if new_key %}<div class="flash">Copy the key now - it is not shown again:<br><code>{{ new_key }}</code></div>{% endif %}
+  {% if keys %}
+  <table>
+    <tr><th>Key</th><th>Allows</th><th>Created</th><th>Expires</th><th>Last used</th><th>Status</th><th></th></tr>
+    {% for k in keys %}
+    <tr>
+      <td><strong>{{ k.name }}</strong><div class="muted small"><code>{{ k.key }}…</code></div></td>
+      <td class="small">{{ k.scope }}</td>
+      <td class="small">{{ k.created }}{% if k.created_by %}<div class="muted">by {{ k.created_by }}</div>{% endif %}</td>
+      <td class="small">{{ k.expires }}</td>
+      <td class="small">{{ k.last_used }}{% if k.last_ip %}<div class="muted">{{ k.last_ip }}</div>{% endif %}</td>
+      <td>{% if k.status == 'active' %}<span class="badge scheduled">active</span>{% else %}<span class="warn-text">{{ k.status }}</span>{% endif %}</td>
+      <td class="actions">{% if k.status == 'active' %}<form method="post" action="/account/api-keys/{{ k.id }}/revoke" data-confirm="Revoke the API key {{ k.name }}? Whatever uses it stops working."><button class="small danger">Revoke</button></form>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+  <form method="post" action="/account/api-keys" class="form-grid">
+    <div><label class="field" for="key-name">Name - what uses it</label><input id="key-name" name="name" type="text" required maxlength="120" placeholder="XDR workflow"></div>
+    <div><label class="field" for="key-scope">Allows</label><select id="key-scope" name="scope">{% for code, text in scopes.items() %}<option value="{{ code }}">{{ text }}</option>{% endfor %}</select></div>
+    <div><label class="field" for="key-expires">Expires after</label><select id="key-expires" name="expires"><option value="30">30 days</option><option value="90" selected>90 days</option><option value="365">1 year</option><option value="never">never</option></select></div>
+    <div><label class="field">&nbsp;</label><button type="submit" class="small">Create key</button></div>
+  </form>
+</section>
+
+
 {% endblock %}
