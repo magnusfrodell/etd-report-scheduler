@@ -3,6 +3,24 @@
 Database migrations run automatically at start-up. Every version runs as a single container
 with its state in the `/data` volume.
 
+## 0.11.0 - Chat delivery: Webex and Microsoft Teams
+
+### Added
+- **Chat channels** - reports and alerts posted to the SOC's own Webex space or Microsoft Teams channel, next to or instead of e-mail. A new **Chat** page (administrators) holds the Webex bot token and the channels; a channel's address is stored encrypted. **Send a test** checks a channel.
+- **The report's headline in the message** - title, tenant and period, status and the key figures, read from the report itself so they match it and follow its language. Webex messages carry the PDF; Teams messages (an Adaptive Card through a Workflows webhook) link to the report in the archive.
+- **Post to** in schedules and Run now - a schedule for all tenants or a group posts one message per tenant.
+- **Alerts to chat** - failed or partly delivered scheduled reports and stalled data collection can be posted to a channel as well as e-mailed.
+- A Teams URL from a retired Office 365 connector, a host that is not Microsoft's Workflows service, or a URL without its `sig=` signature is refused with an explanation of what to paste instead.
+
+### Behaviour
+- A chat outage never fails a report: the run records *Not posted to …* with the reason, the channel shows its last result, and the alert recipients are told. Webex rate limits (HTTP 429) are waited out briefly and retried.
+- A schedule that only sends reports with findings posts nothing when there is nothing to report.
+- In demo mode, chat messages are saved to `/data/demo-outbox` instead of being posted.
+
+### Upgrade notes
+- Migration 0010 adds the chat channels, a channel per schedule and the chat outcome per run. Nothing is posted until you add a channel and choose it.
+- Teams messages link to the report in the archive: set the address of this tool under Settings.
+
 ## 0.10.0 - Report languages
 
 ### Added

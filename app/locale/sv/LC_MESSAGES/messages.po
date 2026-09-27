@@ -3,7 +3,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: ETD Report Scheduler 0.10.0\n"
+"Project-Id-Version: ETD Report Scheduler 0.11.0\n"
 "Report-Msgid-Bugs-To: https://github.com/magnusfrodell/etd-report-scheduler/issues\n"
 "Language: sv\n"
 "Language-Team: Swedish\n"
@@ -805,6 +805,9 @@ msgstr "Office med makron / äldre format"
 
 msgid "OneNote"
 msgstr "OneNote"
+
+msgid "Open the report"
+msgstr "Öppna rapporten"
 
 msgid "Other"
 msgstr "Övrigt"

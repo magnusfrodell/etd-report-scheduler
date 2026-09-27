@@ -735,6 +735,9 @@ msgstr ""
 msgid "OneNote"
 msgstr ""
 
+msgid "Open the report"
+msgstr ""
+
 msgid "Other"
 msgstr ""
 

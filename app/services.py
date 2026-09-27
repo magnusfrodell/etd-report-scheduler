@@ -31,7 +31,7 @@ from app import __version__
 from app.branding import NEUTRAL, BrandView, brand_for
 from app.config import get_config
 from app.db import session_scope
-from app.delivery import archive, pdf
+from app.delivery import archive, chat, pdf
 from app.delivery.email import send_email
 from app.i18n import LANGUAGES, Translator, normalize, use_language
 from app.models import ReportRun, ReportSchedule, Tenant, utcnow
@@ -180,6 +180,7 @@ def run_report(
     delivery_note: str | None = None,
     alert: bool = True,
     language: str | None = None,
+    chat_channel_id: int | None = None,
 ) -> int:
     """Generate one report. Returns the ``ReportRun`` id. Never raises - failures are recorded.
 
@@ -232,6 +233,8 @@ def run_report(
             if brand.subject_prefix:
                 subject = f"{brand.subject_prefix} {subject}"
             result["period_start"], result["period_end"] = ctx.period.start, ctx.period.end
+            chat_target = chat.load_target(session, chat_channel_id) if deliver else None
+            chat_link_text = ctx.tr("Open the report")
 
         # Phase 3 - files, PDF and e-mail with no database session open.
         html_path, pdf_path = archive.archive_paths(cfg.reports_dir, tenant_name, report_key, now, run_id)
@@ -239,9 +242,10 @@ def run_report(
         pdf_bytes = pdf.render_pdf(html) if output_format == "pdf" else None
         if pdf_bytes:
             result["pdf_path"] = archive.write_bytes(pdf_path, pdf_bytes)
-        if deliver and to and only_with_findings and not findings:
+        if deliver and (to or chat_target) and only_with_findings and not findings:
             result["delivery_note"] = "Not sent: nothing to report - the schedule only sends reports with findings."
-        elif deliver and to:
+            to, chat_target = [], None
+        if deliver and to:
             attachments = [(pdf_path.name, pdf_bytes, "application/pdf")] if pdf_bytes else []
             email_html, inline = html, []
             if brand.logo_src:  # mail clients block data: images - send the logo as an inline part instead
@@ -256,10 +260,18 @@ def run_report(
             result["delivered_to"] = ", ".join(r for r in to if r not in refused)
             if refused:
                 result["delivery_error"] = "The relay refused " + "; ".join(f"{addr} ({_smtp_reply(reply)})" for addr, reply in refused.items())
-        elif deliver and not to:
-            log.info("Report %s run %d generated without recipients (archived only)", report_key, run_id)
+        elif deliver and not to and not result.get("delivery_note"):
+            log.info("Report %s run %d generated without e-mail recipients", report_key, run_id)
             if delivery_note:
                 result["delivery_note"] = delivery_note
+        if chat_target is not None:
+            link = (f"{settings.base_url.rstrip('/')}/archive?report={report_key}&tenant={tenant_id or 'all'}&run={run_id}"
+                    if settings.base_url else "")
+            attachment = ((pdf_path.name, pdf_bytes, "application/pdf") if pdf_bytes
+                          else (html_path.name, html.encode("utf-8"), "text/html"))
+            message = chat.report_message(html, link, chat_link_text, attachment)
+            result["chat_channel"] = chat_target.name
+            result["chat_error"] = chat.post(chat_target, message, settings.webex_bot_token)
     except Exception as exc:  # noqa: BLE001
         log.exception("Report %s run %d failed", report_key, run_id)
         result["status"] = "failed"
@@ -267,7 +279,8 @@ def run_report(
 
     # Phase 4 - finalize (retried, so a transient 'database is locked' cannot leave a run 'running' forever).
     _finalize_run(run_id, schedule_id, result)
-    if alert and trigger in ("schedule", "catchup") and (result["status"] == "failed" or result.get("delivery_error")):
+    if alert and trigger in ("schedule", "catchup") and (result["status"] == "failed" or result.get("delivery_error")
+                                                         or result.get("chat_error")):
         from app.alerts import (
             alert_run_problem,  # late import: alerts uses the mailer and the report registry
         )
@@ -286,7 +299,7 @@ def _finalize_run(run_id: int, schedule_id: int | None, result: dict[str, object
                 if run is None:
                     return
                 for key in ("period_start", "period_end", "html_path", "pdf_path", "delivered_to", "error", "delivery_error", "delivery_note",
-                            "language"):
+                            "language", "chat_channel", "chat_error"):
                     if key in result:
                         setattr(run, key, result[key])
                 run.status = str(result["status"])
@@ -358,10 +371,11 @@ def run_schedule(schedule_id: int, *, reference: datetime | None = None, trigger
         fan_out = schedule.target in ("all", "group") and definition.scope != SCOPE_ALL
         output_format, only_findings = output_format or schedule.output_format, schedule.only_with_findings
         language = schedule.language or None  # None = each tenant's own language
+        chat_channel_id = schedule.chat_channel_id
     run_ids = [
         run_report(definition.key, tenant_id=tid, schedule_id=schedule_id, recipients=to, output_format=output_format,
                    reference=reference, triggered_by=triggered_by, only_with_findings=only_findings, delivery_note=note,
-                   alert=not fan_out, deliver=deliver, now=now, language=language)
+                   alert=not fan_out, deliver=deliver, now=now, language=language, chat_channel_id=chat_channel_id)
         for tid, to, note in jobs
     ]
     if fan_out:

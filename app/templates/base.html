@@ -21,7 +21,7 @@
     <a href="/tenants" class="{{ 'active' if request.url.path.startswith('/tenants') else '' }}">Tenants</a>
     <a href="/schedules" class="{{ 'active' if request.url.path.startswith('/schedules') else '' }}">Schedules</a>
     {% if principal.can_edit_settings %}<a href="/settings" class="{{ 'active' if request.url.path.startswith('/settings') else '' }}">Settings</a>{% endif %}
-    {% if principal and principal.is_admin %}<a href="/branding" class="{{ 'active' if request.url.path.startswith('/branding') else '' }}">Branding</a>{% endif %}
+    {% if principal and principal.is_admin %}<a href="/branding" class="{{ 'active' if request.url.path.startswith('/branding') else '' }}">Branding</a><a href="/chat" class="{{ 'active' if request.url.path.startswith('/chat') else '' }}">Chat</a>{% endif %}
     {% if principal.can_manage_users %}<a href="/users" class="{{ 'active' if request.url.path.startswith('/users') else '' }}">Users</a>{% endif %}
     <div class="nav-title">Help</div>
     <a href="/api/docs">API documentation</a>

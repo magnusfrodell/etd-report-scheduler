@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Chat - ETD Report Scheduler{% endblock %}
+{% block heading %}Chat{% endblock %}
+{% block content %}
+<div class="scope-bar"><div>Post reports and alerts to the SOC's own <strong>Webex</strong> space or <strong>Microsoft Teams</strong> channel. Schedules, Run now and the alerts choose the channel. Webex messages carry the report's headline and the PDF; Teams messages carry the headline and a link to the report in the archive{% if not base_url %} - set the <a href="/settings">address of this tool</a> under Settings, or the messages have no link{% endif %}.</div></div>
+
+<section class="panel">
+  <h2>Channels</h2>
+  {% if channels %}
+  <table>
+    <tr><th>Name</th><th>Type</th><th>Posts to</th><th>Used by</th><th>Last result</th><th></th></tr>
+    {% for c in channels %}
+    <tr>
+      <td><strong>{{ c.name }}</strong></td>
+      <td>{{ kinds.get(c.kind, c.kind) }}</td>
+      <td class="muted small">{{ c.target_hint }}</td>
+      <td class="small">{{ usage.get(c.id, 0) }} schedule(s){% if alert_channel == c.id %} · alerts{% endif %}</td>
+      <td class="small">{% if c.last_error %}<span class="warn-text">{{ c.last_error }}</span>{% elif c.last_sent_at %}sent {{ sent[c.id] }}{% else %}<span class="muted">nothing sent yet</span>{% endif %}</td>
+      <td class="actions">
+        <form method="post" action="/chat/channels/{{ c.id }}/test"><button class="small secondary">Send a test</button></form>
+        <form method="post" action="/chat/channels/{{ c.id }}/delete" data-confirm="Delete the channel {{ c.name }}? Schedules that post to it stop posting there."><button class="small danger">Delete</button></form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="muted">No channels yet - add a Webex space or a Teams channel below.</p>{% endif %}
+</section>
+
+{% if channels %}
+<section class="panel">
+  <h2>Alerts</h2>
+  <form method="post" action="/chat/alerts" class="form-grid">
+    <div><label class="field" for="alert-channel">Post alerts to - failed or partly delivered scheduled reports and stalled data collection</label>
+      <select id="alert-channel" name="channel_id"><option value="">No chat channel (e-mail only)</option>{% for c in channels %}<option value="{{ c.id }}" {{ 'selected' if alert_channel == c.id else '' }}>{{ c.name }}</option>{% endfor %}</select></div>
+    <div><label class="field">&nbsp;</label><button type="submit" class="small">Save</button></div>
+  </form>
+</section>
+{% endif %}
+
+<section class="panel">
+  <h2>Webex bot</h2>
+  <p class="muted small">Create a bot at <a href="https://developer.webex.com/my-apps/new/bot" target="_blank" rel="noopener">developer.webex.com</a>, copy its access token, and add the bot to the space it should post in. One bot serves every Webex channel.{% if bot_identity %} Saved token: <strong>{{ bot_identity }}</strong>.{% endif %}</p>
+  <form method="post" action="/chat/webex" class="form-grid">
+    <div class="wide"><label class="field" for="wx-token">Bot access token{% if token_set %} - leave empty to check the saved one{% endif %}</label><input id="wx-token" name="token" type="password" autocomplete="off" placeholder="{{ '•••••••• (saved)' if token_set else '' }}"></div>
+    {% if token_set %}<div class="wide"><label class="checks"><input type="checkbox" name="clear"> Remove the saved token</label></div>{% endif %}
+    <div class="wide"><button type="submit" class="small">Save and check</button></div>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Add a Webex space</h2>
+  {% if rooms_error %}<p class="warn-text small">{{ rooms_error }}</p>{% elif not token_set %}<p class="muted small">Save the bot token first - the spaces the bot is a member of are then listed here.</p>{% endif %}
+  <form method="post" action="/chat/channels" class="form-grid">
+    <input type="hidden" name="kind" value="webex">
+    <div><label class="field" for="wx-name">Name</label><input id="wx-name" name="name" type="text" required maxlength="120" placeholder="SOC - Webex"></div>
+    <div><label class="field" for="wx-room">Space</label><select id="wx-room" name="room_id"><option value="">Choose a space…</option>{% for id, title in rooms %}<option value="{{ id }}">{{ title }}</option>{% endfor %}</select></div>
+    <div class="wide"><label class="field" for="wx-manual">…or paste the space's room id</label><input id="wx-manual" name="room_manual" type="text" maxlength="300"></div>
+    <div class="wide"><button type="submit" class="small">Add Webex space</button></div>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Add a Microsoft Teams channel</h2>
+  <p class="muted small">In the Teams channel, open <strong>Workflows</strong>, choose <em>Post to a channel when a webhook request is received</em>, finish the wizard and copy the URL it shows. Office 365 connector webhooks stopped working in May 2026. The workflow runs as the person who creates it - use an account that stays.</p>
+  <form method="post" action="/chat/channels" class="form-grid">
+    <input type="hidden" name="kind" value="teams">
+    <div><label class="field" for="tm-name">Name</label><input id="tm-name" name="name" type="text" required maxlength="120" placeholder="SOC - Teams"></div>
+    <div class="wide"><label class="field" for="tm-url">Workflows webhook URL</label><input id="tm-url" name="webhook_url" type="password" autocomplete="off" required maxlength="2000"></div>
+    <div class="wide"><button type="submit" class="small">Add Teams channel</button></div>
+  </form>
+</section>
+{% endblock %}

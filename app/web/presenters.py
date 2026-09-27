@@ -120,6 +120,8 @@ def run_view(run: ReportRun, *, definitions: dict[str, Any], tenant_names: dict[
         meta.append(run.delivery_note[0].lower() + run.delivery_note[1:].rstrip("."))
     elif not run.delivery_error:
         meta.append("archive only")
+    if run.chat_channel and not run.chat_error:
+        meta.append(f"posted to {run.chat_channel}")
     if run.language and run.language != "en":
         meta.append(f"in {LANGUAGE_NAMES.get(run.language, run.language)}")
     return {
@@ -135,7 +137,7 @@ def run_view(run: ReportRun, *, definitions: dict[str, Any], tenant_names: dict[
         "when": local_dt(run.started_at, tz),
         "month": f"{run.started_at.astimezone(tz):%B %Y}",
         "scheduled": trigger in ("schedule", "catchup"),
-        "warning": run.delivery_error or "",
+        "warning": " · ".join(w for w in (run.delivery_error, f"Not posted to {run.chat_channel}: {run.chat_error}" if run.chat_error else "") if w),
         "delivered_to": run.delivered_to or "",
         "html": f"/reports/{run.id}/html" if run.html_path else "",
         "pdf": f"/reports/{run.id}/pdf" if run.pdf_path else "",

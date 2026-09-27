@@ -21,6 +21,7 @@ templates only *hide* what the principal cannot do, the handlers *enforce* it.
 from __future__ import annotations
 
 import base64
+import contextlib
 import logging
 import ssl
 from collections import Counter
@@ -30,7 +31,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote, urlencode
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Form, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import and_, func, select
@@ -53,6 +54,7 @@ from app.config import get_config
 from app.crypto import secret_box
 from app.db import get_db, session_scope
 from app.delivery import archive as report_files
+from app.delivery import chat
 from app.delivery.pdf import pdf_available, render_pdf
 from app.etd.factory import client_for_tenant
 from app.etd.regions import REGIONS
@@ -61,10 +63,12 @@ from app.models import (
     GLOBAL_ROLES,
     TENANT_ROLES,
     Brand,
+    ChatChannel,
     ConvictedMessage,
     DailyStat,
     ReportRun,
     ReportSchedule,
+    Setting,
     Tenant,
     TenantGrant,
     User,
@@ -89,7 +93,7 @@ from app.web.auth import (
 )
 from app.web.authz import Principal, ensure, forbid, get_principal, require_admin, require_tenant_admin
 from app.web.icons import icon
-from app.web.presenters import ago, period_label, run_view, zone
+from app.web.presenters import ago, local_dt, period_label, run_view, zone
 from app.web.security import login_limiter, safe_next
 
 log = logging.getLogger(__name__)
@@ -136,6 +140,7 @@ def _base_ctx(request: Request, db: Session, p: Principal, **extra: Any) -> dict
         "ui_brand": view(default_brand(db)),
         "err": request.query_params.get("err"),
         "reports": REPORTS,
+        "chat_names": {c.id: c.name for c in db.execute(select(ChatChannel).order_by(ChatChannel.name)).scalars()},
         **extra,
     }
 
@@ -517,6 +522,7 @@ def schedule_create(
     recipient_mode: str = Form("fixed"),
     only_with_findings: str = Form(""),
     language: str = Form(""),
+    chat_channel_id: str = Form(""),
     db: Session = Depends(get_db),
     p: Principal = Depends(get_principal),
 ) -> Response:
@@ -556,6 +562,7 @@ def schedule_create(
         enabled=True, target=kind, target_group=group, recipient_mode=recipient_mode if recipient_mode in ("fixed", "tenant", "both") else "fixed",
         only_with_findings=only_with_findings == "on" and definition.has_findings is not None,
         language=language if language in LANGUAGES else "",
+        chat_channel_id=int(chat_channel_id) if chat_channel_id.isdigit() and db.get(ChatChannel, int(chat_channel_id)) else None,
     )
     db.add(schedule)
     db.commit()
@@ -635,6 +642,115 @@ def _make_default(db: Session, brand: Brand) -> None:
     for other in db.execute(select(Brand).where(Brand.is_default.is_(True), Brand.id != brand.id)).scalars():
         other.is_default = False
     brand.is_default = True
+
+
+@router.get("/chat", response_class=HTMLResponse)
+def chat_page(request: Request, db: Session = Depends(get_db), p: Principal = Depends(require_admin)) -> Response:
+    settings = load_settings(db)
+    channels = list(db.execute(select(ChatChannel).order_by(ChatChannel.name)).scalars())
+    usage = Counter(s.chat_channel_id for s in db.execute(select(ReportSchedule)).scalars() if s.chat_channel_id)
+    rooms: list[tuple[str, str]] = []
+    rooms_error = bot_identity = ""
+    if settings.webex_bot_token and not get_config().demo_mode:
+        try:
+            rooms = chat.webex_rooms(settings.webex_bot_token)
+        except chat.ChatError as exc:
+            rooms_error = str(exc)
+    return templates.TemplateResponse(request, "chat.html", _base_ctx(
+        request, db, p, channels=channels, usage=usage, kinds=chat.KINDS, rooms=rooms, rooms_error=rooms_error,
+        token_set=bool(settings.webex_bot_token), bot_identity=bot_identity, alert_channel=settings.alert_chat_channel_id,
+        base_url=settings.base_url, sent={c.id: local_dt(c.last_sent_at, settings.tzinfo()) for c in channels}))
+
+
+@router.post("/chat/webex")
+def chat_webex_token(token: str = Form(""), clear: str = Form(""), db: Session = Depends(get_db),
+                     p: Principal = Depends(require_admin)) -> Response:
+    if clear == "on":
+        row = db.get(Setting, "webex_bot_token")
+        if row is not None:
+            db.delete(row)
+            db.commit()
+        return _redirect("/chat", "The Webex bot token was removed.")
+    token = token.strip() or load_settings(db).webex_bot_token
+    if not token:
+        return _redirect("/chat", "Paste the bot's access token.", error=True)
+    try:
+        who = chat.webex_identity(token)
+    except chat.ChatError as exc:
+        return _redirect("/chat", f"The token was not saved: {exc}", error=True)
+    save_settings(db, {"webex_bot_token": token})
+    db.commit()
+    return _redirect("/chat", f"The Webex bot token works - the bot is {who}. Add the bot to the spaces it should post in.")
+
+
+@router.post("/chat/channels")
+def chat_channel_create(name: str = Form(""), kind: str = Form(""), room_id: str = Form(""), room_manual: str = Form(""),
+                        webhook_url: str = Form(""), db: Session = Depends(get_db), p: Principal = Depends(require_admin)) -> Response:
+    name = " ".join(name.split())[:120]
+    if not name:
+        return _redirect("/chat", "Give the channel a name.", error=True)
+    if db.execute(select(ChatChannel).where(ChatChannel.name == name)).scalar_one_or_none():
+        return _redirect("/chat", f"There is already a channel called '{name}'.", error=True)
+    if kind == "webex":
+        address = (room_manual or room_id).strip()
+        if not address:
+            return _redirect("/chat", "Choose the Webex space, or paste its room id.", error=True)
+        title = ""
+        token = load_settings(db).webex_bot_token
+        if token and not get_config().demo_mode:
+            with contextlib.suppress(chat.ChatError):
+                title = dict(chat.webex_rooms(token)).get(address, "")
+        hint = chat.target_hint("webex", address, title)
+    elif kind == "teams":
+        try:
+            address = chat.validate_teams_url(webhook_url)
+        except ValueError as exc:
+            return _redirect("/chat", str(exc), error=True)
+        hint = chat.target_hint("teams", address)
+    else:
+        return _redirect("/chat", "Choose Webex or Microsoft Teams.", error=True)
+    db.add(ChatChannel(name=name, kind=kind, target_enc=secret_box().encrypt(address), target_hint=hint))
+    db.commit()
+    return _redirect("/chat", f"Channel '{name}' added - send a test message to check it.")
+
+
+@router.post("/chat/channels/{channel_id}/test")
+def chat_channel_test(channel_id: int, db: Session = Depends(get_db), p: Principal = Depends(require_admin)) -> Response:
+    target = chat.load_target(db, channel_id)
+    if target is None:
+        raise HTTPException(404, "No such channel")
+    settings = load_settings(db)
+    message = chat.ChatMessage(title="ETD Report Scheduler", status="ok", status_text="Test message",
+                               text="This channel is set up. Reports and alerts that name it are posted here.",
+                               link=settings.base_url, link_text="Open ETD Report Scheduler")
+    db.rollback()  # no transaction open while waiting for the chat service
+    error = chat.post(target, message, settings.webex_bot_token)
+    if error:
+        return _redirect("/chat", f"The test message to '{target.name}' failed: {error}", error=True)
+    return _redirect("/chat", f"Test message posted to '{target.name}'.")
+
+
+@router.post("/chat/channels/{channel_id}/delete")
+def chat_channel_delete(channel_id: int, db: Session = Depends(get_db), p: Principal = Depends(require_admin)) -> Response:
+    channel = db.get(ChatChannel, channel_id)
+    if channel is None:
+        raise HTTPException(404, "No such channel")
+    for schedule in db.execute(select(ReportSchedule).where(ReportSchedule.chat_channel_id == channel_id)).scalars():
+        schedule.chat_channel_id = None
+    if load_settings(db).alert_chat_channel_id == channel_id:
+        save_settings(db, {"alert_chat_channel_id": 0})
+    name = channel.name
+    db.delete(channel)
+    db.commit()
+    return _redirect("/chat", f"Channel '{name}' deleted.")
+
+
+@router.post("/chat/alerts")
+def chat_alerts(channel_id: str = Form(""), db: Session = Depends(get_db), p: Principal = Depends(require_admin)) -> Response:
+    cid = int(channel_id) if channel_id.isdigit() and db.get(ChatChannel, int(channel_id)) else 0
+    save_settings(db, {"alert_chat_channel_id": cid})
+    db.commit()
+    return _redirect("/chat", "Alerts are posted to the chat channel too." if cid else "Alerts go by e-mail only.")
 
 
 @router.get("/branding", response_class=HTMLResponse)
@@ -966,6 +1082,7 @@ def report_run_now(
     output_format: str = Form("pdf"),
     tenant_id: str = Form(""),
     language: str = Form(""),
+    chat_channel_id: str = Form(""),
     next: str = Form(""),
     db: Session = Depends(get_db),
     p: Principal = Depends(get_principal),
@@ -1002,8 +1119,9 @@ def report_run_now(
             targets = list(allowed)
             label = f"{len(allowed)} tenant(s)"
     for tid in targets:
-        background.add_task(run_report, report_key, tenant_id=tid, recipients=to, output_format=fmt, deliver=bool(to), period_kind=period,
-                            language=language if language in LANGUAGES else None)
+        channel = int(chat_channel_id) if chat_channel_id.isdigit() and db.get(ChatChannel, int(chat_channel_id)) else None
+        background.add_task(run_report, report_key, tenant_id=tid, recipients=to, output_format=fmt, deliver=bool(to or channel),
+                            period_kind=period, language=language if language in LANGUAGES else None, chat_channel_id=channel)
     how = f"and sent to {', '.join(to)}" if to else "(archive only, no e-mail)"
     return _redirect(back, f"'{definition.name}' started for {label} {how}.")
 

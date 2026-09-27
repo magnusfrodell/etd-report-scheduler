@@ -295,6 +295,7 @@ class ReportSchedule(Base):
     recipient_mode: Mapped[str] = mapped_column(String(16), nullable=False, default="fixed", server_default="fixed")  # fixed | tenant | both
     only_with_findings: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=false())
     language: Mapped[str] = mapped_column(String(8), nullable=False, default="", server_default="")  # "" = each tenant's language
+    chat_channel_id: Mapped[int | None] = mapped_column(ForeignKey("chat_channels.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=utcnow)
     last_run_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     last_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
@@ -329,6 +330,8 @@ class ReportRun(Base):
     delivery_error: Mapped[str | None] = mapped_column(Text, nullable=True)  # recipients the relay refused
     delivery_note: Mapped[str | None] = mapped_column(String(300), nullable=True)  # why nothing was sent: no findings, no recipients
     language: Mapped[str | None] = mapped_column(String(8), nullable=True)  # the report language this run used
+    chat_channel: Mapped[str | None] = mapped_column(String(120), nullable=True)  # the chat channel it was posted to
+    chat_error: Mapped[str | None] = mapped_column(String(500), nullable=True)  # why posting it failed
 
     schedule: Mapped[ReportSchedule | None] = relationship(back_populates="runs")
 
@@ -444,6 +447,21 @@ class AlertState(Base):
     key: Mapped[str] = mapped_column(String(160), primary_key=True)
     last_sent_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
     detail: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class ChatChannel(Base):
+    """A Webex space or Microsoft Teams channel that reports and alerts are posted to (the SOC's own channel)."""
+
+    __tablename__ = "chat_channels"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False, unique=True)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)  # webex | teams
+    target_enc: Mapped[str] = mapped_column(Text, nullable=False)  # Webex room id or Teams Workflows URL, encrypted
+    target_hint: Mapped[str] = mapped_column(String(200), nullable=False, default="", server_default="")  # shown in the UI
+    last_sent_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    last_error: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=utcnow)
 
 
 class Brand(Base):

@@ -34,7 +34,7 @@ Bundled reports:
 
 **Technology stack:** Python 3.12, FastAPI, SQLAlchemy 2 + Alembic (SQLite by default, PostgreSQL optional), APScheduler, Jinja2, WeasyPrint for PDF, httpx for the ETD API. Standalone application, delivered as a Docker image; no external services other than the ETD API and an SMTP relay.
 
-**Status:** 0.10.0, alpha. The collectors (including Log Export), scheduler, twelve reports (in English and Swedish) and the admin UI work end to end against a fake ETD API in the test-suite (`pytest`, 139 tests) and have been smoke-tested as a running application. Validation against production ETD tenants in all five regions is the next step - please open an issue with what you find. This is community sample code, not a Cisco product, and is not supported by Cisco TAC.
+**Status:** 0.11.0, alpha. The collectors (including Log Export), scheduler, twelve reports (in English and Swedish) and the admin UI work end to end against a fake ETD API in the test-suite (`pytest`, 158 tests) and have been smoke-tested as a running application. Validation against production ETD tenants in all five regions is the next step - please open an issue with what you find. This is community sample code, not a Cisco product, and is not supported by Cisco TAC.
 
 <!-- Add a screenshot of the dashboard here once you run it against a real tenant: ![Dashboard](docs/dashboard.png) -->
 
@@ -64,7 +64,7 @@ docker run -d --name etd-demo -p 8080:8080 \
   -e DEMO_MODE=true -e ADMIN_PASSWORD=choose-a-password \
   -e SECRET_KEY="$(openssl rand -hex 32)" \
   -e ENCRYPTION_KEY="$(python3 -c 'import base64, os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())')" \
-  ghcr.io/magnusfrodell/etd-report-scheduler:0.10.0
+  ghcr.io/magnusfrodell/etd-report-scheduler:0.11.0
 ```
 
 Sign in at http://localhost:8080 as `admin`. Within a minute the demo has collected 90 days of history and filled the archive with the reports its schedules would have produced. Each tenant has a story:
@@ -95,7 +95,7 @@ Prerequisites: Docker 24+ with Compose, network access from the container to `ap
 A pre-built multi-arch image (amd64/arm64) is published for every release tag:
 
 ```bash
-docker pull ghcr.io/magnusfrodell/etd-report-scheduler:0.10.0
+docker pull ghcr.io/magnusfrodell/etd-report-scheduler:0.11.0
 ```
 
 To use it, set `image:` instead of `build:` in `docker-compose.yml` (the line is there, commented out). To build yourself instead:
@@ -180,6 +180,7 @@ pytest
 * **Tenant reporting profile** – besides domains, vendors, VIPs and user labels: an optional *group* (for schedules that cover a group, such as a service tier) the customer's *report recipients* and the *report language*.
 * **Reporting profile per tenant** (Tenants page, manager role) – own domains (blank = detected from outgoing mail and recipients), vendor and partner domains to watch, VIP mailboxes (added to the global list) and names for ETD user ids, because ETD's audit log records users by UUID only.
 * **Settings** – timezone (IANA name, e.g. `Europe/Stockholm`), the default report language, SMTP relay, partner recipients (default for cross-tenant reports), retention in days, which verdicts to store per message (threats only by default: `bec`, `scam`, `phishing`, `malicious`; adding `spam`/`graymail` multiplies the volume), the daily API budget per tenant (default 8 000 of ETD's 10 000), the backfill window size, the global VIP mailboxes, Log Export collection on/off and how long the audit trail is kept (default 730 days).
+* **Chat** (administrators) – the SOC's Webex space or Microsoft Teams channel: a Webex bot token, the channels, and whether alerts are posted too. See [Chat delivery](#chat-delivery-webex-and-microsoft-teams).
 
 ### Log Export (audit trail, verdict changes, sender history)
 
@@ -248,6 +249,7 @@ Sign in as the bootstrap admin, add a tenant, then add users:
 7. **Settings > E-mail > Alert recipients** – e-mailed when a scheduled report fails or is only partly delivered, and once a day while a data stream is stalled. **Settings > Storage and backups** shows the archive and database size, the newest backups and a **Back up the database now** button.
 8. **Branding** (administrators) – add a brand with a name, a PNG or JPEG logo, header and accent colours and a footer, and optionally the e-mail sender name, Reply-To and a subject prefix. The first brand becomes the default; a tenant can use another one from its reporting profile. **Preview a report** shows the brand on a real report, as HTML or PDF. In e-mails the logo is embedded as an inline image, because mail clients block data: images. Without a brand, reports keep the neutral look.
 9. **Report languages** – reports, PDFs and report e-mails in English or Swedish. Set the default under **Settings**, a customer's language in the tenant's reporting profile, or pick one for a schedule or a single **Run now**. See [Report languages](#report-languages).
+10. **Chat** (administrators) – add the SOC's Webex space or Teams channel, then pick it as *Post to* in a schedule or a Run now; alerts can be posted there too.
 
 The tenant switcher in the header filters the dashboard, schedules and report cards to one tenant, or shows all; the archive starts from it and has its own tenant filter. Times in the archive are shown in the timezone from Settings.
 
@@ -287,12 +289,22 @@ Everything a customer reads is translated: headings, explanations, checks and re
 
 Adding a language (Danish, Norwegian and Finnish are the obvious next ones) is a translation job rather than a code change - see [docs/TRANSLATING.md](docs/TRANSLATING.md).
 
+### Chat delivery (Webex and Microsoft Teams)
+
+Reports and alerts can be posted to the SOC's own Webex space or Microsoft Teams channel, next to or instead of e-mail. Each message carries the report's headline - title, tenant and period, status and the key figures - in the report's language. Webex messages carry the PDF as well; Teams messages link to the report in the archive, which needs the address of this tool under **Settings**. All traffic is outbound: nothing has to reach the container.
+
+**Webex:** create a bot at [developer.webex.com](https://developer.webex.com/my-apps/new/bot), paste its access token on the **Chat** page (it is checked and stored encrypted), add the bot to the SOC's space, and add the space as a channel - the spaces the bot is a member of are listed.
+
+**Microsoft Teams:** in the channel, open **Workflows**, choose *Post to a channel when a webhook request is received*, finish the wizard and paste the URL on the **Chat** page (stored encrypted). The trigger must allow *Anyone* to trigger it - the URL then ends with a `sig=` signature. The workflow runs as the person who created it, so use an account that stays. Office 365 connector webhooks stopped working in May 2026 and are refused with an explanation.
+
+Pick the channel as **Post to** in a schedule (a schedule for all tenants posts one message per tenant) or in **Run now**, and under **Chat > Alerts** to post failed or partly delivered scheduled reports and stalled data collection there too. A chat outage never fails a report: the archive shows *Not posted to …* with the reason, the channel shows its last result, and the alert recipients are told. **Send a test** on the Chat page checks a channel. In demo mode, messages are saved to `/data/demo-outbox` instead of being posted.
+
 ### Continuous integration
 
 `.github/workflows/ci.yml` runs ruff, the test-suite and an Alembic consistency check on every push and pull request. `.github/workflows/docker.yml` builds and publishes the container image to GitHub Container Registry when a `v*` tag is pushed:
 
 ```bash
-git tag v0.10.0 && git push origin v0.10.0
+git tag v0.11.0 && git push origin v0.11.0
 ```
 
 ### Architecture

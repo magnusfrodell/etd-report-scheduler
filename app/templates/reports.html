@@ -57,6 +57,8 @@
               <select id="f-{{ r.key }}" name="output_format" form="run-{{ r.key }}"><option value="pdf">PDF + HTML</option><option value="html">HTML only</option></select></div>
             <div><label class="field" for="l-{{ r.key }}">Language</label>
               <select id="l-{{ r.key }}" name="language" form="run-{{ r.key }}"><option value="">Tenant's language</option>{% for code, name in REPORT_LANGUAGES.items() %}<option value="{{ code }}">{{ name }}</option>{% endfor %}</select></div>
+            {% if chat_names %}<div><label class="field" for="c-{{ r.key }}">Post to</label>
+              <select id="c-{{ r.key }}" name="chat_channel_id" form="run-{{ r.key }}"><option value="">No chat</option>{% for id, name in chat_names.items() %}<option value="{{ id }}">{{ name }}</option>{% endfor %}</select></div>{% endif %}
             <div class="wide"><label class="field" for="t-{{ r.key }}">E-mail to (optional)</label>
               <input id="t-{{ r.key }}" type="text" name="recipients" form="run-{{ r.key }}" placeholder="empty = archive only"></div>
             <div class="wide"><button type="submit" form="run-{{ r.key }}" class="small">{{ icon('play', 12) }} Run with these options</button></div>

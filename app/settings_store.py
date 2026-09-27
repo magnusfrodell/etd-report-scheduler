@@ -60,8 +60,10 @@ class RuntimeSettings:
     report_language: str = "en"  # default report language; tenants and schedules can override it
     backup_keep: int = 7  # nightly database backups kept in DATA_DIR/backups; 0 = off
     base_url: str = ""
+    webex_bot_token: str = ""  # decrypted in memory only
+    alert_chat_channel_id: int = 0  # chat channel for alerts; 0 = none
 
-    SECRET_KEYS = ("smtp_password",)
+    SECRET_KEYS = ("smtp_password", "webex_bot_token")
 
     def tzinfo(self) -> ZoneInfo:
         try:
