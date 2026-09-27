@@ -90,14 +90,14 @@ def _token_hash(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def create_session(db: Session, user: User, request: Request) -> str:
+def create_session(db: Session, user: User, request: Request, method: str = "password") -> str:
     """Start a session for ``user`` and return the cookie value."""
     token = secrets.token_urlsafe(32)
     now = utcnow()
     db.add(UserSession(user_id=user.id, token_hash=_token_hash(token), created_at=now, last_seen_at=now,
                        expires_at=now + timedelta(seconds=get_config().session_max_age_seconds),
                        ip=request.client.host if request.client else None,
-                       user_agent=(request.headers.get("user-agent") or "")[:200] or None))
+                       user_agent=(request.headers.get("user-agent") or "")[:200] or None, auth_method=method))
     return serializer().dumps({"sid": token})
 
 

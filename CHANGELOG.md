@@ -3,6 +3,20 @@
 Database migrations run automatically at start-up. Every version runs as a single container
 with its state in the `/data` volume.
 
+## 0.14.0 - Single sign-on with Duo and OpenID Connect
+
+### Added
+- **Single sign-on** (administrators, new **Single sign-on** page) with Duo Single Sign-On or any OpenID Connect provider: a *Sign in with Duo* button on the sign-in page. Authorization Code flow with PKCE (S256), state and nonce; the ID token's signature, issuer, audience, expiry and nonce are checked against the provider's published keys, which are refetched once when the provider rotates them.
+- **Accounts from the provider** - recognised by the provider's stable id; on a first sign-in, linked to an existing account with the same e-mail address, or created with the role *user* and no tenant access (can be switched off). Accounts created this way have no password.
+- **Roles from groups** - optional administrator and tenant administrator groups set the global role at every sign-in; the last enabled administrator is never demoted. Tenant access is still granted on the Tenants page.
+- **Password sign-in for the emergency administrator only** - optional; everyone else must use the provider.
+- Sessions show whether they came from single sign-on or a password; the activity log records every single sign-on sign-in and refusal with the reason and the provider's authentication methods (`amr`).
+- The page shows the redirect URL to register in Duo and checks that the provider answers.
+
+### Upgrade notes
+- Migration 0013 adds the provider's id to users and the sign-in method to sessions. Nothing changes until single sign-on is switched on.
+- New dependency: PyJWT, for verifying ID tokens (it uses the `cryptography` package the tool already has).
+
 ## 0.13.0 - API keys
 
 ### Added

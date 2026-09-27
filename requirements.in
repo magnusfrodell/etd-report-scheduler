@@ -14,4 +14,5 @@ pydantic-settings>=2.3,<3.0
 itsdangerous>=2.2,<3.0
 dnspython>=2.6,<3.0
 babel>=2.14,<3.0  # report languages: message catalogs, localized month names
+pyjwt[crypto]>=2.8,<3.0  # single sign-on: verifying ID tokens from the identity provider (OIDC)
 weasyprint>=62.0 ; platform_system != "Windows"

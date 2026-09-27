@@ -142,6 +142,8 @@ class User(Base):
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=utcnow)
     last_login_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    # "<issuer> <sub>" once the user has signed in with single sign-on; the identity provider's stable id
+    sso_id: Mapped[str | None] = mapped_column(String(400), nullable=True, unique=True, index=True)
 
     grants: Mapped[list[TenantGrant]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
@@ -465,6 +467,7 @@ class UserSession(Base):
     user_agent: Mapped[str | None] = mapped_column(String(200), nullable=True)
     revoked_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     revoked_reason: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    auth_method: Mapped[str] = mapped_column(String(16), nullable=False, default="password", server_default="password")  # password | sso
 
 
 class ApiKey(Base):

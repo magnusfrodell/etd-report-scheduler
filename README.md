@@ -34,7 +34,7 @@ Bundled reports:
 
 **Technology stack:** Python 3.12, FastAPI, SQLAlchemy 2 + Alembic (SQLite by default, PostgreSQL optional), APScheduler, Jinja2, WeasyPrint for PDF, httpx for the ETD API. Standalone application, delivered as a Docker image; no external services other than the ETD API and an SMTP relay.
 
-**Status:** 0.13.0, alpha. The collectors (including Log Export), scheduler, twelve reports (in English and Swedish) and the admin UI work end to end against a fake ETD API in the test-suite (`pytest`, 180 tests) and have been smoke-tested as a running application. Validation against production ETD tenants in all five regions is the next step - please open an issue with what you find. This is community sample code, not a Cisco product, and is not supported by Cisco TAC.
+**Status:** 0.14.0, alpha. The collectors (including Log Export), scheduler, twelve reports (in English and Swedish) and the admin UI work end to end against a fake ETD API in the test-suite (`pytest`, 197 tests) and have been smoke-tested as a running application. Validation against production ETD tenants in all five regions is the next step - please open an issue with what you find. This is community sample code, not a Cisco product, and is not supported by Cisco TAC.
 
 <!-- Add a screenshot of the dashboard here once you run it against a real tenant: ![Dashboard](docs/dashboard.png) -->
 
@@ -64,7 +64,7 @@ docker run -d --name etd-demo -p 8080:8080 \
   -e DEMO_MODE=true -e ADMIN_PASSWORD=choose-a-password \
   -e SECRET_KEY="$(openssl rand -hex 32)" \
   -e ENCRYPTION_KEY="$(python3 -c 'import base64, os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())')" \
-  ghcr.io/magnusfrodell/etd-report-scheduler:0.13.0
+  ghcr.io/magnusfrodell/etd-report-scheduler:0.14.0
 ```
 
 Sign in at http://localhost:8080 as `admin`. Within a minute the demo has collected 90 days of history and filled the archive with the reports its schedules would have produced. Each tenant has a story:
@@ -95,7 +95,7 @@ Prerequisites: Docker 24+ with Compose, network access from the container to `ap
 A pre-built multi-arch image (amd64/arm64) is published for every release tag:
 
 ```bash
-docker pull ghcr.io/magnusfrodell/etd-report-scheduler:0.13.0
+docker pull ghcr.io/magnusfrodell/etd-report-scheduler:0.14.0
 ```
 
 To use it, set `image:` instead of `build:` in `docker-compose.yml` (the line is there, commented out). To build yourself instead:
@@ -251,6 +251,7 @@ Sign in as the bootstrap admin, add a tenant, then add users:
 9. **Report languages** – reports, PDFs and report e-mails in English or Swedish. Set the default under **Settings**, a customer's language in the tenant's reporting profile, or pick one for a schedule or a single **Run now**. See [Report languages](#report-languages).
 10. **Chat** (administrators) – add the SOC's Webex space or Teams channel, then pick it as *Post to* in a schedule or a Run now; alerts can be posted there too.
 11. **Activity log** (administrators) – who did what in the tool, sign-ins and opened reports, with filters and CSV/JSON export. **Users** shows who is signed in, ends sessions and manages every API key; **Your account** shows your own sessions and API keys. See [Activity log and sessions](#activity-log-and-sessions).
+12. **Single sign-on** (administrators) – let people sign in with Duo Single Sign-On or another OpenID Connect provider. See [Single sign-on](#single-sign-on-duo-and-other-openid-connect-providers).
 
 The tenant switcher in the header filters the dashboard, schedules and report cards to one tenant, or shows all; the archive starts from it and has its own tenant filter. Times in the archive are shown in the timezone from Settings.
 
@@ -309,12 +310,20 @@ Pick the channel as **Post to** in a schedule (a schedule for all tenants posts 
 
 **Sessions.** A sign-in is a session on the server; the cookie only carries a random token, and the database stores just a hash of it. Signing out ends the session on the server, so a copy of the cookie stops working at once. A session also ends after 120 minutes without activity (set it under **Settings**; 0 keeps only the 12-hour limit of `SESSION_MAX_AGE_SECONDS`), when an administrator resets the user's password or disables the account, and when the user changes their own password - that browser then continues in a new session. **Users** lists who is signed in, from which device and address, with **End** per session and **Sign out** per user; **Your account** lists your own sessions, with **Sign out all other sessions**.
 
+### Single sign-on (Duo and other OpenID Connect providers)
+
+People can sign in with **Duo Single Sign-On** - or Entra ID, Okta or any OpenID Connect provider - so that the provider's multi-factor authentication and access policies apply to this tool too. The sign-in is the Authorization Code flow with PKCE, state and nonce; the ID token is checked against the provider's published keys (signature, issuer, audience, expiry and nonce). Only the browser has to reach the tool; the token exchange is outbound.
+
+**In Duo:** Applications › Application Catalog › *Generic OIDC Relying Party* › Add, and give the groups that may use the tool access. On the *General* tab choose the *Authorization Code* grant and add the Sign-In Redirect URL that the **Single sign-on** page shows - `<address of this tool>/auth/sso/callback`, so set the address under **Settings** first. On the *Scopes* tab keep `openid`, `email` and `profile`; for roles by group, add a custom scope `groups` with a claim `groups` mapped to your group attribute (for Active Directory, a `format_ad_groups` claim transformation gives plain group names). Then copy the *Issuer*, *Client ID* and *Client Secret* from the *Metadata* tab to the **Single sign-on** page, switch it on and save - the page checks that the provider answers. If Duo does not accept an `http://` address as redirect URL, put the tool behind HTTPS (a reverse proxy) and use that address.
+
+**Accounts:** a person is recognised by the provider's stable id. On their first sign-in an existing account with the same e-mail address is linked; otherwise an account is created with the role *user* and no tenant access until it is granted on the Tenants page (switch that off to admit only people who already have an account). With **administrator groups** and **tenant administrator groups** set, every sign-in sets the global role from the groups claim - the last enabled administrator is never demoted. **Password sign-in** can be kept for the emergency administrator only (`ADMIN_USERNAME`), so everyone else goes through the provider. Signing out ends the session in this tool; the Duo session is left alone. Every sign-in and refusal is in the activity log, with the authentication methods the provider reports (`amr`).
+
 ### Continuous integration
 
 `.github/workflows/ci.yml` runs ruff, the test-suite and an Alembic consistency check on every push and pull request. `.github/workflows/docker.yml` builds and publishes the container image to GitHub Container Registry when a `v*` tag is pushed:
 
 ```bash
-git tag v0.13.0 && git push origin v0.13.0
+git tag v0.14.0 && git push origin v0.14.0
 ```
 
 ### Architecture

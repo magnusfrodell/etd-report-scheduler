@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Single sign-on - ETD Report Scheduler{% endblock %}
+{% block heading %}Single sign-on{% endblock %}
+{% block content %}
+<div class="scope-bar"><div>Let people sign in with <strong>Duo Single Sign-On</strong> - or Entra ID, Okta or any OpenID Connect provider - instead of a password kept here. Their multi-factor authentication and access policies then apply to this tool too. {{ sso_users }} account(s) have signed in with single sign-on so far.</div></div>
+
+<section class="panel">
+  <h2>In Duo</h2>
+  <ol class="small steps">
+    <li>Duo Admin Panel › Applications › Application Catalog › <strong>Generic OIDC Relying Party</strong> › Add. Under <em>User access</em>, choose the groups that may use this tool.</li>
+    <li>On the <em>General</em> tab, choose the <em>Authorization Code</em> grant and add this Sign-In Redirect URL: {% if callback %}<code>{{ callback }}</code>{% else %}<span class="warn-text">set the address of this tool under Settings first</span>{% endif %}</li>
+    <li>On the <em>Scopes</em> tab, keep <code>openid</code>, <code>email</code> and <code>profile</code>. To give roles by group, add a custom scope <code>groups</code> with a claim <code>groups</code> mapped to your group attribute - for Active Directory, a <code>format_ad_groups</code> claim transformation gives plain group names - and add <code>groups</code> to the scopes below.</li>
+    <li>Copy the <em>Issuer</em>, <em>Client ID</em> and <em>Client Secret</em> from the <em>Metadata</em> tab into the form below, switch single sign-on on and save.</li>
+  </ol>
+</section>
+
+<section class="panel">
+  <h2>Provider</h2>
+  <form method="post" action="/sso" class="form-grid">
+    <div class="wide"><label class="checks"><input type="checkbox" name="enabled" {{ 'checked' if s.sso_enabled else '' }}> Single sign-on is on</label></div>
+    <div><label class="field" for="sso-name">Name on the sign-in button</label><input id="sso-name" name="name" type="text" maxlength="40" value="{{ s.sso_name }}"></div>
+    <div class="wide"><label class="field" for="sso-issuer">Issuer</label><input id="sso-issuer" name="issuer" type="text" inputmode="url" spellcheck="false" value="{{ s.sso_issuer }}" placeholder="https://sso-….sso.duosecurity.com/oidc/DI…"></div>
+    <div><label class="field" for="sso-client">Client ID</label><input id="sso-client" name="client_id" type="text" value="{{ s.sso_client_id }}"></div>
+    <div><label class="field" for="sso-secret">Client secret{% if secret_set %} - leave empty to keep the saved one{% endif %}</label><input id="sso-secret" name="client_secret" type="password" autocomplete="off" placeholder="{{ '•••••••• (saved)' if secret_set else '' }}"></div>
+    <div class="wide"><label class="field" for="sso-scopes">Scopes</label><input id="sso-scopes" name="scopes" type="text" value="{{ s.sso_scopes }}"></div>
+    <div><label class="field" for="sso-claim">Groups claim</label><input id="sso-claim" name="groups_claim" type="text" value="{{ s.sso_groups_claim }}"></div>
+    <div><label class="field" for="sso-admins">Administrator groups (comma separated)</label><input id="sso-admins" name="admin_groups" type="text" value="{{ s.sso_admin_groups }}"></div>
+    <div><label class="field" for="sso-tadmins">Tenant administrator groups</label><input id="sso-tadmins" name="tenant_admin_groups" type="text" value="{{ s.sso_tenant_admin_groups }}"></div>
+    <p class="wide muted small">With groups set, every sign-in sets the global role: an administrator group gives administrator, a tenant administrator group gives tenant administrator, anything else user - the last enabled administrator is never demoted. Without groups, roles are set on the Users page. Access to each tenant is always granted on the Tenants page.</p>
+    <div class="wide"><label class="checks"><input type="checkbox" name="create_users" {{ 'checked' if s.sso_create_users else '' }}> Create an account on first sign-in</label>
+      <p class="muted small">New accounts get the role user and no tenant access until it is granted. When off, only people who already have an account get in - on their first sign-in they are matched by e-mail.</p></div>
+    <div class="wide"><label class="field" for="sso-pw">Password sign-in</label><select id="sso-pw" name="password_login"><option value="all" {{ 'selected' if s.sso_password_login == 'all' else '' }}>Allowed for everyone</option><option value="break_glass" {{ 'selected' if s.sso_password_login == 'break_glass' else '' }}>Only the emergency administrator account ({{ break_glass_user }})</option></select></div>
+    <div class="wide"><button type="submit" class="small">Save</button></div>
+  </form>
+  <form method="post" action="/sso/check"><button class="small secondary">Check the provider</button></form>
+</section>
+{% endblock %}

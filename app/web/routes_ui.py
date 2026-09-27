@@ -26,6 +26,7 @@ import csv
 import io
 import json
 import logging
+import secrets
 import ssl
 from collections import Counter
 from datetime import UTC, datetime, timedelta
@@ -40,7 +41,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session
 
-from app import __version__, activity
+from app import __version__, activity, sso
 from app.branding import (
     DEFAULT_ACCENT,
     DEFAULT_PRIMARY,
@@ -170,12 +171,23 @@ def _tenant_or_404(db: Session, tenant_id: int, p: Principal, role: str) -> Tena
 def login_form(request: Request) -> Response:
     with session_scope() as session:
         ui_brand = view(default_brand(session))
-    return templates.TemplateResponse(request, "login.html", {"request": request, "err": request.query_params.get("err"), "ui_brand": ui_brand})
+        settings = load_settings(session)
+    sso_on = settings.sso_enabled and bool(settings.sso_issuer and settings.sso_client_id)
+    return templates.TemplateResponse(request, "login.html", {
+        "request": request, "err": request.query_params.get("err"), "ui_brand": ui_brand, "sso_on": sso_on, "sso_name": settings.sso_name,
+        "password_for_all": not sso_on or settings.sso_password_login != "break_glass",
+        "next_url": safe_next(request.query_params.get("next", "/"))})
 
 
 @router.post("/login")
 def login(request: Request, username: str = Form(...), password: str = Form(...), next: str = Form("/"), db: Session = Depends(get_db)) -> Response:
     client = request.client.host if request.client else "?"
+    settings = load_settings(db)
+    if (settings.sso_enabled and settings.sso_password_login == "break_glass"
+            and username.strip().lower() != get_config().admin_username.lower()):
+        activity.note(actor=username.strip()[:120], outcome="denied")
+        return _redirect("/login", f"Sign in with {settings.sso_name} - password sign-in is kept for the emergency administrator account.",
+                         error=True)
     wait = login_limiter.retry_after(username, client)
     if wait:
         log.warning("Sign-in for user %r from %s refused: too many failed attempts", username, client)
@@ -197,6 +209,113 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
     resp.set_cookie(SESSION_COOKIE, cookie, httponly=True, samesite="lax", secure=cfg.cookie_secure, max_age=cfg.session_max_age_seconds)
     resp.set_cookie(TENANT_COOKIE, "all", samesite="lax", max_age=365 * 24 * 3600)
     return resp
+
+
+def _sso_failed(message: str, outcome: str = "failed") -> Response:
+    activity.note(force_action="auth.sign_in", outcome=outcome, details={"method": "sso", "message": message})
+    resp = _redirect("/login", message, error=True)
+    resp.delete_cookie(sso.STATE_COOKIE, path="/auth/sso")
+    return resp
+
+
+@router.get("/auth/sso/start")
+def sso_start(request: Request, next: str = "/", db: Session = Depends(get_db)) -> Response:
+    settings = load_settings(db)
+    if not (settings.sso_enabled and settings.sso_issuer and settings.sso_client_id):
+        return _redirect("/login", "Single sign-on is not set up.", error=True)
+    if not settings.base_url:
+        return _sso_failed("Single sign-on needs the address of this tool - an administrator sets it under Settings.")
+    try:
+        url, cookie = sso.start(settings, safe_next(next))
+    except sso.SsoError as exc:
+        return _sso_failed(str(exc))
+    resp = RedirectResponse(url, status_code=303)
+    resp.set_cookie(sso.STATE_COOKIE, cookie, max_age=sso.STATE_MAX_AGE, httponly=True, samesite="lax",
+                    secure=get_config().cookie_secure, path="/auth/sso")
+    return resp
+
+
+@router.get("/auth/sso/callback")
+def sso_callback(request: Request, code: str = "", state: str = "", error: str = "", error_description: str = "",
+                 db: Session = Depends(get_db)) -> Response:
+    settings = load_settings(db)
+    if not settings.sso_enabled:
+        return _sso_failed("Single sign-on is not set up.")
+    if error:
+        return _sso_failed(f"{settings.sso_name} did not sign you in: {error_description or error}.", "denied" if error == "access_denied" else "failed")
+    try:
+        saved = sso.read_state(request.cookies.get(sso.STATE_COOKIE))
+        if not state or not secrets.compare_digest(state, str(saved.get("state", ""))):
+            raise sso.SsoError("The sign-in could not be matched to this browser - start it again.")
+        tokens = sso.exchange(settings, code, saved["verifier"])
+        claims = sso.verify_id_token(settings, tokens["id_token"], saved["nonce"])
+        claims = {**sso.userinfo(settings, tokens.get("access_token"), claims["sub"]), **claims}  # the verified ID token wins
+        user, done = sso.account_for(db, settings, claims)
+    except sso.SsoError as exc:
+        db.rollback()
+        return _sso_failed(str(exc), "denied" if exc.denied else "failed")
+    cookie = create_session(db, user, request, method="sso")
+    db.commit()
+    details: dict[str, Any] = {"method": "sso", "provider": settings.sso_name}
+    if done:
+        details["account"] = "; ".join(done)
+    if claims.get("amr"):
+        details["amr"] = claims["amr"]
+    activity.note(force_action="auth.sign_in", actor=user.username, actor_id=user.id, details=details)
+    cfg = get_config()
+    resp = RedirectResponse(safe_next(str(saved.get("next") or "/")), status_code=303)
+    resp.set_cookie(SESSION_COOKIE, cookie, httponly=True, samesite="lax", secure=cfg.cookie_secure, max_age=cfg.session_max_age_seconds)
+    resp.set_cookie(TENANT_COOKIE, "all", samesite="lax", max_age=365 * 24 * 3600)
+    resp.delete_cookie(sso.STATE_COOKIE, path="/auth/sso")
+    return resp
+
+
+@router.get("/sso", response_class=HTMLResponse)
+def sso_page(request: Request, db: Session = Depends(get_db), p: Principal = Depends(require_admin)) -> Response:
+    settings = load_settings(db)
+    sso_users = db.execute(select(func.count()).select_from(User).where(User.sso_id.is_not(None))).scalar_one()
+    return templates.TemplateResponse(request, "sso.html", _base_ctx(
+        request, db, p, s=settings, callback=sso.callback_url(settings), secret_set=bool(settings.sso_client_secret),
+        break_glass_user=get_config().admin_username, sso_users=sso_users))
+
+
+@router.post("/sso")
+async def sso_save(request: Request, db: Session = Depends(get_db), p: Principal = Depends(require_admin)) -> Response:
+    form = await request.form()
+    text = lambda key, limit=400: " ".join(str(form.get(key, "")).split())[:limit]  # noqa: E731
+    issuer = text("issuer").rstrip("/")
+    values: dict[str, Any] = {
+        "sso_enabled": form.get("enabled") == "on", "sso_name": text("name", 40) or "Duo", "sso_issuer": issuer,
+        "sso_client_id": text("client_id", 200), "sso_scopes": text("scopes") or "openid email profile",
+        "sso_groups_claim": text("groups_claim", 60) or "groups", "sso_admin_groups": text("admin_groups"),
+        "sso_tenant_admin_groups": text("tenant_admin_groups"), "sso_create_users": form.get("create_users") == "on",
+        "sso_password_login": "break_glass" if form.get("password_login") == "break_glass" else "all",
+    }
+    if str(form.get("client_secret", "")).strip():
+        values["sso_client_secret"] = str(form.get("client_secret")).strip()
+    if "openid" not in values["sso_scopes"].split():
+        values["sso_scopes"] = "openid " + values["sso_scopes"]
+    if values["sso_enabled"] and not (issuer and values["sso_client_id"]):
+        return _redirect("/sso", "Single sign-on needs the issuer and the client ID before it can be switched on.", error=True)
+    if values["sso_enabled"] and not load_settings(db).base_url:
+        return _redirect("/sso", "Set the address of this tool under Settings first - the provider sends people back to it.", error=True)
+    save_settings(db, values)
+    db.commit()
+    if values["sso_enabled"]:
+        try:
+            found = sso.check(load_settings(db))
+        except sso.SsoError as exc:
+            return _redirect("/sso", f"Saved, but the provider could not be checked: {exc}", error=True)
+        return _redirect("/sso", f"Saved. {found}")
+    return _redirect("/sso", "Saved - single sign-on is off.")
+
+
+@router.post("/sso/check")
+def sso_check(db: Session = Depends(get_db), p: Principal = Depends(require_admin)) -> Response:
+    try:
+        return _redirect("/sso", sso.check(load_settings(db)))
+    except sso.SsoError as exc:
+        return _redirect("/sso", str(exc), error=True)
 
 
 @router.post("/logout")
@@ -1411,6 +1530,7 @@ def user_delete(user_id: int, db: Session = Depends(get_db), p: Principal = Depe
 def _session_rows(db: Session, sessions: list[UserSession], tz: Any, current_id: int | None) -> list[dict[str, Any]]:
     names = {u.id: u.username for u in db.execute(select(User)).scalars()}
     return [{"id": s.id, "user_id": s.user_id, "user": names.get(s.user_id, "?"), "device": device_label(s.user_agent), "ip": s.ip or "",
+             "method": s.auth_method,
              "started": local_dt(s.created_at, tz), "active": ago(s.last_seen_at), "current": s.id == current_id} for s in sessions]
 
 

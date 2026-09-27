@@ -8,7 +8,7 @@
     <tr><th>User</th><th>E-mail</th><th>Global role</th><th>Tenant access</th><th>Status</th><th>Last login (UTC)</th><th>Actions</th></tr>
     {% for u in users %}
     <tr>
-      <td><strong>{{ u.label }}</strong><div class="muted">{{ u.username }}</div></td>
+      <td><strong>{{ u.label }}</strong><div class="muted">{{ u.username }}{% if u.sso_id %} · single sign-on{% endif %}</div></td>
       <td>{{ u.email or '–' }}</td>
       <td>
         <form method="post" action="/users/{{ u.id }}/role" style="display:flex;gap:6px;align-items:center">
@@ -41,7 +41,7 @@
     {% for s in sessions %}
     <tr>
       <td><strong>{{ s.user }}</strong>{% if s.current %} <span class="badge scheduled">you, here</span>{% endif %}</td>
-      <td>{{ s.device }}</td><td class="small">{{ s.ip }}</td><td class="small">{{ s.started }}</td><td class="small">{{ s.active }}</td>
+      <td>{{ s.device }}{% if s.method == 'sso' %} <span class="muted small">· SSO</span>{% endif %}</td><td class="small">{{ s.ip }}</td><td class="small">{{ s.started }}</td><td class="small">{{ s.active }}</td>
       <td class="actions">{% if not s.current %}<form method="post" action="/sessions/{{ s.id }}/end" data-confirm="End this session of {{ s.user }}?"><button class="small secondary">End</button></form>{% endif %}</td>
     </tr>
     {% endfor %}

@@ -70,6 +70,7 @@ ACTIONS: dict[str, str | None] = {
     "api_collect": "tenant.collect", "api_logs": "tenant.collect_logs", "api_backfill": "tenant.backfill", "api_run_report": "report.run",
     "account_api_key_create": "api_key.create", "account_api_key_revoke": "api_key.revoke",
     "user_api_key_create": "api_key.create", "api_key_revoke": "api_key.revoke",
+    "sso_save": "sso.update", "sso_check": "sso.check",
 }
 # Reads that are worth a line: an archived report holds customer data, an export holds the log itself.
 READ_ACTIONS: dict[str, str] = {"report_file": "report.view", "activity_export": "activity.export", "api_activity": "activity.export"}

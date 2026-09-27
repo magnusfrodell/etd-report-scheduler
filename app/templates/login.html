@@ -8,15 +8,25 @@
 </head>
 <body>
 <div class="login-wrap">
-  <form class="login-card" method="post" action="/login">
+  <div class="login-card">
     {% if ui_brand and ui_brand.logo_src %}<img class="login-logo" src="{{ ui_brand.logo_src }}" alt="{{ ui_brand.name }}">{% endif %}<h1>ETD Report Scheduler</h1>{% if ui_brand and ui_brand.name %}<p class="muted">{{ ui_brand.name }}</p>{% endif %}
-    <p>Sign in with the admin account from your environment configuration.</p>
     {% if err %}<div class="flash error" style="margin-bottom:12px">{{ err }}</div>{% endif %}
-    <input type="hidden" name="next" value="{{ request.query_params.get('next', '/') }}">
-    <div class="field-row"><label class="field" for="username">Username</label><input id="username" name="username" type="text" autocomplete="username" required autofocus></div>
-    <div class="field-row"><label class="field" for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required></div>
-    <button type="submit">Sign in</button>
-  </form>
+    {% if sso_on %}<a class="sso-button" href="/auth/sso/start?next={{ next_url|urlencode }}">Sign in with {{ sso_name }}</a>{% endif %}
+    {% macro password_form() %}
+    <form method="post" action="/login">
+      <input type="hidden" name="next" value="{{ next_url }}">
+      <div class="field-row"><label class="field" for="username">Username</label><input id="username" name="username" type="text" autocomplete="username" required {{ '' if sso_on else 'autofocus' }}></div>
+      <div class="field-row"><label class="field" for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required></div>
+      <button type="submit">Sign in</button>
+    </form>
+    {% endmacro %}
+    {% if password_for_all %}
+      {% if sso_on %}<div class="login-divider">or with a password</div>{% else %}<p>Sign in with your ETD Report Scheduler account.</p>{% endif %}
+      {{ password_form() }}
+    {% else %}
+      <details class="break-glass"><summary>Emergency administrator sign-in</summary>{{ password_form() }}</details>
+    {% endif %}
+  </div>
 </div>
 </body>
 </html>

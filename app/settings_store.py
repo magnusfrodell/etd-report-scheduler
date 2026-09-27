@@ -65,8 +65,20 @@ class RuntimeSettings:
     alert_chat_channel_id: int = 0  # chat channel for alerts; 0 = none
     session_idle_minutes: int = 120  # sign out after this long without activity; 0 = only the absolute lifetime
     activity_retention_days: int = 365  # how long this tool's activity log is kept
+    # Single sign-on (OpenID Connect) - Duo SSO, Entra ID or any OIDC provider
+    sso_enabled: bool = False
+    sso_name: str = "Duo"  # on the sign-in button
+    sso_issuer: str = ""
+    sso_client_id: str = ""
+    sso_client_secret: str = ""  # decrypted in memory only
+    sso_scopes: str = "openid email profile"
+    sso_groups_claim: str = "groups"
+    sso_admin_groups: str = ""  # comma separated; members become administrators
+    sso_tenant_admin_groups: str = ""  # members become tenant administrators
+    sso_create_users: bool = True  # an account on first sign-in (role user, no tenant access until granted)
+    sso_password_login: str = "all"  # all | break_glass (only the ADMIN_USERNAME account may use a password)
 
-    SECRET_KEYS = ("smtp_password", "webex_bot_token")
+    SECRET_KEYS = ("smtp_password", "webex_bot_token", "sso_client_secret")
 
     def tzinfo(self) -> ZoneInfo:
         try:

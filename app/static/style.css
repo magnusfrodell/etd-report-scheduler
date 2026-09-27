@@ -307,3 +307,11 @@ input[type=color] { height: 38px; padding: 2px 4px; width: 100%; }
 
 /* Demo mode */
 .demo-banner { background: #fff7e0; border: 1px solid #f0d58a; color: #6b5200; border-radius: var(--radius-ctl); padding: 8px 12px; font-size: 13px; }
+
+/* sign-in page: single sign-on */
+.sso-button { display: block; text-align: center; background: var(--accent); color: #fff; border-radius: var(--radius-ctl); padding: 10px 14px; font-weight: 600; text-decoration: none; margin: 4px 0 16px; }
+.sso-button:hover { background: var(--accent-dark); }
+.login-divider { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; margin: 0 0 14px; }
+.login-divider::before, .login-divider::after { content: ""; flex: 1; border-top: 1px solid var(--border); }
+details.break-glass summary { cursor: pointer; color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+ol.steps li { margin-bottom: 6px; }
