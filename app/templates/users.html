@@ -23,6 +23,7 @@
         <form method="post" action="/users/{{ u.id }}/password" style="display:flex;gap:6px"><input name="password" type="password" placeholder="new password" autocomplete="new-password" style="width:150px" required><button class="small secondary">Reset</button></form>
         {% if u.id != principal.user.id %}
         <form method="post" action="/users/{{ u.id }}/toggle"><button class="small secondary">{{ 'Disable' if u.enabled else 'Enable' }}</button></form>
+        {% if session_counts.get(u.id) %}<form method="post" action="/users/{{ u.id }}/sessions/end" data-confirm="Sign {{ u.username }} out everywhere?"><button class="small secondary">Sign out ({{ session_counts[u.id] }})</button></form>{% endif %}
         <form method="post" action="/users/{{ u.id }}/delete" data-confirm="Delete user {{ u.username }}?"><button class="small danger">Delete</button></form>
         {% endif %}
       </td>
@@ -30,6 +31,24 @@
     {% endfor %}
   </table>
 </section>
+
+<section class="panel">
+  <h2>Active sessions</h2>
+  <p class="muted small">Who is signed in right now. Ending a session signs that browser out at once - a copy of its cookie stops working too. Disabling a user or resetting their password ends all of their sessions.</p>
+  {% if sessions %}
+  <table>
+    <tr><th>User</th><th>Device</th><th>IP address</th><th>Signed in</th><th>Last active</th><th></th></tr>
+    {% for s in sessions %}
+    <tr>
+      <td><strong>{{ s.user }}</strong>{% if s.current %} <span class="badge scheduled">you, here</span>{% endif %}</td>
+      <td>{{ s.device }}</td><td class="small">{{ s.ip }}</td><td class="small">{{ s.started }}</td><td class="small">{{ s.active }}</td>
+      <td class="actions">{% if not s.current %}<form method="post" action="/sessions/{{ s.id }}/end" data-confirm="End this session of {{ s.user }}?"><button class="small secondary">End</button></form>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}<p class="muted">Nobody is signed in.</p>{% endif %}
+</section>
+
 <section class="panel">
   <h2>Add user</h2>
   <form method="post" action="/users" class="form-grid" autocomplete="off">

@@ -27,6 +27,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import __version__
+from app.activity import ActivityMiddleware
 from app.config import get_config
 from app.crypto import init_secret_box
 from app.db import init_engine, run_migrations, session_scope
@@ -75,6 +76,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title="ETD Report Scheduler", version=__version__, lifespan=lifespan, docs_url="/api/docs", redoc_url=None)
     app.add_middleware(SecurityMiddleware, trusted_origins=cfg.trusted_origins)
+    app.add_middleware(ActivityMiddleware)  # outermost: sees every answer, including refusals
     app.mount("/static", StaticFiles(directory=str(Path(__file__).resolve().parent / "static")), name="static")
     app.include_router(routes_api.router)
     app.include_router(routes_ui.router)

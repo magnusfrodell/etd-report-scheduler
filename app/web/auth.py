@@ -26,15 +26,17 @@ import hashlib
 import hmac
 import logging
 import os
-from typing import Any
+import secrets
+from datetime import timedelta
 
 from fastapi import Request
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.config import AppConfig, get_config
-from app.models import User, utcnow
+from app.db import session_scope
+from app.models import Setting, User, UserSession, utcnow
 
 log = logging.getLogger(__name__)
 
@@ -73,16 +75,33 @@ def validate_new_password(password: str) -> str | None:
 
 
 # ------------------------------------------------------------------- sessions
+# The cookie carries a random token in a signed envelope; the session itself lives in the database, so
+# signing out, an administrator's revoke, a password change or inactivity ends it for whoever holds the
+# cookie - not just in the browser that pressed the button.
+TOUCH_EVERY = timedelta(seconds=60)  # how often last_seen_at is written
+
+
 def serializer(cfg: AppConfig | None = None) -> URLSafeTimedSerializer:
     cfg = cfg or get_config()
-    return URLSafeTimedSerializer(cfg.secret_key, salt="etd-session-v2")
+    return URLSafeTimedSerializer(cfg.secret_key, salt="etd-session-v3")  # v2 cookies (before 0.12.0) sign in again
 
 
-def session_token(user: User) -> str:
-    return serializer().dumps({"uid": user.id, "ph": user.password_hash[-16:]})
+def _token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
 
 
-def read_session(request: Request) -> dict[str, Any] | None:
+def create_session(db: Session, user: User, request: Request) -> str:
+    """Start a session for ``user`` and return the cookie value."""
+    token = secrets.token_urlsafe(32)
+    now = utcnow()
+    db.add(UserSession(user_id=user.id, token_hash=_token_hash(token), created_at=now, last_seen_at=now,
+                       expires_at=now + timedelta(seconds=get_config().session_max_age_seconds),
+                       ip=request.client.host if request.client else None,
+                       user_agent=(request.headers.get("user-agent") or "")[:200] or None))
+    return serializer().dumps({"sid": token})
+
+
+def read_session(request: Request) -> str | None:
     raw = request.cookies.get(SESSION_COOKIE)
     if not raw:
         return None
@@ -90,17 +109,93 @@ def read_session(request: Request) -> dict[str, Any] | None:
         data = serializer().loads(raw, max_age=get_config().session_max_age_seconds)
     except (BadSignature, SignatureExpired):
         return None
-    return data if isinstance(data, dict) and "uid" in data else None
+    return data.get("sid") if isinstance(data, dict) and isinstance(data.get("sid"), str) else None
+
+
+def _idle_limit(db: Session) -> timedelta | None:
+    row = db.get(Setting, "session_idle_minutes")
+    try:
+        minutes = int(row.value) if row is not None and row.value is not None else 120
+    except (TypeError, ValueError):
+        minutes = 120
+    return timedelta(minutes=minutes) if minutes > 0 else None
+
+
+def current_session(db: Session, request: Request) -> UserSession | None:
+    token = read_session(request)
+    if token is None:
+        return None
+    session = db.execute(select(UserSession).where(UserSession.token_hash == _token_hash(token))).scalar_one_or_none()
+    if session is None or session.revoked_at is not None:
+        return None
+    now = utcnow()
+    idle = _idle_limit(db)
+    if session.expires_at <= now:
+        return None
+    if idle is not None and session.last_seen_at + idle <= now:
+        _end([session.id], "inactivity")
+        return None
+    if now - session.last_seen_at >= TOUCH_EVERY:
+        with session_scope() as touch:  # WAL: a short write of its own, independent of the request's transaction
+            touch.execute(update(UserSession).where(UserSession.id == session.id).values(last_seen_at=now))
+    return session
 
 
 def user_from_session(db: Session, request: Request) -> User | None:
-    data = read_session(request)
-    if data is None:
+    session = current_session(db, request)
+    if session is None:
         return None
-    user = db.get(User, int(data["uid"]))
-    if user is None or not user.enabled or user.password_hash[-16:] != data.get("ph"):
+    user = db.get(User, session.user_id)
+    if user is None or not user.enabled:
         return None
+    request.state.session_id = session.id
     return user
+
+
+def _end(session_ids: list[int], reason: str) -> None:
+    if not session_ids:
+        return
+    with session_scope() as db:
+        db.execute(update(UserSession).where(UserSession.id.in_(session_ids), UserSession.revoked_at.is_(None))
+                   .values(revoked_at=utcnow(), revoked_reason=reason[:60]))
+
+
+def active_sessions(db: Session, user_id: int | None = None) -> list[UserSession]:
+    """Sessions that can still be used, most recently active first; all users when ``user_id`` is None."""
+    now = utcnow()
+    query = select(UserSession).where(UserSession.revoked_at.is_(None), UserSession.expires_at > now)
+    if user_id is not None:
+        query = query.where(UserSession.user_id == user_id)
+    idle = _idle_limit(db)
+    rows = list(db.execute(query.order_by(UserSession.last_seen_at.desc())).scalars())
+    return [r for r in rows if idle is None or r.last_seen_at + idle > now]
+
+
+def end_sessions(db: Session, user_id: int, reason: str, keep: int | None = None) -> int:
+    """End every session of a user (except ``keep``). Returns how many were ended."""
+    ids = [s.id for s in active_sessions(db, user_id) if s.id != keep]
+    db.execute(update(UserSession).where(UserSession.id.in_(ids)).values(revoked_at=utcnow(), revoked_reason=reason[:60]))
+    return len(ids)
+
+
+def end_session(db: Session, session_id: int, reason: str) -> UserSession | None:
+    session = db.get(UserSession, session_id)
+    if session is not None and session.revoked_at is None:
+        session.revoked_at, session.revoked_reason = utcnow(), reason[:60]
+    return session
+
+
+def device_label(user_agent: str | None) -> str:
+    """'Edge on Windows' from a User-Agent header - enough to recognise one's own browser."""
+    ua = user_agent or ""
+    browser = next((name for key, name in (("Edg/", "Edge"), ("OPR/", "Opera"), ("Firefox/", "Firefox"), ("Chrome/", "Chrome"),
+                                           ("Safari/", "Safari"), ("curl/", "curl"), ("python-httpx", "script"), ("testclient", "test client"))
+                    if key.lower() in ua.lower()), "")
+    system = next((name for key, name in (("Windows", "Windows"), ("iPhone", "iOS"), ("iPad", "iPadOS"), ("Android", "Android"),
+                                          ("Mac OS X", "macOS"), ("Macintosh", "macOS"), ("Linux", "Linux")) if key in ua), "")
+    if browser and system:
+        return f"{browser} on {system}"
+    return browser or system or (ua[:40] if ua else "unknown device")
 
 
 def authenticate(db: Session, username: str, password: str) -> User | None:

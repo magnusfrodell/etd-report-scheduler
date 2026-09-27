@@ -22,10 +22,13 @@ from __future__ import annotations
 
 import base64
 import contextlib
+import csv
+import io
+import json
 import logging
 import ssl
 from collections import Counter
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from functools import partial
 from pathlib import Path
 from typing import Any
@@ -37,7 +40,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session
 
-from app import __version__
+from app import __version__, activity
 from app.branding import (
     DEFAULT_ACCENT,
     DEFAULT_PRIMARY,
@@ -62,6 +65,7 @@ from app.i18n import LANGUAGE_NAMES, LANGUAGES, normalize
 from app.models import (
     GLOBAL_ROLES,
     TENANT_ROLES,
+    ActivityEvent,
     Brand,
     ChatChannel,
     ConvictedMessage,
@@ -72,6 +76,7 @@ from app.models import (
     Tenant,
     TenantGrant,
     User,
+    UserSession,
     utcnow,
 )
 from app.reports.base import CATEGORIES, CATEGORY_KEYS, SCOPE_ALL, ReportDefinition
@@ -84,10 +89,15 @@ from app.tenant_profile import get_profile, parse_addresses, parse_domains, pars
 from app.web.auth import (
     SESSION_COOKIE,
     TENANT_COOKIE,
+    active_sessions,
     authenticate,
+    create_session,
+    current_session,
     current_tenant_selection,
+    device_label,
+    end_session,
+    end_sessions,
     hash_password,
-    session_token,
     validate_new_password,
     verify_password,
 )
@@ -97,7 +107,7 @@ from app.web.presenters import ago, local_dt, period_label, run_view, zone
 from app.web.security import login_limiter, safe_next
 
 log = logging.getLogger(__name__)
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(activity.prepare)])
 templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
 templates.env.globals["app_version"] = __version__
 templates.env.globals["REGIONS"] = REGIONS
@@ -167,24 +177,35 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
     wait = login_limiter.retry_after(username, client)
     if wait:
         log.warning("Sign-in for user %r from %s refused: too many failed attempts", username, client)
+        activity.note(actor=username.strip()[:120], outcome="denied")
         return _redirect("/login", f"Too many failed sign-ins. Try again in {max(1, -(-wait // 60))} min.", error=True)
     user = authenticate(db, username, password)
     if user is None:
         login_limiter.failed(username, client)
         log.warning("Failed login for user %r from %s", username, client)
+        activity.note(actor=username.strip()[:120])
         return _redirect("/login", "Wrong username or password.", error=True)
     login_limiter.succeeded(username, client)
+    cookie = create_session(db, user, request)
     db.commit()
+    activity.note(actor=user.username, actor_id=user.id)
     target = safe_next(next)
     resp = RedirectResponse(target, status_code=303)
     cfg = get_config()
-    resp.set_cookie(SESSION_COOKIE, session_token(user), httponly=True, samesite="lax", secure=cfg.cookie_secure, max_age=cfg.session_max_age_seconds)
+    resp.set_cookie(SESSION_COOKIE, cookie, httponly=True, samesite="lax", secure=cfg.cookie_secure, max_age=cfg.session_max_age_seconds)
     resp.set_cookie(TENANT_COOKIE, "all", samesite="lax", max_age=365 * 24 * 3600)
     return resp
 
 
 @router.post("/logout")
-def logout() -> Response:
+def logout(request: Request, db: Session = Depends(get_db)) -> Response:
+    """Sign out ends the session on the server too: a copy of the cookie stops working at once."""
+    session = current_session(db, request)
+    if session is not None:
+        user = db.get(User, session.user_id)
+        end_session(db, session.id, "signed out")
+        db.commit()
+        activity.note(actor=user.username if user else "", actor_id=session.user_id, target_type="session", target_id=str(session.id))
     resp = RedirectResponse("/login", status_code=303)
     resp.delete_cookie(SESSION_COOKIE)
     resp.delete_cookie(TENANT_COOKIE)
@@ -292,6 +313,8 @@ def tenant_create(
     tenant = Tenant(name=name, region=region, client_id=client_id.strip(), client_secret_enc=box.encrypt(client_secret.strip()) or "", api_key_enc=box.encrypt(api_key.strip()) or "", enabled=True)
     db.add(tenant)
     db.commit()
+    activity.note(target=tenant.name, target_type="tenant", target_id=str(tenant.id), tenant_id=tenant.id, outcome="ok",
+                  details={"region": tenant.region})  # created - a failed connection test afterwards is only a detail
     log.info("Tenant created: %s (%s) by %s", tenant.name, tenant.region, p.user.username)
     client = client_for_tenant(tenant, timeout=15)
     try:
@@ -433,6 +456,7 @@ def tenant_grant(tenant_id: int, user_id: int = Form(...), role: str = Form(...)
         grant.role = role
     db.commit()
     log.info("Access: %s is now %s on %s (by %s)", user.username, role, tenant.name, p.user.username)
+    activity.note(details={"user": user.username, "role": role})
     return _redirect("/tenants", f"{user.label} is now {role} on '{tenant.name}'.")
 
 
@@ -568,6 +592,8 @@ def schedule_create(
     db.commit()
     if scheduler.running:
         scheduler.reload_report_jobs()
+    activity.note(target=f"{definition.name} ({who})", target_type="schedule", target_id=str(schedule.id), tenant_id=schedule.tenant_id,
+                  details={"cron": cron, "language": schedule.language or None, "chat_channel_id": schedule.chat_channel_id})
     return _redirect("/schedules", f"Schedule for '{definition.name}' ({who}) created ({cron}, {settings.timezone}).")
 
 
@@ -670,6 +696,7 @@ def chat_webex_token(token: str = Form(""), clear: str = Form(""), db: Session =
         if row is not None:
             db.delete(row)
             db.commit()
+        activity.note(details={"webex_bot_token": "removed"})
         return _redirect("/chat", "The Webex bot token was removed.")
     token = token.strip() or load_settings(db).webex_bot_token
     if not token:
@@ -709,8 +736,10 @@ def chat_channel_create(name: str = Form(""), kind: str = Form(""), room_id: str
         hint = chat.target_hint("teams", address)
     else:
         return _redirect("/chat", "Choose Webex or Microsoft Teams.", error=True)
-    db.add(ChatChannel(name=name, kind=kind, target_enc=secret_box().encrypt(address), target_hint=hint))
+    channel = ChatChannel(name=name, kind=kind, target_enc=secret_box().encrypt(address), target_hint=hint)
+    db.add(channel)
     db.commit()
+    activity.note(target=name, target_type="chat_channel", target_id=str(channel.id), details={"kind": kind, "posts_to": hint})
     return _redirect("/chat", f"Channel '{name}' added - send a test message to check it.")
 
 
@@ -773,6 +802,7 @@ async def branding_create(request: Request, db: Session = Depends(get_db), p: Pr
         return _redirect("/branding", " ".join(errors), error=True)
     first = db.execute(select(Brand.id).limit(1)).first() is None
     brand = Brand(**values)
+    activity.note(target=values.get("name"), target_type="brand")
     if data:
         brand.logo_b64, brand.logo_type = base64.b64encode(data).decode(), kind
     db.add(brand)
@@ -1118,6 +1148,8 @@ def report_run_now(
                 return _redirect(back, "No enabled tenant you may run reports for - the operator role is required.", error=True)
             targets = list(allowed)
             label = f"{len(allowed)} tenant(s)"
+    activity.note(details={"tenants": len(targets), "recipients": len(to), "language": language or None,
+                           "chat_channel_id": int(chat_channel_id) if chat_channel_id.isdigit() else None})
     for tid in targets:
         channel = int(chat_channel_id) if chat_channel_id.isdigit() and db.get(ChatChannel, int(chat_channel_id)) else None
         background.add_task(run_report, report_key, tenant_id=tid, recipients=to, output_format=fmt, deliver=bool(to or channel),
@@ -1150,7 +1182,7 @@ def settings_page(request: Request, db: Session = Depends(get_db), p: Principal 
     settings = load_settings(db)
     from app.backup import storage_summary
 
-    return templates.TemplateResponse(request, "settings.html", _base_ctx(request, db, p, settings=settings, all_verdicts=ALL_VERDICTS,
+    return templates.TemplateResponse(request, "settings.html", _base_ctx(request, db, p, session_hours=get_config().session_max_age_seconds // 3600, settings=settings, all_verdicts=ALL_VERDICTS,
                                                                           pdf_available=pdf_available(), storage=storage_summary()))
 
 
@@ -1192,6 +1224,8 @@ async def settings_save(request: Request, db: Session = Depends(get_db), p: Prin
         "alert_recipients": str(form.get("alert_recipients", "")).strip(),
         "report_language": normalize(str(form.get("report_language", "en"))),
         "backup_keep": max(0, min(60, int(str(form.get("backup_keep", "7")) or 7))),
+        "session_idle_minutes": max(0, min(24 * 60, int(str(form.get("session_idle_minutes", "120")) or 0))),
+        "activity_retention_days": max(30, int(str(form.get("activity_retention_days", "365")) or 365)),
         "base_url": str(form.get("base_url", "")).strip(),
     }
     if values["smtp_ca_pem"]:
@@ -1247,7 +1281,10 @@ def users_page(request: Request, db: Session = Depends(get_db), p: Principal = D
     for g in db.execute(select(TenantGrant)).scalars():
         grants.setdefault(g.user_id, []).append(g)
     tenant_names = {t.id: t.name for t in db.execute(select(Tenant)).scalars()}
-    return templates.TemplateResponse(request, "users.html", _base_ctx(request, db, p, users=users, grants=grants, tenant_names=tenant_names))
+    sessions = _session_rows(db, active_sessions(db), zone(load_settings(db).timezone), getattr(request.state, "session_id", None))
+    session_counts = Counter(s["user_id"] for s in sessions)
+    return templates.TemplateResponse(request, "users.html", _base_ctx(request, db, p, users=users, grants=grants, tenant_names=tenant_names,
+                                                                        sessions=sessions, session_counts=session_counts))
 
 
 @router.post("/users")
@@ -1272,6 +1309,7 @@ def user_create(
     db.add(User(username=username, display_name=display_name.strip(), email=email.strip() or None, password_hash=hash_password(password), role=role, enabled=True))
     db.commit()
     log.info("User %s (%s) created by %s", username, role, p.user.username)
+    activity.note(target=username, target_type="user", details={"role": role})
     return _redirect("/users", f"User '{username}' created with role {role}. Give them tenant access on the Tenants page.")
 
 
@@ -1284,6 +1322,7 @@ def user_role(user_id: int, role: str = Form(...), db: Session = Depends(get_db)
         return _redirect("/users", "You cannot change your own role - ask another administrator.", error=True)
     if user.role == "admin" and role != "admin" and _admin_count(db, exclude_id=user.id) == 0:
         return _redirect("/users", "Cannot demote the last enabled administrator.", error=True)
+    activity.note(details={"role": [user.role, role]})
     user.role = role
     db.commit()
     return _redirect("/users", f"'{user.username}' is now {role}.")
@@ -1297,7 +1336,9 @@ def user_password(user_id: int, password: str = Form(...), db: Session = Depends
     if err := validate_new_password(password):
         return _redirect("/users", err, error=True)
     user.password_hash = hash_password(password)
+    ended = end_sessions(db, user.id, "password reset by an administrator")
     db.commit()
+    activity.note(details={"password": "reset", "sessions_ended": ended})
     log.info("Password reset for %s by %s", user.username, p.user.username)
     return _redirect("/users", f"Password for '{user.username}' reset; their existing sessions are signed out.")
 
@@ -1312,7 +1353,9 @@ def user_toggle(user_id: int, db: Session = Depends(get_db), p: Principal = Depe
     if user.enabled and user.role == "admin" and _admin_count(db, exclude_id=user.id) == 0:
         return _redirect("/users", "Cannot disable the last enabled administrator.", error=True)
     user.enabled = not user.enabled
+    ended = 0 if user.enabled else end_sessions(db, user.id, "account disabled")
     db.commit()
+    activity.note(details={"enabled": [not user.enabled, user.enabled], "sessions_ended": ended})
     return _redirect("/users", f"'{user.username}' {'enabled' if user.enabled else 'disabled'}.")
 
 
@@ -1333,14 +1376,147 @@ def user_delete(user_id: int, db: Session = Depends(get_db), p: Principal = Depe
 
 
 # ---------------------------------------------------------------- account
+def _session_rows(db: Session, sessions: list[UserSession], tz: Any, current_id: int | None) -> list[dict[str, Any]]:
+    names = {u.id: u.username for u in db.execute(select(User)).scalars()}
+    return [{"id": s.id, "user_id": s.user_id, "user": names.get(s.user_id, "?"), "device": device_label(s.user_agent), "ip": s.ip or "",
+             "started": local_dt(s.created_at, tz), "active": ago(s.last_seen_at), "current": s.id == current_id} for s in sessions]
+
+
+@router.post("/account/sessions/{session_id}/end")
+def account_session_end(session_id: int, request: Request, db: Session = Depends(get_db), p: Principal = Depends(get_principal)) -> Response:
+    session = db.get(UserSession, session_id)
+    if session is None or session.user_id != p.user.id:
+        raise forbid("That is not one of your sessions.")
+    if session.id == getattr(request.state, "session_id", None):
+        return _redirect("/account", "That is the session you are using - sign out instead.", error=True)
+    end_session(db, session_id, "ended by the user")
+    db.commit()
+    return _redirect("/account", "The session was ended - that browser is signed out.")
+
+
+@router.post("/account/sessions/end-others")
+def account_sessions_end_others(request: Request, db: Session = Depends(get_db), p: Principal = Depends(get_principal)) -> Response:
+    ended = end_sessions(db, p.user.id, "ended by the user", keep=getattr(request.state, "session_id", None))
+    db.commit()
+    activity.note(details={"sessions_ended": ended})
+    return _redirect("/account", f"{ended} other session(s) ended." if ended else "You had no other sessions.")
+
+
+@router.post("/sessions/{session_id}/end")
+def session_end(session_id: int, db: Session = Depends(get_db), p: Principal = Depends(require_admin)) -> Response:
+    if db.get(UserSession, session_id) is None:
+        raise HTTPException(404, "No such session")
+    end_session(db, session_id, f"ended by {p.user.username}")
+    db.commit()
+    return _redirect("/users", "The session was ended - that browser is signed out.")
+
+
+@router.post("/users/{user_id}/sessions/end")
+def user_sessions_end(user_id: int, request: Request, db: Session = Depends(get_db), p: Principal = Depends(require_admin)) -> Response:
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(404, "No such user")
+    keep = getattr(request.state, "session_id", None) if user_id == p.user.id else None
+    ended = end_sessions(db, user_id, f"ended by {p.user.username}", keep=keep)
+    db.commit()
+    activity.note(details={"sessions_ended": ended})
+    return _redirect("/users", f"{ended} session(s) of '{user.username}' ended.")
+
+
+# ---------------------------------------------------------------- the activity log
+ACTIVITY_PAGE_SIZE = 100
+ACTIVITY_EXPORT_LIMIT = 50_000
+
+
+def _activity_filter(params: Any) -> Any:
+    query = select(ActivityEvent)
+    if action := str(params.get("action") or "").strip():
+        query = query.where(ActivityEvent.action.startswith(action, autoescape=True))
+    if (outcome := params.get("outcome")) in ("ok", "failed", "denied"):
+        query = query.where(ActivityEvent.outcome == outcome)
+    if who := str(params.get("who") or "").strip():
+        query = query.where(ActivityEvent.actor.contains(who, autoescape=True))
+    if text := str(params.get("q") or "").strip():
+        query = query.where(ActivityEvent.target.contains(text, autoescape=True) | ActivityEvent.action.contains(text, autoescape=True))
+    if (tenant := str(params.get("tenant") or "")).isdigit():
+        query = query.where(ActivityEvent.tenant_id == int(tenant))
+    for key, op in (("since", "ge"), ("until", "lt")):
+        raw = str(params.get(key) or "").strip()
+        if not raw:
+            continue
+        try:
+            when = datetime.fromisoformat(raw)
+        except ValueError:
+            continue
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=UTC)
+        if op == "lt" and len(raw) == 10:  # a date: include the whole day
+            when += timedelta(days=1)
+        query = query.where(ActivityEvent.at >= when if op == "ge" else ActivityEvent.at < when)
+    return query.order_by(ActivityEvent.id.desc())
+
+
+def _activity_dict(e: ActivityEvent) -> dict[str, Any]:
+    return {"id": e.id, "at": e.at.isoformat(), "actor": e.actor, "actor_id": e.actor_id, "ip": e.ip, "action": e.action,
+            "target_type": e.target_type, "target_id": e.target_id, "target": e.target, "tenant_id": e.tenant_id,
+            "outcome": e.outcome, "details": e.details}
+
+
+def _details_text(details: dict[str, Any] | None) -> str:
+    def show(value: Any) -> str:
+        if isinstance(value, list) and len(value) == 2:
+            return f"{value[0]} → {value[1]}"
+        if isinstance(value, dict):
+            return "; ".join(f"{k}: {show(v)}" for k, v in value.items())
+        return str(value)
+    return "; ".join(f"{k}: {show(v)}" for k, v in (details or {}).items())
+
+
+@router.get("/activity", response_class=HTMLResponse)
+def activity_page(request: Request, db: Session = Depends(get_db), p: Principal = Depends(require_admin)) -> Response:
+    params = request.query_params
+    page = max(1, int(params.get("page", "1")) if str(params.get("page", "1")).isdigit() else 1)
+    rows = list(db.execute(_activity_filter(params).offset((page - 1) * ACTIVITY_PAGE_SIZE).limit(ACTIVITY_PAGE_SIZE + 1)).scalars())
+    settings = load_settings(db)
+    tz = zone(settings.timezone)
+    tenant_names = {t.id: t.name for t in db.execute(select(Tenant)).scalars()}
+    events = [{**_activity_dict(e), "when": local_dt(e.at, tz), "tenant": tenant_names.get(e.tenant_id, f"#{e.tenant_id}") if e.tenant_id else "",
+               "details_text": _details_text(e.details)} for e in rows[:ACTIVITY_PAGE_SIZE]]
+    categories = sorted({a.split(".")[0] for a in (*activity.ACTIONS.values(), *activity.READ_ACTIONS.values()) if a})
+    query = {k: v for k, v in params.items() if k != "page" and v}
+    return templates.TemplateResponse(request, "activity.html", _base_ctx(
+        request, db, p, events=events, page=page, more=len(rows) > ACTIVITY_PAGE_SIZE, categories=categories, filters=query,
+        filter_query=urlencode(query), tenant_names=tenant_names, retention_days=settings.activity_retention_days))
+
+
+@router.get("/activity/export")
+def activity_export(request: Request, format: str = "csv", db: Session = Depends(get_db), p: Principal = Depends(require_admin)) -> Response:
+    rows = [_activity_dict(e) for e in db.execute(_activity_filter(request.query_params).limit(ACTIVITY_EXPORT_LIMIT)).scalars()]
+    stamp = f"{utcnow():%Y%m%d-%H%M%S}"
+    if format == "json":
+        return Response(json.dumps(rows, ensure_ascii=False, indent=1), media_type="application/json",
+                        headers={"Content-Disposition": f'attachment; filename="activity-{stamp}.json"'})
+    out = io.StringIO()
+    columns = ["id", "at", "actor", "actor_id", "ip", "action", "target_type", "target_id", "target", "tenant_id", "outcome", "details"]
+    writer = csv.DictWriter(out, fieldnames=columns)
+    writer.writeheader()
+    for row in rows:
+        writer.writerow({**row, "details": json.dumps(row["details"], ensure_ascii=False) if row["details"] else ""})
+    return Response(out.getvalue(), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="activity-{stamp}.csv"'})
+
+
 @router.get("/account", response_class=HTMLResponse)
 def account_page(request: Request, db: Session = Depends(get_db), p: Principal = Depends(get_principal)) -> Response:
     tenant_names = {t.id: t.name for t in p.visible_tenants(db)}
-    return templates.TemplateResponse(request, "account.html", _base_ctx(request, db, p, tenant_names=tenant_names))
+    tz = zone(load_settings(db).timezone)
+    sessions = _session_rows(db, active_sessions(db, p.user.id), tz, getattr(request.state, "session_id", None))
+    return templates.TemplateResponse(request, "account.html", _base_ctx(request, db, p, tenant_names=tenant_names, sessions=sessions))
 
 
 @router.post("/account/password")
 def account_password(
+    request: Request,
     current_password: str = Form(...),
     new_password: str = Form(...),
     confirm_password: str = Form(...),
@@ -1356,8 +1532,13 @@ def account_password(
     if err := validate_new_password(new_password):
         return _redirect("/account", err, error=True)
     user.password_hash = hash_password(new_password)
+    # Every session ends - this one too, in case a copy of its cookie is why the password is changing -
+    # and this browser continues in a fresh session.
+    ended = end_sessions(db, user.id, "password changed")
+    cookie = create_session(db, user, request)
     db.commit()
+    activity.note(details={"password": "changed", "sessions_ended": ended})
     resp = _redirect("/account", "Password changed. Other sessions of your account are signed out.")
     cfg = get_config()
-    resp.set_cookie(SESSION_COOKIE, session_token(user), httponly=True, samesite="lax", secure=cfg.cookie_secure, max_age=cfg.session_max_age_seconds)
+    resp.set_cookie(SESSION_COOKIE, cookie, httponly=True, samesite="lax", secure=cfg.cookie_secure, max_age=cfg.session_max_age_seconds)
     return resp

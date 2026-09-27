@@ -20,23 +20,25 @@ and is subject to the same roles.
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app import __version__
+from app import __version__, activity
 from app.collectors import runner
 from app.config import get_config
 from app.db import get_db
 from app.i18n import LANGUAGES
-from app.models import Tenant, User
+from app.models import ActivityEvent, Tenant, User
 from app.reports.base import SCOPE_ALL
 from app.reports.registry import REPORTS, get_report
 from app.scheduler import scheduler
 from app.services import run_report
 from app.web.authz import Principal, ensure, forbid, get_principal, require_admin, require_tenant_admin
 
-router = APIRouter(prefix="/api")
+router = APIRouter(prefix="/api", dependencies=[Depends(activity.prepare)])
 
 
 @router.get("/health")
@@ -150,3 +152,17 @@ def list_users(db: Session = Depends(get_db), p: Principal = Depends(require_adm
         {"id": u.id, "username": u.username, "display_name": u.display_name, "email": u.email, "role": u.role, "enabled": u.enabled, "last_login_at": u.last_login_at}
         for u in db.execute(select(User).order_by(User.username)).scalars()
     ]
+
+
+@router.get("/activity")
+def api_activity(request: Request, limit: int = 500, before_id: int | None = None, db: Session = Depends(get_db),
+                 p: Principal = Depends(require_admin)) -> dict[str, Any]:
+    """The activity log, newest first. Filters as on the Activity log page (action, outcome, who, q,
+    tenant, since, until); page with ``before_id`` = the ``next_before_id`` of the previous answer."""
+    from app.web.routes_ui import _activity_dict, _activity_filter  # the page and the API filter alike
+
+    query = _activity_filter(request.query_params)
+    if before_id:
+        query = query.where(ActivityEvent.id < before_id)
+    rows = list(db.execute(query.limit(max(1, min(limit, 5000)))).scalars())
+    return {"events": [_activity_dict(e) for e in rows], "next_before_id": rows[-1].id if rows else None}

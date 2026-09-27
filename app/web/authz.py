@@ -30,6 +30,7 @@ from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app import activity
 from app.db import get_db
 from app.models import Tenant, TenantGrant, User
 from app.web.auth import user_from_session
@@ -109,10 +110,13 @@ def get_principal(request: Request, db: Session = Depends(get_db)) -> Principal:
         if request.url.path.startswith("/api/"):
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Authentication required")
         raise HTTPException(status.HTTP_303_SEE_OTHER, headers={"Location": f"/login?next={request.url.path}"})
-    return build_principal(db, user)
+    principal = build_principal(db, user)
+    request.state.principal = principal  # for the activity log
+    return principal
 
 
 def forbid(message: str = "You do not have permission to do that.") -> HTTPException:
+    activity.note(outcome="denied", details={"message": message})
     return HTTPException(status.HTTP_403_FORBIDDEN, message)
 
 

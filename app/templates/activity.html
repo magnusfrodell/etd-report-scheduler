@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Activity log - ETD Report Scheduler{% endblock %}
+{% block heading %}Activity log{% endblock %}
+{% block content %}
+<div class="scope-bar"><div>Who did what in ETD Report Scheduler: every change made through the UI or the API, sign-ins, and opened reports, each with its outcome - <strong>ok</strong>, <strong>failed</strong> or <strong>denied</strong>. Kept for {{ retention_days }} days (Settings). Passwords, tokens and webhook addresses are never recorded. ETD's own audit trail is in the <em>Audit and compliance</em> report.</div></div>
+
+<section class="panel">
+  <form method="get" action="/activity" class="form-grid">
+    <div><label class="field" for="f-who">Who</label><input id="f-who" name="who" type="text" value="{{ filters.who or '' }}" placeholder="username"></div>
+    <div><label class="field" for="f-action">Action</label><select id="f-action" name="action"><option value="">All</option>{% for c in categories %}<option value="{{ c }}." {{ 'selected' if filters.action == c ~ '.' else '' }}>{{ c }}</option>{% endfor %}</select></div>
+    <div><label class="field" for="f-outcome">Outcome</label><select id="f-outcome" name="outcome"><option value="">All</option>{% for o in ('ok', 'failed', 'denied') %}<option value="{{ o }}" {{ 'selected' if filters.outcome == o else '' }}>{{ o }}</option>{% endfor %}</select></div>
+    <div><label class="field" for="f-tenant">Tenant</label><select id="f-tenant" name="tenant"><option value="">All</option>{% for id, name in tenant_names.items() %}<option value="{{ id }}" {{ 'selected' if filters.tenant == id|string else '' }}>{{ name }}</option>{% endfor %}</select></div>
+    <div><label class="field" for="f-since">From</label><input id="f-since" name="since" type="date" value="{{ filters.since or '' }}"></div>
+    <div><label class="field" for="f-until">To</label><input id="f-until" name="until" type="date" value="{{ filters.until or '' }}"></div>
+    <div><label class="field" for="f-q">Target or action contains</label><input id="f-q" name="q" type="text" value="{{ filters.q or '' }}"></div>
+    <div><label class="field">&nbsp;</label><button type="submit" class="small">Filter</button> <a class="small" href="/activity">Clear</a></div>
+  </form>
+</section>
+
+<section class="panel">
+  <h2>Events{% if filters %} (filtered){% endif %}</h2>
+  <p class="small muted">Export this selection as <a href="/activity/export?format=csv&amp;{{ filter_query }}">CSV</a> or <a href="/activity/export?format=json&amp;{{ filter_query }}">JSON</a>, or pull it into a SIEM from <code>GET /api/activity</code>.</p>
+  {% if events %}
+  <table>
+    <tr><th>When</th><th>Who</th><th>Action</th><th>Target</th><th>Tenant</th><th>Outcome</th><th>Details</th></tr>
+    {% for e in events %}
+    <tr>
+      <td class="small">{{ e.when }}</td>
+      <td><strong>{{ e.actor }}</strong>{% if e.ip %}<div class="muted small">{{ e.ip }}</div>{% endif %}</td>
+      <td><code>{{ e.action }}</code></td>
+      <td>{{ e.target or '' }}{% if e.target_type %}<div class="muted small">{{ e.target_type }}{% if e.target_id %} #{{ e.target_id }}{% endif %}</div>{% endif %}</td>
+      <td class="small">{{ e.tenant }}</td>
+      <td>{% if e.outcome == 'ok' %}<span class="badge scheduled">ok</span>{% else %}<span class="warn-text">{{ e.outcome }}</span>{% endif %}</td>
+      <td class="small">{{ e.details_text }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p class="small">{% if page > 1 %}<a href="/activity?page={{ page - 1 }}&amp;{{ filter_query }}">← Newer</a>{% endif %}{% if more %}{% if page > 1 %} · {% endif %}<a href="/activity?page={{ page + 1 }}&amp;{{ filter_query }}">Older →</a>{% endif %}</p>
+  {% else %}<p class="muted">Nothing recorded{% if filters %} for this selection{% endif %}.</p>{% endif %}
+</section>
+{% endblock %}

@@ -21,4 +21,21 @@
     </form>
   </div>
 </section>
+
+<section class="panel">
+  <h2>Your sessions</h2>
+  <p class="muted small">Every browser signed in to your account. Ending a session signs that browser out at once - a copy of its cookie stops working too.</p>
+  <table>
+    <tr><th>Device</th><th>IP address</th><th>Signed in</th><th>Last active</th><th></th></tr>
+    {% for s in sessions %}
+    <tr>
+      <td>{{ s.device }}{% if s.current %} <span class="badge scheduled">this browser</span>{% endif %}</td>
+      <td class="small">{{ s.ip }}</td><td class="small">{{ s.started }}</td><td class="small">{{ s.active }}</td>
+      <td class="actions">{% if not s.current %}<form method="post" action="/account/sessions/{{ s.id }}/end"><button class="small secondary">End</button></form>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% if sessions|length > 1 %}<form method="post" action="/account/sessions/end-others"><button class="small secondary">Sign out all other sessions</button></form>{% endif %}
+</section>
+
 {% endblock %}

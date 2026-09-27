@@ -18,12 +18,13 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass, field, fields
+from dataclasses import asdict, dataclass, field, fields
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy.orm import Session
 
+from app import activity
 from app.crypto import secret_box
 from app.models import Setting
 
@@ -62,6 +63,8 @@ class RuntimeSettings:
     base_url: str = ""
     webex_bot_token: str = ""  # decrypted in memory only
     alert_chat_channel_id: int = 0  # chat channel for alerts; 0 = none
+    session_idle_minutes: int = 120  # sign out after this long without activity; 0 = only the absolute lifetime
+    activity_retention_days: int = 365  # how long this tool's activity log is kept
 
     SECRET_KEYS = ("smtp_password", "webex_bot_token")
 
@@ -106,6 +109,11 @@ def load_settings(session: Session) -> RuntimeSettings:
 def save_settings(session: Session, values: dict[str, Any]) -> None:
     """Persist a subset of settings. Unknown keys are ignored, secrets are encrypted."""
     known = {f.name for f in fields(RuntimeSettings)}
+    current = asdict(load_settings(session))
+    changed = {key: ("changed" if key in RuntimeSettings.SECRET_KEYS else [current.get(key), value]) for key, value in values.items()
+               if key in known and value != current.get(key) and not (key in RuntimeSettings.SECRET_KEYS and value == "")}
+    if changed:
+        activity.note(details={"settings": changed})
     for key, value in values.items():
         if key not in known:
             continue

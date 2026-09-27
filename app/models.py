@@ -449,6 +449,44 @@ class AlertState(Base):
     detail: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
+class UserSession(Base):
+    """A signed-in browser. The cookie carries a random token and only its SHA-256 is stored here, so the
+    database alone signs nobody in - and a session ended here is ended everywhere, whoever holds the cookie."""
+
+    __tablename__ = "user_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=utcnow)
+    last_seen_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False)
+    ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+    revoked_reason: Mapped[str | None] = mapped_column(String(60), nullable=True)
+
+
+class ActivityEvent(Base):
+    """Who did what in this tool, when, from where, and whether it was allowed. Names are copied at the
+    time, so the history stays readable after a user, tenant or schedule is deleted."""
+
+    __tablename__ = "activity_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=utcnow, index=True)
+    actor_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    actor: Mapped[str] = mapped_column(String(120), nullable=False, default="", server_default="")
+    ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    action: Mapped[str] = mapped_column(String(60), nullable=False, index=True)
+    target_type: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    target_id: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    target: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    tenant_id: Mapped[int | None] = mapped_column(Integer, nullable=True)  # no foreign key: the history outlives the tenant
+    outcome: Mapped[str] = mapped_column(String(10), nullable=False, default="ok", server_default="ok")  # ok | failed | denied
+    details: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+
+
 class ChatChannel(Base):
     """A Webex space or Microsoft Teams channel that reports and alerts are posted to (the SOC's own channel)."""
 

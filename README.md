@@ -34,7 +34,7 @@ Bundled reports:
 
 **Technology stack:** Python 3.12, FastAPI, SQLAlchemy 2 + Alembic (SQLite by default, PostgreSQL optional), APScheduler, Jinja2, WeasyPrint for PDF, httpx for the ETD API. Standalone application, delivered as a Docker image; no external services other than the ETD API and an SMTP relay.
 
-**Status:** 0.11.0, alpha. The collectors (including Log Export), scheduler, twelve reports (in English and Swedish) and the admin UI work end to end against a fake ETD API in the test-suite (`pytest`, 158 tests) and have been smoke-tested as a running application. Validation against production ETD tenants in all five regions is the next step - please open an issue with what you find. This is community sample code, not a Cisco product, and is not supported by Cisco TAC.
+**Status:** 0.12.0, alpha. The collectors (including Log Export), scheduler, twelve reports (in English and Swedish) and the admin UI work end to end against a fake ETD API in the test-suite (`pytest`, 172 tests) and have been smoke-tested as a running application. Validation against production ETD tenants in all five regions is the next step - please open an issue with what you find. This is community sample code, not a Cisco product, and is not supported by Cisco TAC.
 
 <!-- Add a screenshot of the dashboard here once you run it against a real tenant: ![Dashboard](docs/dashboard.png) -->
 
@@ -64,7 +64,7 @@ docker run -d --name etd-demo -p 8080:8080 \
   -e DEMO_MODE=true -e ADMIN_PASSWORD=choose-a-password \
   -e SECRET_KEY="$(openssl rand -hex 32)" \
   -e ENCRYPTION_KEY="$(python3 -c 'import base64, os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())')" \
-  ghcr.io/magnusfrodell/etd-report-scheduler:0.11.0
+  ghcr.io/magnusfrodell/etd-report-scheduler:0.12.0
 ```
 
 Sign in at http://localhost:8080 as `admin`. Within a minute the demo has collected 90 days of history and filled the archive with the reports its schedules would have produced. Each tenant has a story:
@@ -95,7 +95,7 @@ Prerequisites: Docker 24+ with Compose, network access from the container to `ap
 A pre-built multi-arch image (amd64/arm64) is published for every release tag:
 
 ```bash
-docker pull ghcr.io/magnusfrodell/etd-report-scheduler:0.11.0
+docker pull ghcr.io/magnusfrodell/etd-report-scheduler:0.12.0
 ```
 
 To use it, set `image:` instead of `build:` in `docker-compose.yml` (the line is there, commented out). To build yourself instead:
@@ -167,7 +167,7 @@ pytest
 | `LOG_LEVEL` | no | `INFO` | Log verbosity (stdout) |
 | `HTTP_TIMEOUT` | no | `30` | Seconds per ETD API request |
 | `SCHEDULER_ENABLED` | no | `true` | `false` runs the UI without any automatic jobs |
-| `SESSION_MAX_AGE_SECONDS` | no | `43200` | Admin session lifetime |
+| `SESSION_MAX_AGE_SECONDS` | no | `43200` | Longest a sign-in lasts (12 h); inactivity ends it sooner - see Settings |
 | `COOKIE_SECURE` | no | `false` | Set `true` behind HTTPS |
 | `FORWARDED_ALLOW_IPS` | no | `127.0.0.1` | Proxies whose `X-Forwarded-*` headers are trusted (comma-separated addresses or networks) |
 | `TRUSTED_ORIGINS` | no | – | Extra origins allowed to submit forms, e.g. `https://reports.example.com` behind a proxy that rewrites the `Host` header |
@@ -250,6 +250,7 @@ Sign in as the bootstrap admin, add a tenant, then add users:
 8. **Branding** (administrators) – add a brand with a name, a PNG or JPEG logo, header and accent colours and a footer, and optionally the e-mail sender name, Reply-To and a subject prefix. The first brand becomes the default; a tenant can use another one from its reporting profile. **Preview a report** shows the brand on a real report, as HTML or PDF. In e-mails the logo is embedded as an inline image, because mail clients block data: images. Without a brand, reports keep the neutral look.
 9. **Report languages** – reports, PDFs and report e-mails in English or Swedish. Set the default under **Settings**, a customer's language in the tenant's reporting profile, or pick one for a schedule or a single **Run now**. See [Report languages](#report-languages).
 10. **Chat** (administrators) – add the SOC's Webex space or Teams channel, then pick it as *Post to* in a schedule or a Run now; alerts can be posted there too.
+11. **Activity log** (administrators) – who did what in the tool, sign-ins and opened reports, with filters and CSV/JSON export. **Users** shows who is signed in and ends sessions; **Your account** shows your own. See [Activity log and sessions](#activity-log-and-sessions).
 
 The tenant switcher in the header filters the dashboard, schedules and report cards to one tenant, or shows all; the archive starts from it and has its own tenant filter. Times in the archive are shown in the timezone from Settings.
 
@@ -299,12 +300,18 @@ Reports and alerts can be posted to the SOC's own Webex space or Microsoft Teams
 
 Pick the channel as **Post to** in a schedule (a schedule for all tenants posts one message per tenant) or in **Run now**, and under **Chat > Alerts** to post failed or partly delivered scheduled reports and stalled data collection there too. A chat outage never fails a report: the archive shows *Not posted to …* with the reason, the channel shows its last result, and the alert recipients are told. **Send a test** on the Chat page checks a channel. In demo mode, messages are saved to `/data/demo-outbox` instead of being posted.
 
+### Activity log and sessions
+
+**Activity log.** Every change made through the UI or the API is recorded once it has been answered - tenants, schedules, reports run, settings, users and access, brands, chat channels, backups - together with sign-ins, sign-outs, ended sessions and opened archived reports. Each entry says who (username and IP address), what, which object (by name, so it stays readable after the object is deleted), which tenant, and the outcome: *ok*, *failed* (with the message the user saw) or *denied* (not allowed, or not signed in). Changed settings are listed by name; passwords, tokens and webhook addresses are never recorded - a changed secret shows as *changed*. Administrators read the log under **Activity log**, filter it by person, kind of action, outcome, tenant and date, export the selection as CSV or JSON, or pull it into a SIEM from `GET /api/activity` (newest first, page with `before_id`). It is kept for 365 days by default (**Settings**). ETD's own audit trail is a different thing: it is collected from ETD and shown in the *Audit and compliance* report.
+
+**Sessions.** A sign-in is a session on the server; the cookie only carries a random token, and the database stores just a hash of it. Signing out ends the session on the server, so a copy of the cookie stops working at once. A session also ends after 120 minutes without activity (set it under **Settings**; 0 keeps only the 12-hour limit of `SESSION_MAX_AGE_SECONDS`), when an administrator resets the user's password or disables the account, and when the user changes their own password - that browser then continues in a new session. **Users** lists who is signed in, from which device and address, with **End** per session and **Sign out** per user; **Your account** lists your own sessions, with **Sign out all other sessions**.
+
 ### Continuous integration
 
 `.github/workflows/ci.yml` runs ruff, the test-suite and an Alembic consistency check on every push and pull request. `.github/workflows/docker.yml` builds and publishes the container image to GitHub Container Registry when a `v*` tag is pushed:
 
 ```bash
-git tag v0.11.0 && git push origin v0.11.0
+git tag v0.12.0 && git push origin v0.12.0
 ```
 
 ### Architecture

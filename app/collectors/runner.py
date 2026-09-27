@@ -32,6 +32,7 @@ from app.delivery import archive as report_files
 from app.etd.client import ETDClient
 from app.etd.factory import client_for_tenant
 from app.models import (
+    ActivityEvent,
     AuditEvent,
     ConvictedMessage,
     DailyStat,
@@ -42,6 +43,7 @@ from app.models import (
     SenderDomainDaily,
     Tenant,
     TopEntry,
+    UserSession,
     utcnow,
 )
 from app.settings_store import RuntimeSettings, load_settings
@@ -261,6 +263,11 @@ def purge_old_data() -> dict[str, int]:
         doomed_files: list[str] = []
         deleted = {
             "daily_stats": session.query(DailyStat).filter(DailyStat.day < cutoff.date()).delete(synchronize_session=False),
+            "activity_events": session.query(ActivityEvent).filter(
+                ActivityEvent.at < utcnow() - timedelta(days=settings.activity_retention_days)).delete(synchronize_session=False),
+            "user_sessions": session.query(UserSession).filter(
+                (UserSession.revoked_at < utcnow() - timedelta(days=30)) | (UserSession.expires_at < utcnow() - timedelta(days=30))
+            ).delete(synchronize_session=False),
             "top_entries": session.query(TopEntry).filter(TopEntry.period_end < cutoff.date()).delete(synchronize_session=False),
             "convicted_messages": session.query(ConvictedMessage)
             .filter(ConvictedMessage.timestamp < cutoff)

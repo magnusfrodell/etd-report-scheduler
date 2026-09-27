@@ -3,6 +3,22 @@
 Database migrations run automatically at start-up. Every version runs as a single container
 with its state in the `/data` volume.
 
+## 0.12.0 - Activity log and server-side sessions
+
+### Added
+- **Activity log** (administrators) - who did what in the tool: every change made through the UI or the API, sign-ins and sign-outs, ended sessions and opened archived reports, with the actor, IP address, object (named, so deleted objects stay readable), tenant and outcome (*ok*, *failed* with the message shown, or *denied*). Changed settings are listed by name; passwords, tokens and webhook addresses are never recorded. Filters, CSV and JSON export, and `GET /api/activity` for a SIEM. Kept for 365 days by default.
+- **Sessions you can see and end** - Users lists who is signed in, from which device and address, with End per session and Sign out per user; Your account lists your own sessions with Sign out all other sessions.
+- **Sign out after inactivity** - 120 minutes by default (Settings; 0 keeps only the 12-hour limit).
+- A test fails when a new route that changes something has no activity name, so the log cannot quietly miss a feature.
+
+### Changed
+- **Signing out ends the session on the server.** Before, it only deleted the browser's cookie, and a copy of the cookie stayed valid for up to 12 hours.
+- A sign-in is now a server-side session: the cookie carries a random token and the database stores only its hash. Resetting a user's password or disabling the account ends their sessions, and changing your own password ends every session - the current one included, in case a copied cookie is why - and continues this browser in a new one.
+
+### Upgrade notes
+- Migration 0011 adds the sessions and the activity log. Everyone signs in again once after the upgrade.
+- Sessions now end after 120 minutes without activity. Set **Sign out after inactivity** to 0 under Settings for the previous behaviour.
+
 ## 0.11.0 - Chat delivery: Webex and Microsoft Teams
 
 ### Added
