@@ -95,4 +95,6 @@ def status(key: ApiKey) -> str:
         return "revoked"
     if key.expires_at is not None and key.expires_at <= utcnow():
         return "expired"
+    if key.expires_at is not None and key.expires_at <= utcnow() + timedelta(days=7):
+        return "expires soon"
     return "active"

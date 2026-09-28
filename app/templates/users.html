@@ -65,7 +65,7 @@
       <td class="small">{{ k.expires }}</td>
       <td class="small">{{ k.last_used }}{% if k.last_ip %}<div class="muted">{{ k.last_ip }}</div>{% endif %}</td>
       <td>{% if k.status == 'active' %}<span class="badge scheduled">active</span>{% else %}<span class="warn-text">{{ k.status }}</span>{% endif %}</td>
-      <td class="actions">{% if k.status == 'active' %}<form method="post" action="/api-keys/{{ k.id }}/revoke" data-confirm="Revoke the API key {{ k.name }} of {{ k.user }}?"><button class="small danger">Revoke</button></form>{% endif %}</td>
+      <td class="actions">{% if k.status in ('active', 'expires soon') %}<form method="post" action="/api-keys/{{ k.id }}/revoke" data-confirm="Revoke the API key {{ k.name }} of {{ k.user }}?"><button class="small danger">Revoke</button></form>{% endif %}</td>
     </tr>
     {% endfor %}
   </table>

@@ -3,6 +3,20 @@
 Database migrations run automatically at start-up. Every version runs as a single container
 with its state in the `/data` volume.
 
+## 0.16.0 - Ready for 1.0: upgrades, scale and reminders
+
+### Added
+- **API key reminders** - a week before a key expires, and again on its last day, the alert recipients (e-mail and chat) and the key's owner are told; key lists show *expires soon*. A script whose key lapsed used to just stop working.
+- **A year of history in demo mode** - beyond the 90 days ETD keeps, so the Trends reports show twelve months (the older months are a little calmer, so the last quarter has a rise to read about). The demo schedules include both trend reports.
+
+### Verified
+- **Upgrades with data** - a test runs every migration in order on a database with a row in every table, then back to the first release and up again. A migration that adds a required column without a default passes on an empty test database and breaks every real installation; this now fails the build.
+- **Scale** - a test checks that the reports across tenants ask the database the same number of questions with 12 more tenants.
+- **Regions** - the API addresses for the Americas, Europe, Australia, India and the UAE match Cisco's API documentation.
+
+### Upgrade notes
+- No migration.
+
 ## 0.15.0 - Trends over time
 
 ### Added

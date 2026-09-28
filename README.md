@@ -36,7 +36,7 @@ Bundled reports:
 
 **Technology stack:** Python 3.12, FastAPI, SQLAlchemy 2 + Alembic (SQLite by default, PostgreSQL optional), APScheduler, Jinja2, WeasyPrint for PDF, httpx for the ETD API. Standalone application, delivered as a Docker image; no external services other than the ETD API and an SMTP relay.
 
-**Status:** 0.15.0, alpha. The collectors (including Log Export), scheduler, fourteen reports (in English and Swedish) and the admin UI work end to end against a fake ETD API in the test-suite (`pytest`, 205 tests) and have been smoke-tested as a running application. Validation against production ETD tenants in all five regions is the next step - please open an issue with what you find. This is community sample code, not a Cisco product, and is not supported by Cisco TAC.
+**Status:** 0.16.0, alpha. The collectors (including Log Export), scheduler, fourteen reports (in English and Swedish) and the admin UI work end to end against a fake ETD API in the test-suite (`pytest`, 210 tests) and have been smoke-tested as a running application. Validation against production ETD tenants in all five regions is the next step - please open an issue with what you find. This is community sample code, not a Cisco product, and is not supported by Cisco TAC.
 
 <!-- Add a screenshot of the dashboard here once you run it against a real tenant: ![Dashboard](docs/dashboard.png) -->
 
@@ -66,7 +66,7 @@ docker run -d --name etd-demo -p 8080:8080 \
   -e DEMO_MODE=true -e ADMIN_PASSWORD=choose-a-password \
   -e SECRET_KEY="$(openssl rand -hex 32)" \
   -e ENCRYPTION_KEY="$(python3 -c 'import base64, os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())')" \
-  ghcr.io/magnusfrodell/etd-report-scheduler:0.15.0
+  ghcr.io/magnusfrodell/etd-report-scheduler:0.16.0
 ```
 
 Sign in at http://localhost:8080 as `admin`. Within a minute the demo has collected 90 days of history and filled the archive with the reports its schedules would have produced. Each tenant has a story:
@@ -86,6 +86,8 @@ E-mails are saved as `.eml` files in `/data/demo-outbox` instead of being sent. 
 
 ![Vendor risk as PDF](docs/images/vendor-risk-pdf.png)
 
+The demo holds a year of history - more than the 90 days ETD itself keeps - so the **Trends** reports have something to show.
+
 To see a Swedish report, open a demo tenant's reporting profile on the Tenants page, set *Report language* to Svenska and press **Run now** on any report card.
 
 ## Installation
@@ -97,7 +99,7 @@ Prerequisites: Docker 24+ with Compose, network access from the container to `ap
 A pre-built multi-arch image (amd64/arm64) is published for every release tag:
 
 ```bash
-docker pull ghcr.io/magnusfrodell/etd-report-scheduler:0.15.0
+docker pull ghcr.io/magnusfrodell/etd-report-scheduler:0.16.0
 ```
 
 To use it, set `image:` instead of `build:` in `docker-compose.yml` (the line is there, commented out). To build yourself instead:
@@ -257,7 +259,7 @@ Sign in as the bootstrap admin, add a tenant, then add users:
 
 The tenant switcher in the header filters the dashboard, schedules and report cards to one tenant, or shows all; the archive starts from it and has its own tenant filter. Times in the archive are shown in the timezone from Settings.
 
-The same actions are available as JSON for automation, with an API key (interactive documentation at `/api/docs`, where **Authorize** takes a key). Create a key under **Your account** - or, for an integration, create a user for it with only the access it needs and give it a key on the **Users** page. A key acts as its user and can only narrow what the user may do: *Read* allows GET requests, *Read and run* also starts reports and collection where the user's role on the tenant allows it. Keys work with `/api` only, are shown once, stored as a hash, and stop working when revoked, when they expire (30 days to never; 90 by default) or when their user is disabled.
+The same actions are available as JSON for automation, with an API key (interactive documentation at `/api/docs`, where **Authorize** takes a key). Create a key under **Your account** - or, for an integration, create a user for it with only the access it needs and give it a key on the **Users** page. A key acts as its user and can only narrow what the user may do: *Read* allows GET requests, *Read and run* also starts reports and collection where the user's role on the tenant allows it. Keys work with `/api` only, are shown once, stored as a hash, and stop working when revoked, when they expire (30 days to never; 90 by default) or when their user is disabled. A week before a key expires, and again on its last day, the alert recipients and the key's owner are reminded.
 
 ```bash
 # health (no authentication)
@@ -329,7 +331,7 @@ People can sign in with **Duo Single Sign-On** - or Entra ID, Okta or any OpenID
 `.github/workflows/ci.yml` runs ruff, the test-suite and an Alembic consistency check on every push and pull request. `.github/workflows/docker.yml` builds and publishes the container image to GitHub Container Registry when a `v*` tag is pushed:
 
 ```bash
-git tag v0.15.0 && git push origin v0.15.0
+git tag v0.16.0 && git push origin v0.16.0
 ```
 
 ### Architecture

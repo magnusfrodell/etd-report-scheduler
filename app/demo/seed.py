@@ -17,16 +17,20 @@
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
+import random
+from collections import Counter
+from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.collectors import runner
+from app.collectors.convictions import map_message
 from app.crypto import secret_box
 from app.db import session_scope
+from app.demo import simulator
 from app.demo.scenario import ANALYSTS, TENANTS, DemoTenant
-from app.models import Brand, ReportSchedule, Tenant, utcnow
+from app.models import Brand, DailyStat, ReportSchedule, Tenant, utcnow
 from app.reports.registry import get_report
 from app.settings_store import load_settings, save_settings
 
@@ -45,7 +49,11 @@ DEMO_SCHEDULES: tuple[tuple[str, str, str | None, str, str, bool], ...] = (
     ("executive_summary", "group", "Premium", "both", "noc@demo-partner.example", False),
     ("posture_effectiveness", "group", "Premium", "both", "noc@demo-partner.example", False),
     ("cross_tenant_rollup", "tenant", None, "fixed", "", False),  # one report across all tenants, to the partner recipients
+    ("trends", "all", None, "tenant", "", False),
+    ("trends_all", "tenant", None, "fixed", "", False),
 )
+HISTORY_DAYS = 395  # a year and a month, so Trends can set the latest month against the same month a year earlier
+CALMER = 0.7  # older months keep this share of the threats, so the last quarter shows a rise worth reading about
 
 
 def add_demo_tenant(session: Session, spec: DemoTenant) -> Tenant:
@@ -128,8 +136,42 @@ def fill_archive_history(schedule_ids: list[int] | None = None, per_schedule: in
     return runs
 
 
+def extend_history(tenant_ids: list[int] | None = None, days: int = HISTORY_DAYS) -> int:
+    """History beyond the 90 days ETD (and the simulated API) offers, as if the tool had been collecting for a
+    year - stored directly, with the statistics and messages the simulator gives for each day, so the trend
+    reports have something to show. Returns the number of days added."""
+    added = 0
+    today = datetime.now(UTC).date()
+    with session_scope() as session:
+        query = select(Tenant).where(Tenant.enabled.is_(True))
+        if tenant_ids:
+            query = query.where(Tenant.id.in_(tenant_ids))
+        for tenant in session.execute(query).scalars():
+            key = simulator.simulator.spec_for(tenant).key
+            first = session.execute(select(func.min(DailyStat.day)).where(DailyStat.tenant_id == tenant.id)).scalar_one() or today
+            day = today - timedelta(days=days)
+            while day < first:
+                kept = [m for m in simulator.day_messages(key, day) if random.Random(f"{key}:{m['id']}:calmer").random() < CALMER]
+                stats = simulator.day_stats(key, day)
+                counts = Counter(m["verdict"]["category"] for m in kept)
+                directions, verdicts = stats["directions"], stats["verdicts"]
+                session.add(DailyStat(tenant_id=tenant.id, day=day, total_messages=stats["total"], incoming=directions["incoming"],
+                                      outgoing=directions["outgoing"], internal=directions["internal"], malicious=counts["malicious"],
+                                      phishing=counts["phishing"], bec=counts["bec"], scam=counts["scam"], spam=verdicts["spam"],
+                                      graymail=verdicts["graymail"], retro_verdicts=sum(1 for m in kept if m["verdict"]["isRetroVerdict"])))
+                for message in kept:
+                    row = map_message(tenant.id, message)
+                    if row is not None:
+                        session.add(row)
+                added += 1
+                day += timedelta(days=1)
+            session.flush()
+    return added
+
+
 def warm_up(*, fill_archive: bool) -> None:
     collect_history()
+    extend_history()
     if fill_archive:
         log.warning("Demo mode: history collected - filling the archive")
         fill_archive_history()

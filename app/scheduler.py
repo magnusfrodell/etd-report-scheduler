@@ -32,7 +32,7 @@ from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.alerts import check_collection
+from app.alerts import check_api_keys, check_collection
 from app.backup import nightly_backup
 from app.collectors import runner
 from app.config import get_config
@@ -230,6 +230,7 @@ class ReportScheduler:
         s.add_job(runner.purge_old_data, self._cron("30 3 * * *"), id="maintenance:retention", name="Retention purge", replace_existing=True)
         s.add_job(nightly_backup, self._cron("45 3 * * *"), id="maintenance:backup", name="Nightly database backup", replace_existing=True)
         s.add_job(check_collection, self._cron("55 * * * *"), id="alerts:collection", name="Alert on stalled collection", replace_existing=True)
+        s.add_job(check_api_keys, self._cron("5 7 * * *"), id="alerts:api_keys", name="Remind about API keys that expire soon", replace_existing=True)
         s.add_job(write_heartbeat, "interval", minutes=HEARTBEAT_MINUTES, id="maintenance:heartbeat", name="Heartbeat", replace_existing=True)
 
     def reload_report_jobs(self) -> None:

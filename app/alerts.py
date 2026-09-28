@@ -25,7 +25,7 @@ from sqlalchemy import select
 from app.db import session_scope
 from app.delivery import chat
 from app.delivery.email import send_email
-from app.models import AlertState, ReportRun, ReportSchedule, Tenant, utcnow
+from app.models import AlertState, ApiKey, ReportRun, ReportSchedule, Tenant, User, utcnow
 from app.quality import tenant_health
 from app.reports.registry import REPORTS
 from app.settings_store import RuntimeSettings, load_settings
@@ -139,5 +139,56 @@ def check_collection(now: datetime | None = None) -> int:
         for key, text in due:
             state = session.get(AlertState, key) or AlertState(key=key, last_sent_at=now)
             state.last_sent_at, state.detail = now, text
+            session.add(state)
+    return len(due)
+
+
+API_KEY_WARNING = timedelta(days=7)
+
+
+def check_api_keys(now: datetime | None = None) -> int:
+    """Daily: API keys that expire within a week - once when they enter the week and again on the last day,
+    to the alert recipients (and chat channel) and to the key's owner. A script whose key lapses unnoticed
+    simply stops working."""
+    now = now or utcnow()
+    with session_scope() as session:
+        settings = load_settings(session)
+        owners = {u.id: u for u in session.execute(select(User)).scalars()}
+        due: list[tuple[str, str, str, str | None]] = []  # (state key, stage, line, owner e-mail)
+        still_open: set[str] = set()
+        keys = session.execute(select(ApiKey).where(ApiKey.revoked_at.is_(None), ApiKey.expires_at.is_not(None),
+                                                    ApiKey.expires_at > now, ApiKey.expires_at <= now + API_KEY_WARNING)).scalars()
+        for key in keys:
+            state_key = f"api_key:{key.id}"
+            still_open.add(state_key)
+            stage = "last day" if key.expires_at - now <= timedelta(days=1) else "week"
+            state = session.get(AlertState, state_key)
+            if state is not None and state.detail == stage:
+                continue
+            owner = owners.get(key.user_id)
+            line = (f"API key '{key.name}' (etd_{key.key_id}) of {owner.username if owner else 'a deleted user'} expires "
+                    f"{key.expires_at:%Y-%m-%d %H:%M} UTC - create a new key and put it in place before then.")
+            due.append((state_key, stage, line, owner.email if owner and owner.enabled and owner.email else None))
+        for state in session.execute(select(AlertState).where(AlertState.key.like("api_key:%"))).scalars():
+            if state.key not in still_open:
+                session.delete(state)
+        link = f"{settings.base_url.rstrip('/')}/account" if settings.base_url else ""
+    if not due:
+        return 0
+    delivered = _send(settings, f"[ETD] {len(due)} API key(s) expire within a week", [line for _, _, line, _ in due], link)
+    if settings.smtp_configured:
+        for _, _, line, email in due:
+            if email and email.lower() not in {r.lower() for r in settings.alert_recipient_list}:
+                try:
+                    send_email(settings, [email], "[ETD] Your API key expires soon", f"<p>{escape(line)}</p>")
+                    delivered = True
+                except Exception:  # noqa: BLE001 - a reminder must never break the job
+                    log.exception("Could not remind %s about an expiring API key", email)
+    if not delivered:
+        return 0
+    with session_scope() as session:
+        for state_key, stage, _line, _ in due:
+            state = session.get(AlertState, state_key) or AlertState(key=state_key, last_sent_at=now)
+            state.last_sent_at, state.detail = now, stage
             session.add(state)
     return len(due)
