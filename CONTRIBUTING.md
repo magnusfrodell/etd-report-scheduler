@@ -25,6 +25,15 @@ uvicorn app.main:app --reload --port 8080
    default cron, subject line).
 4. Add a test in `tests/test_reports.py` that builds it for two tenants and proves
    the numbers do not leak between them.
+5. Make every text a reader sees translatable: `{{ _("...") }}` in the template,
+   `tr = ctx.tr` and `tr("...")` in the code, and `N_("...")` for values the logic
+   also uses as keys (translate those where they are shown). Put numbers in
+   placeholders, never in the text. Then refresh the catalog and add the Swedish
+   translations - see [docs/TRANSLATING.md](docs/TRANSLATING.md).
+6. Nothing else to write: `tests/test_i18n.py` renders every registered report in
+   every language and fails if a text lacks a translation, if a translated report
+   shows a different number than the English one, or if anything runs past the
+   edge of the PDF page.
 
 ## Schema changes
 
@@ -35,12 +44,23 @@ DATABASE_URL=sqlite:///./data/etd.db alembic revision --autogenerate -m "describ
 alembic check   # must report "No new upgrade operations detected."
 ```
 
-Migrations run automatically when the container starts.
+Migrations run automatically when the container starts. A new column that may not be
+empty needs a `server_default`: `tests/test_ready_for_1_0.py` runs every migration on
+a database with a row in every table, so a migration that only works on an empty
+database fails the build rather than a real installation.
+
+## New pages and API endpoints
+
+Every route that changes something needs a name in `ACTIONS` in `app/activity.py`,
+so the activity log records it; a test fails for a route without one. If the handler
+knows something the request does not - the name of what it created, which values
+changed - add it with `activity.note(...)`. Never note a password, token or address
+that works as a secret.
 
 ## Pull requests
 
 * Keep the Cisco Sample Code License header on every source file.
-* Run `ruff check .` and `pytest` before opening the PR.
+* Run `ruff check .`, `pytest` and `git diff --check` before opening the PR.
 * Describe the ETD API behaviour you relied on and link the DevNet page.
 
 ## Dependencies

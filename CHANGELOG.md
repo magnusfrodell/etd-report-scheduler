@@ -3,6 +3,19 @@
 Database migrations run automatically at start-up. Every version runs as a single container
 with its state in the `/data` volume.
 
+## 1.0.0 - First stable release
+
+ETD Report Scheduler is ready for use: fourteen reports in English and Swedish, delivered by e-mail, Webex and Microsoft Teams, with single sign-on, API keys, an activity log, and every database migration tested on an installation with data.
+
+### Changed
+- **README follows the DevNet Code Exchange template** - demo mode is the *Related Sandbox* (there is no DevNet Sandbox for ETD), the feature list covers languages, chat delivery, single sign-on, API keys and the activity log, and the known issues and roadmap are current.
+- **New screenshots** from demo mode: report cards, the archive with a Trends report, a Trends PDF, Data quality and the Activity log.
+- **SECURITY.md** - how to report a vulnerability privately, and how the tool protects what it holds.
+- **CONTRIBUTING.md** - what a new report, route or migration needs now: translatable texts, activity log names, and defaults that survive the upgrade test.
+
+### Upgrade notes
+- No migration. From any 0.x release, pull the new image; the migrations since that release run on start-up.
+
 ## 0.16.0 - Ready for 1.0: upgrades, scale and reminders
 
 ### Added

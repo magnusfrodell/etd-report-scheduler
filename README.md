@@ -8,12 +8,15 @@ What it adds on top of the built-in ETD console:
 
 * **Scheduling and delivery** – cron-based schedules per tenant, for a group of tenants or for all tenants (including tenants added later), sent to fixed recipients and/or each customer's own contacts, optionally only when a report has findings; HTML e-mail with optional PDF attachment and an archive of every generated report.
 * **Branding** – a partner's name, logo, colours and footer on reports, PDFs and e-mails, with the e-mail sender name, Reply-To and subject prefix; one default brand and, where needed, another brand per tenant.
-* **Demo mode** – `DEMO_MODE=true` runs the tool against a simulated ETD API with four invented tenants, for demos, evaluation and screenshots; nothing contacts Cisco or a mail relay.
+* **Demo mode** – `DEMO_MODE=true` runs the tool against a simulated ETD API with four invented tenants and a year of history, for demos, evaluation and screenshots; nothing contacts Cisco or a mail relay.
 * **History and comparison** – daily statistics are kept as long as you like (retention is configurable, ETD keeps 90 days), so every report compares the period with the previous one.
 * **Reports built on message data** – threat-convicted messages are collected through the Message Search API, which enables reports ETD does not offer: compromise indicators on outgoing/internal mail, a Very Attacked People index, campaign clustering and dwell-time/exposure analysis.
 * **Posture, risk and compliance** – with ETD's Log Export and DNS: authentication posture of own domains, vendor and look-alike risk, technique and attachment trends, an audit trail kept beyond ETD's 30 days, and a quarterly posture score for management.
 * **Cross-tenant view** – ranking, spikes, collector errors and data gaps across all connected tenants.
 * **Users and roles** – global roles (admin, tenant admin, user) plus per-tenant roles (viewer, operator, manager), so a partner can give each customer's people access to exactly their tenant and nothing else.
+* **Enterprise sign-in and control** – single sign-on with Duo or any OpenID Connect provider, server-side sessions that end at sign-out, API keys for scripts and integrations, and an activity log of who did what in the tool.
+* **Report languages** – reports, PDFs and report e-mails in English or Swedish, chosen per installation, tenant or schedule.
+* **Chat delivery** – the report's headline and PDF to the SOC's Webex space, or an Adaptive Card to a Microsoft Teams channel; alerts too.
 
 Bundled reports:
 
@@ -36,9 +39,11 @@ Bundled reports:
 
 **Technology stack:** Python 3.12, FastAPI, SQLAlchemy 2 + Alembic (SQLite by default, PostgreSQL optional), APScheduler, Jinja2, WeasyPrint for PDF, httpx for the ETD API. Standalone application, delivered as a Docker image; no external services other than the ETD API and an SMTP relay.
 
-**Status:** 0.16.0, alpha. The collectors (including Log Export), scheduler, fourteen reports (in English and Swedish) and the admin UI work end to end against a fake ETD API in the test-suite (`pytest`, 210 tests) and have been smoke-tested as a running application. Validation against production ETD tenants in all five regions is the next step - please open an issue with what you find. This is community sample code, not a Cisco product, and is not supported by Cisco TAC.
+**Status:** 1.0.0. The collectors, scheduler, fourteen reports in English and Swedish, delivery by e-mail, Webex and Microsoft Teams, and the admin UI are covered by 210 automated tests - including every database migration upgraded with data in every table - and run against real ETD tenants in the Beta, Americas and Europe regions. The Australia, India and UAE regions use the addresses in Cisco's API documentation but have not been tried against a real tenant yet; please open an issue with what you find. This is community sample code, not a Cisco product, and is not supported by Cisco TAC.
 
-<!-- Add a screenshot of the dashboard here once you run it against a real tenant: ![Dashboard](docs/dashboard.png) -->
+**Try it first:** no ETD tenant needed - [demo mode](#related-sandbox) runs the whole tool against a simulated ETD API.
+
+![Report cards in demo mode](docs/images/reports.png)
 
 # Use Case
 
@@ -57,39 +62,6 @@ Challenges solved along the way: ETD's API only exposes UTC days and 32-day sear
 
 Ideas for extending the solution: "caught behind the gateway" with SMA cross-referencing, user-reported-vs-verdict, department enrichment from Entra ID for the VAP index, DKIM selector discovery, an OIDC login, webhook delivery to Teams/Slack.
 
-## Try it first: demo mode
-
-`DEMO_MODE=true` starts the tool with four invented Nordic and Baltic tenants served by a simulated ETD API - no Cisco account and no mail relay needed. The real collectors, reports, schedules and alerts run against the simulation, so what you see is what the tool does with real data:
-
-```bash
-docker run -d --name etd-demo -p 8080:8080 \
-  -e DEMO_MODE=true -e ADMIN_PASSWORD=choose-a-password \
-  -e SECRET_KEY="$(openssl rand -hex 32)" \
-  -e ENCRYPTION_KEY="$(python3 -c 'import base64, os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())')" \
-  ghcr.io/magnusfrodell/etd-report-scheduler:0.16.0
-```
-
-Sign in at http://localhost:8080 as `admin`. Within a minute the demo has collected 90 days of history and filled the archive with the reports its schedules would have produced. Each tenant has a story:
-
-* **Nordic Freight AB** – a supplier's real accounts ask for new bank details, a look-alike of the company's own domain has been delivering mail, and a weekly QR-code campaign.
-* **Baltic Pharma AS** – attacks aimed at the management team and retrospective verdicts that are cleaned up late, or never.
-* **Helios Energy Oy** – a hijacked mailbox sending phishing to customers, and `p=none` in DMARC.
-* **Aurora Retail ApS** – Log Export fails, as seen on the Data quality page, and no report recipients are set.
-
-E-mails are saved as `.eml` files in `/data/demo-outbox` instead of being sent. Demo mode only seeds an empty database and routes every ETD call to the simulator, so give it its own data volume rather than pointing it at real data.
-
-![Report cards](docs/images/reports.png)
-
-![Archive with a branded vendor-risk report](docs/images/archive.png)
-
-![Data quality](docs/images/data-quality.png)
-
-![Vendor risk as PDF](docs/images/vendor-risk-pdf.png)
-
-The demo holds a year of history - more than the 90 days ETD itself keeps - so the **Trends** reports have something to show.
-
-To see a Swedish report, open a demo tenant's reporting profile on the Tenants page, set *Report language* to Svenska and press **Run now** on any report card.
-
 ## Installation
 
 ### Option A: Docker (recommended)
@@ -99,7 +71,7 @@ Prerequisites: Docker 24+ with Compose, network access from the container to `ap
 A pre-built multi-arch image (amd64/arm64) is published for every release tag:
 
 ```bash
-docker pull ghcr.io/magnusfrodell/etd-report-scheduler:0.16.0
+docker pull ghcr.io/magnusfrodell/etd-report-scheduler:1.0.0
 ```
 
 To use it, set `image:` instead of `build:` in `docker-compose.yml` (the line is there, commented out). To build yourself instead:
@@ -282,6 +254,37 @@ curl -H "Authorization: Bearer $ETD_KEY" "http://localhost:8080/api/activity?sin
 
 Generated files are stored under `/data/reports/<tenant>/<report>/<timestamp>-run<id>.html|pdf` in the volume; the run id keeps every run's files distinct.
 
+## Related Sandbox
+
+There is no DevNet Sandbox for Secure Email Threat Defense; demo mode takes its place. `DEMO_MODE=true` starts the tool with four invented Nordic and Baltic tenants served by a simulated ETD API - no Cisco account and no mail relay needed. The real collectors, reports, schedules and alerts run against the simulation, so what you see is what the tool does with real data:
+
+```bash
+docker run -d --name etd-demo -p 8080:8080 \
+  -e DEMO_MODE=true -e ADMIN_PASSWORD=choose-a-password \
+  -e SECRET_KEY="$(openssl rand -hex 32)" \
+  -e ENCRYPTION_KEY="$(python3 -c 'import base64, os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())')" \
+  ghcr.io/magnusfrodell/etd-report-scheduler:1.0.0
+```
+
+Sign in at http://localhost:8080 as `admin`. Within a minute the demo has a year of history - more than the 90 days ETD itself keeps - and an archive filled with the reports its schedules would have produced, including twelve-month trends. Each tenant has a story:
+
+* **Nordic Freight AB** – a supplier's real accounts ask for new bank details, a look-alike of the company's own domain has been delivering mail, and a weekly QR-code campaign.
+* **Baltic Pharma AS** – attacks aimed at the management team and retrospective verdicts that are cleaned up late, or never.
+* **Helios Energy Oy** – a hijacked mailbox sending phishing to customers, and `p=none` in DMARC.
+* **Aurora Retail ApS** – Log Export fails, as seen on the Data quality page, and no report recipients are set.
+
+E-mails are saved as `.eml` files in `/data/demo-outbox` instead of being sent. Demo mode only seeds an empty database and routes every ETD call to the simulator, so give it its own data volume rather than pointing it at real data.
+
+To see a Swedish report, open a demo tenant's reporting profile on the Tenants page, set *Report language* to Svenska and press **Run now** on any report card.
+
+![The archive, with a branded Trends report in the preview](docs/images/archive.png)
+
+![Trends as PDF: twelve months, what stands out, month by month](docs/images/trends-pdf.png)
+
+![Data quality: per tenant and data stream, with the demo's broken Log Export](docs/images/data-quality.png)
+
+![Activity log: who did what, with the outcome](docs/images/activity.png)
+
 ## Additional paragraphs
 
 ### Trends
@@ -331,7 +334,7 @@ People can sign in with **Duo Single Sign-On** - or Entra ID, Okta or any OpenID
 `.github/workflows/ci.yml` runs ruff, the test-suite and an Alembic consistency check on every push and pull request. `.github/workflows/docker.yml` builds and publishes the container image to GitHub Container Registry when a `v*` tag is pushed:
 
 ```bash
-git tag v0.16.0 && git push origin v0.16.0
+git tag v1.0.0 && git push origin v1.0.0
 ```
 
 ### Architecture
@@ -392,29 +395,32 @@ Tenant isolation is enforced in one place: every query helper in `app/reports/re
 
 ## Known issues
 
-* Not yet validated against production ETD tenants; the fake API in `tests/etd_mock.py` follows the DevNet documentation and Cisco's own Sentinel connector.
+* The Australia, India and UAE regions use the API addresses from Cisco's documentation but have not been tried against a real tenant yet.
 * The Reporting API's top-sender list contains external senders only; internal threat senders come from the compromise-indicators report instead.
 * Retrospective verdicts on messages older than the rescan window (7 days by default) are not picked up; increase `convictions_rescan_days` in Settings if you need more.
 * Backfill covers threat verdicts only (the stored verdict set). Backfilling spam and graymail for 90 days would run into the daily quota on any sizeable tenant, so those are collected from the day they are enabled.
-* Local accounts only (no OIDC/SAML yet) - contributions welcome. Put the UI behind your reverse proxy's authentication if your policy requires SSO.
+* History starts when a tenant is added, with the 90 days ETD provides; trend comparisons appear after six months with data.
+* Microsoft Teams messages carry the report's headline and a link to the archive, not the PDF (Workflows webhooks cannot carry a file); Webex messages carry the PDF.
+* Signing out ends the session in this tool; the single sign-on provider's own session is left alone. Some providers - possibly Duo - only accept an `https://` redirect URL, so the tool may need to sit behind HTTPS for single sign-on.
+* Run one instance per database: the scheduler runs inside the application, so two containers on the same data would send every report twice.
 * PDF rendering requires WeasyPrint's system libraries (present in the Docker image). Without them, reports are sent as HTML.
 * ETD's audit log identifies users by UUID only; name them in the tenant's reporting profile to get readable audit reports.
-* Look-alike detection, text-only "callback" lures and the audit event grouping are heuristics built on ETD's documented technique names and log samples; verify before blocking a domain. QR detection relies on the "QR code" technique and QR flags in `urlMetadata`, whose exact field names are not documented yet.
+* Look-alike detection, text-only "callback" lures and the audit event grouping are heuristics built on ETD's documented technique names and log samples; verify before blocking a domain. QR detection relies on the "QR code" technique and QR-origin URLs.
 * DNS posture is read from the container's resolver (cached for a day); DKIM is not checked because selectors cannot be discovered from DNS.
 
 Please use [GitHub Issues](../../issues) for bugs and feature requests; include the ETD region, the report key and the relevant lines from the container log (`docker compose logs`).
 
 ## Getting help
 
-Open an issue in this repository. For questions about the ETD API itself, see the [DevNet documentation](https://developer.cisco.com/docs/message-search-api/) and the [ETD user guide](https://docs.cmd.cisco.com/en/Content/secure-email-threat-defense-user-guide/homeUG.htm). Cisco TAC does not support this code.
+Open an issue in this repository. Report security problems privately as described in [SECURITY](./SECURITY.md), not in an issue. For questions about the ETD API itself, see the [DevNet documentation](https://developer.cisco.com/docs/message-search-api/) and the [ETD user guide](https://docs.cmd.cisco.com/en/Content/secure-email-threat-defense-user-guide/homeUG.htm). Cisco TAC does not support this code.
 
 ## Getting involved
 
 Contributions are welcome, particularly:
 
-* Reports from the roadmap (vendor risk, gateway cross-referencing, allow-list risk, user-reported loop, audit compliance and authentication posture via Log Export).
-* Feedback from real tenants: field names that differ from the documentation, rate-limit behaviour, regional quirks.
-* OIDC login and webhook delivery.
+* Feedback from real tenants, especially in the Australia, India and UAE regions: field names that differ from the documentation, rate-limit behaviour, regional quirks.
+* Report languages beyond English and Swedish - Danish, Norwegian and Finnish are the obvious next ones; see [docs/TRANSLATING.md](docs/TRANSLATING.md).
+* Ideas on the roadmap: findings as Cisco XDR incidents, DMARC aggregate (`rua`) reports, and report PDFs in Teams through SharePoint.
 
 See [CONTRIBUTING](./CONTRIBUTING.md) for the development setup, how to add a report and how to create schema migrations.
 

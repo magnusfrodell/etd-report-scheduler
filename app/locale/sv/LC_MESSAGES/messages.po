@@ -3,7 +3,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: ETD Report Scheduler 0.16.0\n"
+"Project-Id-Version: ETD Report Scheduler 1.0.0\n"
 "Report-Msgid-Bugs-To: https://github.com/magnusfrodell/etd-report-scheduler/issues\n"
 "Language: sv\n"
 "Language-Team: Swedish\n"
