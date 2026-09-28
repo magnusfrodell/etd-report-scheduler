@@ -3,7 +3,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: ETD Report Scheduler 0.14.0\n"
+"Project-Id-Version: ETD Report Scheduler 0.15.0\n"
 "Report-Msgid-Bugs-To: https://github.com/magnusfrodell/etd-report-scheduler/issues\n"
 "Language: sv\n"
 "Language-Team: Swedish\n"
@@ -137,6 +137,13 @@ msgstr ""
 
 msgid "All tenants"
 msgstr "Alla tenants"
+
+msgid "All tenants together, month by month"
+msgstr "Alla tenants tillsammans, månad för månad"
+
+#, python-brace-format
+msgid "All tenants · twelve months · {first} – {last}"
+msgstr "Alla tenants · tolv månader · {first} – {last}"
 
 #, python-brace-format
 msgid "All tenants · {period_label}"
@@ -296,6 +303,9 @@ msgstr ""
 msgid "Convicted"
 msgstr "Hotklassade"
 
+msgid "Convicted after delivery, last three months"
+msgstr "Hotklassade efter leverans, senaste tre månaderna"
+
 msgid "Convicted messages have not been collected yet, so remediation cannot be assessed."
 msgstr "Hotklassade meddelanden har inte samlats in ännu, så åtgärdandet kan inte bedömas."
 
@@ -391,6 +401,13 @@ msgid "ETD: frequent sender ({frequent_count})"
 msgstr "ETD: frekvent avsändare ({frequent_count})"
 
 msgid ""
+"Each character is a month, oldest first: higher is more threats per 10 000 messages, scaled per tenant; · is a month "
+"without complete data. The change compares the last three months with the three before."
+msgstr ""
+"Varje tecken är en månad, äldst först: högre betyder fler hot per 10 000 meddelanden, skalat per tenant; · är en "
+"månad utan fullständig data. Förändringen jämför de senaste tre månaderna med de tre dessförinnan."
+
+msgid ""
 "Enable Log Export in ETD (Administration > Business > Export Log Preferences) to learn counterparties from clean mail"
 " and to detect delivered look-alikes."
 msgstr ""
@@ -420,6 +437,9 @@ msgstr "Kringgående"
 
 msgid "Events"
 msgstr "Händelser"
+
+msgid "Every tenant, largest increase first"
+msgstr "Alla tenants, störst ökning först"
 
 msgid "Every threat in the period has been remediated."
 msgstr "Alla hot under perioden har åtgärdats."
@@ -548,6 +568,9 @@ msgstr "Känd relation"
 msgid "Last seen"
 msgstr "Senast sedd"
 
+msgid "Last three months"
+msgstr "Senaste tre månaderna"
+
 msgid "Link and attachment"
 msgstr "Länk och bilaga"
 
@@ -615,8 +638,14 @@ msgstr "Max"
 msgid "Median"
 msgstr "Median"
 
+msgid "Median dwell"
+msgstr "Median uppehållstid"
+
 msgid "Median dwell time (retro)"
 msgstr "Median uppehållstid (retroaktiva)"
+
+msgid "Median dwell time (retro), last three months"
+msgstr "Median uppehållstid (retroaktiva), senaste tre månaderna"
 
 msgid "Median time in inbox until remediation"
 msgstr "Mediantid i inkorgen till åtgärd"
@@ -652,6 +681,17 @@ msgstr "Microsoft Forms / Sway / Dynamics"
 msgid "Month"
 msgstr "Månad"
 
+msgid "Months with data"
+msgstr "Månader med data"
+
+#, python-brace-format, python-format
+msgid ""
+"More threats are caught only after delivery: {now} % were convicted retrospectively, against {before} % in the three "
+"months before - make sure retrospective verdicts trigger automatic remediation."
+msgstr ""
+"Fler hot fångas först efter leverans: {now} % hotklassades retroaktivt, mot {before} % under de tre månaderna "
+"dessförinnan - se till att retroaktiva bedömningar utlöser automatisk åtgärd."
+
 #, python-brace-format
 msgid "Most-abused legitimate service: {service} ({urls} URL(s)) - consider stricter handling or sandboxing of links to it."
 msgstr ""
@@ -663,6 +703,10 @@ msgstr "Flytta alla egna domäner till DMARC p=reject - att förfalska er egen d
 
 msgid "Needs attention"
 msgstr "Behöver åtgärdas"
+
+#, python-brace-format
+msgid "New in the last three months, not seen in the nine months before: {techniques}."
+msgstr "Nytt de senaste tre månaderna, inte sett under de nio månaderna dessförinnan: {techniques}."
 
 msgid "New or rare senders with financial lures"
 msgstr "Nya eller ovanliga avsändare med ekonomiska lockbeten"
@@ -745,6 +789,9 @@ msgstr "Inga särskilda rekommendationer för perioden."
 
 msgid "No statistics stored for the period - collector has not run or failed."
 msgstr "Ingen statistik sparad för perioden - insamlingen har inte körts eller har misslyckats."
+
+msgid "No technique changed markedly between the two periods."
+msgstr "Ingen teknik förändrades påtagligt mellan de två perioderna."
 
 msgid "No technique data in this period"
 msgstr "Inga teknikdata under perioden"
@@ -837,6 +884,9 @@ msgstr "Personer med ett oåtgärdat hot"
 msgid "Per 10,000"
 msgstr "Per 10 000"
 
+msgid "Per 10,000, last three months"
+msgstr "Per 10 000, senaste tre månaderna"
+
 #, python-brace-format
 msgid ""
 "Per message: verdict weight (BEC {bec}, malicious {malicious}, phishing {phishing}, scam {scam}), technique severity "
@@ -921,6 +971,16 @@ msgstr ""
 msgid "Ranking by threats"
 msgstr "Rangordning efter antal hot"
 
+#, python-format
+msgid ""
+"Rates are threats per 10 000 scanned messages, so a busier month is not a worse one. A month with less than 80 % of "
+"its days collected is marked incomplete and left out of every comparison. History starts when the tenant was added "
+"(ETD provides 90 days back) and is kept for the retention period under Settings."
+msgstr ""
+"Nivåerna är hot per 10 000 skannade meddelanden, så en månad med mer trafik är inte automatiskt sämre. En månad där "
+"mindre än 80 % av dagarna samlats in markeras som ofullständig och hålls utanför alla jämförelser. Historiken börjar "
+"när tenanten lades till (ETD ger 90 dagar bakåt) och sparas så länge som lagringstiden under Settings anger."
+
 msgid "Rcpts"
 msgstr "Mott."
 
@@ -986,6 +1046,12 @@ msgid "Retro-convicted mail sits in inboxes too long - make sure retrospective v
 msgstr ""
 "Retroaktivt hotklassad e-post ligger kvar för länge i inkorgarna - se till att retroaktiva bedömningar utlöser "
 "automatisk åtgärd."
+
+#, python-brace-format
+msgid "Retro-convicted mail stays longer in inboxes: median {now} against {before} in the three months before."
+msgstr ""
+"Retroaktivt hotklassad e-post ligger kvar längre i inkorgarna: median {now} mot {before} under de tre månaderna "
+"dessförinnan."
 
 msgid "Retro-convicted messages"
 msgstr "Retroaktivt hotklassade meddelanden"
@@ -1107,6 +1173,9 @@ msgstr "Teknikfamiljer"
 msgid "Techniques and business risk"
 msgstr "Tekniker och affärsrisk"
 
+msgid "Techniques on the rise and in decline"
+msgstr "Tekniker som ökar och minskar"
+
 msgid "Techniques seen against these people"
 msgstr "Tekniker som använts mot dessa personer"
 
@@ -1115,6 +1184,10 @@ msgstr "Tenant"
 
 msgid "Tenants"
 msgstr "Tenants"
+
+#, python-format
+msgid "Tenants with a rising threat rate (+20 % or more)"
+msgstr "Tenants med ökande hotnivå (+20 % eller mer)"
 
 msgid "Text-only lures (possible callback)"
 msgstr "Lockbeten med enbart text (möjlig återuppringning)"
@@ -1136,6 +1209,18 @@ msgstr ""
 "kontroll inte gäller perioden (till exempel inga hot); okänd betyder att data saknas och räknas aldrig som godkänt. "
 "Om mindre än 80 % av vikten kunde bedömas ges varken poäng eller betyg."
 
+#, python-brace-format, python-format
+msgid ""
+"The threat rate is {change} % higher than in the three months before: {now} against {before} threats per 10 000 "
+"messages."
+msgstr "Hotnivån är {change} % högre än under de tre månaderna dessförinnan: {now} mot {before} hot per 10 000 meddelanden."
+
+#, python-brace-format, python-format
+msgid ""
+"The threat rate is {change} % lower than in the three months before: {now} against {before} threats per 10 000 "
+"messages."
+msgstr "Hotnivån är {change} % lägre än under de tre månaderna dessförinnan: {now} mot {before} hot per 10 000 meddelanden."
+
 #, python-brace-format
 msgid ""
 "The {threat_domains_checked} most frequent threat sender domains were checked in DNS. \"reject\" and \"quarantine\" "
@@ -1146,6 +1231,13 @@ msgstr ""
 "är de policyer som domänerna publicerar i dag. ETD anger inte resultatet av SPF, DKIM eller DMARC för varje "
 "meddelande, och en policy kan ha ändrats sedan leveransen, så detta visar inte att meddelandena klarade "
 "autentiseringen."
+
+msgid ""
+"There is not yet enough history for comparisons (six months with data). ETD provided 90 days back when the tenant was"
+" added, and the tool keeps collecting."
+msgstr ""
+"Historiken räcker ännu inte för jämförelser (sex månader med data). ETD gav 90 dagar bakåt när tenanten lades till, "
+"och verktyget fortsätter att samla in."
 
 msgid "This period"
 msgstr "Den här perioden"
@@ -1158,6 +1250,9 @@ msgstr "Hotmeddelanden"
 
 msgid "Threat rate"
 msgstr "Hotandel"
+
+msgid "Threat rate month by month"
+msgstr "Hotnivå månad för månad"
 
 #, python-brace-format, python-format
 msgid ""
@@ -1197,6 +1292,9 @@ msgstr "Hot från domäner med tillämpad DMARC"
 msgid "Threats from senders the recipient normally talks to - often a compromised partner account."
 msgstr "Hot från avsändare som mottagaren normalt har kontakt med - ofta ett kapat konto hos en partner."
 
+msgid "Threats per 10 000 messages, last three months"
+msgstr "Hot per 10 000 meddelanden, senaste tre månaderna"
+
 msgid "Threats remediated"
 msgstr "Åtgärdade hot"
 
@@ -1221,6 +1319,15 @@ msgstr "Hot med QR-koder"
 
 msgid "Threats with Reply-To to another domain"
 msgstr "Hot med Reply-To till en annan domän"
+
+msgid "Threats, last twelve months"
+msgstr "Hot, senaste tolv månaderna"
+
+msgid "Threats, twelve months"
+msgstr "Hot, tolv månader"
+
+msgid "Three months before"
+msgstr "Tre månader dessförinnan"
 
 msgid "Time"
 msgstr "Tid"
@@ -1260,8 +1367,24 @@ msgstr "Totalt"
 msgid "Traffic by direction"
 msgstr "Trafik per riktning"
 
+msgid "Trend"
+msgstr "Trend"
+
+msgid "Trends"
+msgstr "Trender"
+
+msgid "Trends across tenants"
+msgstr "Trender för alla tenants"
+
 msgid "Tunnels / IPFS"
 msgstr "Tunnlar / IPFS"
+
+msgid "Twelve months"
+msgstr "Tolv månader"
+
+#, python-brace-format
+msgid "Twelve months · {first} – {last}"
+msgstr "Tolv månader · {first} – {last}"
 
 msgid "Type"
 msgstr "Typ"
@@ -1308,6 +1431,9 @@ msgstr "Ändrade bedömningar och åtgärder"
 msgid "Verdicts"
 msgstr "Bedömningar"
 
+msgid "Verdicts and response month by month"
+msgstr "Bedömningar och åtgärder månad för månad"
+
 msgid "Very Attacked People"
 msgstr "Mest attackerade personer"
 
@@ -1337,6 +1463,9 @@ msgstr "Webbgränssnitt"
 
 msgid "What it means"
 msgstr "Vad det betyder"
+
+msgid "What stands out"
+msgstr "Det här sticker ut"
 
 msgid "Who"
 msgstr "Vem"
@@ -1397,6 +1526,14 @@ msgid "[ETD] Techniques and business risk - {tenant} - {period}"
 msgstr "[ETD] Tekniker och affärsrisk - {tenant} - {period}"
 
 #, python-brace-format
+msgid "[ETD] Trends - {tenant} - {period}"
+msgstr "[ETD] Trender - {tenant} - {period}"
+
+#, python-brace-format
+msgid "[ETD] Trends across tenants - {period}"
+msgstr "[ETD] Trender för alla tenants - {period}"
+
+#, python-brace-format
 msgid "[ETD] Vendor risk - {tenant} - {period}"
 msgstr "[ETD] Leverantörsrisk - {tenant} - {period}"
 
@@ -1439,6 +1576,9 @@ msgstr "domäner upptäckta automatiskt"
 
 msgid "error"
 msgstr "fel"
+
+msgid "falling"
+msgstr "minskar"
 
 msgid "first seen this period"
 msgstr "först sedd under perioden"
@@ -1514,6 +1654,9 @@ msgstr "nej"
 msgid "no all mechanism"
 msgstr "ingen all-mekanism"
 
+msgid "no comparison yet"
+msgstr "ingen jämförelse än"
+
 msgid "no rua"
 msgstr "ingen rua"
 
@@ -1559,6 +1702,9 @@ msgstr "kvartalsrapport för {period}"
 
 msgid "redirect"
 msgstr "redirect"
+
+msgid "rising"
+msgstr "ökar"
 
 msgid "senders:"
 msgstr "avsändare:"
@@ -1609,6 +1755,10 @@ msgstr ""
 "måste verifieras via en annan kanal."
 
 #, python-brace-format
+msgid "{before} in the three months before"
+msgstr "{before} under de tre månaderna dessförinnan"
+
+#, python-brace-format
 msgid ""
 "{callback_count} text-only lure(s) without a link look like callback phishing - teach finance and the service desk to"
 " verify phone numbers independently."
@@ -1635,6 +1785,10 @@ msgid ""
 msgstr ""
 "{compromised} motpart(er) med tecken på kapning, {lookalikes} förväxlingsdomän(er), {spoofed} förfalskning(ar) av "
 "egna domäner"
+
+#, python-brace-format, python-format
+msgid "{count} month(s) have less than 80 % of their days collected; they are marked and left out of the comparisons."
+msgstr "{count} månad(er) har mindre än 80 % av dagarna insamlade; de markeras och hålls utanför jämförelserna."
 
 #, python-brace-format
 msgid "{covered_hours} of {hours} hours"
@@ -1759,6 +1913,14 @@ msgstr ""
 "bilagor: {html_attachment}, maskerade filändelser: {masqueraded}."
 
 #, python-brace-format
+msgid "{months} month(s) with data"
+msgstr "{months} månad(er) med data"
+
+#, python-brace-format
+msgid "{month}: {now} threats per 10 000 messages, against {before} in {year_ago_month}."
+msgstr "{month}: {now} hot per 10 000 meddelanden, mot {before} i {year_ago_month}."
+
+#, python-brace-format
 msgid "{new_techniques} new vs previous period"
 msgstr "nya jämfört med föregående period: {new_techniques}"
 
@@ -1773,6 +1935,10 @@ msgstr ""
 #, python-brace-format, python-format
 msgid "{pct} % of the period's hours collected, {gap_count} gap(s)"
 msgstr "{pct} % av periodens timmar insamlade, antal luckor: {gap_count}"
+
+#, python-brace-format
+msgid "{points} percentage points against the three months before"
+msgstr "{points} procentenheter jämfört med de tre månaderna dessförinnan"
 
 #, python-brace-format
 msgid "{previous_campaign_count} previous period"
@@ -1839,6 +2005,10 @@ msgstr "{shortened} hot använde förkortade URL:er och {low_rep_tld} en toppdom
 #, python-brace-format
 msgid "{spoofed_count} threat(s) used one of your domains in the From: header ({verdicts})."
 msgstr "{spoofed_count} hot använde en av era domäner i From:-huvudet ({verdicts})."
+
+#, python-brace-format
+msgid "{technique} is on the rise: {now} threats in the last three months against {before} before."
+msgstr "{technique} ökar: {now} hot de senaste tre månaderna mot {before} dessförinnan."
 
 #, python-brace-format
 msgid "{tenant}: {threats} vs {previous_threats}"

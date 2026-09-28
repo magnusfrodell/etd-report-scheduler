@@ -3,6 +3,22 @@
 Database migrations run automatically at start-up. Every version runs as a single container
 with its state in the `/data` volume.
 
+## 0.15.0 - Trends over time
+
+### Added
+- **Trends** (per tenant, monthly) - twelve months of threats per 10 000 messages, verdict mix, retrospective verdicts, median dwell time and automatic remediation. The last three months are compared with the three before, and the latest month with the same month a year earlier. Techniques on the rise, in decline and new, and a short *What stands out* in plain words.
+- **Trends across tenants** (monthly) - every tenant's twelve-month threat rate as a small chart, largest increase first, and all tenants together month by month.
+- Both are in English and Swedish, like every report.
+
+### How the trends stay honest
+- Rates are per 10 000 messages, so volume changes do not read as risk changes.
+- A month with less than 80 % of its days collected is marked *incomplete* and left out of every comparison.
+- Comparisons and rising or falling techniques need data in both periods; a young tenant is told that there is not yet enough history rather than shown an invented change.
+- The small charts are block characters, not images, so they survive every mail client and the PDF.
+
+### Upgrade notes
+- No migration. The reports use the history the tool already keeps (400 days by default).
+
 ## 0.14.0 - Single sign-on with Duo and OpenID Connect
 
 ### Added

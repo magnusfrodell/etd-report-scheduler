@@ -1,0 +1,22 @@
+{% extends "email/base_report.html" %}
+{% block body %}
+<h2>{{ _("All tenants · twelve months · {first} – {last}", first=data.first_month, last=data.last_month) }}</h2>
+<table class="kpis"><tr>
+  <td class="kpi"><div class="v">{{ data.tenants }}</div><div class="l">{{ _("Tenants") }}</div></td>
+  <td class="kpi"><div class="v">{{ data.fleet_now if data.fleet_now is not none else '–' }}</div><div class="l">{{ _("Threats per 10 000 messages, last three months") }}</div><div class="d">{% if data.fleet_change is none %}<span class="flat">{{ _("no comparison yet") }}</span>{% elif data.fleet_change > 0 %}<span class="up">▲ {{ data.fleet_change|fmt_pct }}</span>{% elif data.fleet_change < 0 %}<span class="down">▼ {{ data.fleet_change|fmt_pct }}</span>{% else %}<span class="flat">±0</span>{% endif %}</div></td>
+  <td class="kpi"><div class="v">{{ data.rising|length }}</div><div class="l">{{ _("Tenants with a rising threat rate (+20 % or more)") }}</div></td>
+</tr></table>
+
+<h2>{{ _("Every tenant, largest increase first") }}</h2>
+<table>
+  <tr><th>{{ _("Tenant") }}</th><th>{{ _("Twelve months") }}</th><th class="num">{{ _("Per 10,000, last three months") }}</th><th class="num">{{ _("Change") }}</th><th class="num">{{ _("Threats, twelve months") }}</th><th class="num">{{ _("Months with data") }}</th></tr>
+  {% for r in data.rows %}<tr><td>{{ r.tenant }}</td><td><span class="spark">{{ r.spark }}</span></td><td class="num">{{ r.now if r.now is not none else '–' }}</td><td class="num">{% if r.change is none %}<span class="flat">–</span>{% elif r.change > 0 %}<span class="up">▲ {{ r.change|fmt_pct }}</span>{% elif r.change < 0 %}<span class="down">▼ {{ r.change|fmt_pct }}</span>{% else %}<span class="flat">±0</span>{% endif %}</td><td class="num">{{ r.threats_12m|fmt_int }}</td><td class="num">{{ r.months }}/12</td></tr>{% endfor %}
+</table>
+<p class="note">{{ _("Each character is a month, oldest first: higher is more threats per 10 000 messages, scaled per tenant; · is a month without complete data. The change compares the last three months with the three before.") }}</p>
+
+<h2>{{ _("All tenants together, month by month") }}</h2>
+<table>
+  <tr><th>{{ _("Month") }}</th><th class="num">{{ _("Messages") }}</th><th class="num">{{ _("Threats") }}</th><th class="num">{{ _("Per 10,000") }}</th><th></th></tr>
+  {% for r in data.fleet %}<tr><td>{{ r.month }}{% if r.partial %} <span class="warn-text">{{ _("incomplete") }}</span>{% endif %}</td><td class="num">{{ r.messages|fmt_int }}</td><td class="num">{{ r.threats|fmt_int }}</td><td class="num">{{ r.per_10k if r.per_10k is not none else '–' }}</td><td style="width:30%"><div class="bar"><span style="width:{{ r.bar_pct|string }}%"></span></div></td></tr>{% endfor %}
+</table>
+{% endblock %}

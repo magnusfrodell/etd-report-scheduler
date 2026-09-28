@@ -112,6 +112,13 @@ msgstr ""
 msgid "All tenants"
 msgstr ""
 
+msgid "All tenants together, month by month"
+msgstr ""
+
+#, python-brace-format
+msgid "All tenants · twelve months · {first} – {last}"
+msgstr ""
+
 #, python-brace-format
 msgid "All tenants · {period_label}"
 msgstr ""
@@ -253,6 +260,9 @@ msgstr ""
 msgid "Convicted"
 msgstr ""
 
+msgid "Convicted after delivery, last three months"
+msgstr ""
+
 msgid "Convicted messages have not been collected yet, so remediation cannot be assessed."
 msgstr ""
 
@@ -342,6 +352,11 @@ msgid "ETD: frequent sender ({frequent_count})"
 msgstr ""
 
 msgid ""
+"Each character is a month, oldest first: higher is more threats per 10 000 messages, scaled per tenant; · is a month "
+"without complete data. The change compares the last three months with the three before."
+msgstr ""
+
+msgid ""
 "Enable Log Export in ETD (Administration > Business > Export Log Preferences) to learn counterparties from clean mail"
 " and to detect delivered look-alikes."
 msgstr ""
@@ -364,6 +379,9 @@ msgid "Evasion"
 msgstr ""
 
 msgid "Events"
+msgstr ""
+
+msgid "Every tenant, largest increase first"
 msgstr ""
 
 msgid "Every threat in the period has been remediated."
@@ -491,6 +509,9 @@ msgstr ""
 msgid "Last seen"
 msgstr ""
 
+msgid "Last three months"
+msgstr ""
+
 msgid "Link and attachment"
 msgstr ""
 
@@ -556,7 +577,13 @@ msgstr ""
 msgid "Median"
 msgstr ""
 
+msgid "Median dwell"
+msgstr ""
+
 msgid "Median dwell time (retro)"
+msgstr ""
+
+msgid "Median dwell time (retro), last three months"
 msgstr ""
 
 msgid "Median time in inbox until remediation"
@@ -591,6 +618,15 @@ msgstr ""
 msgid "Month"
 msgstr ""
 
+msgid "Months with data"
+msgstr ""
+
+#, python-brace-format, python-format
+msgid ""
+"More threats are caught only after delivery: {now} % were convicted retrospectively, against {before} % in the three "
+"months before - make sure retrospective verdicts trigger automatic remediation."
+msgstr ""
+
 #, python-brace-format
 msgid "Most-abused legitimate service: {service} ({urls} URL(s)) - consider stricter handling or sandboxing of links to it."
 msgstr ""
@@ -599,6 +635,10 @@ msgid "Move every own domain to DMARC p=reject - spoofing your own domain is the
 msgstr ""
 
 msgid "Needs attention"
+msgstr ""
+
+#, python-brace-format
+msgid "New in the last three months, not seen in the nine months before: {techniques}."
 msgstr ""
 
 msgid "New or rare senders with financial lures"
@@ -675,6 +715,9 @@ msgid "No specific recommendations for this period."
 msgstr ""
 
 msgid "No statistics stored for the period - collector has not run or failed."
+msgstr ""
+
+msgid "No technique changed markedly between the two periods."
 msgstr ""
 
 msgid "No technique data in this period"
@@ -764,6 +807,9 @@ msgstr ""
 msgid "Per 10,000"
 msgstr ""
 
+msgid "Per 10,000, last three months"
+msgstr ""
+
 #, python-brace-format
 msgid ""
 "Per message: verdict weight (BEC {bec}, malicious {malicious}, phishing {phishing}, scam {scam}), technique severity "
@@ -839,6 +885,13 @@ msgstr ""
 msgid "Ranking by threats"
 msgstr ""
 
+#, python-format
+msgid ""
+"Rates are threats per 10 000 scanned messages, so a busier month is not a worse one. A month with less than 80 % of "
+"its days collected is marked incomplete and left out of every comparison. History starts when the tenant was added "
+"(ETD provides 90 days back) and is kept for the retention period under Settings."
+msgstr ""
+
 msgid "Rcpts"
 msgstr ""
 
@@ -898,6 +951,10 @@ msgid "Retro threats remediated within 1 h"
 msgstr ""
 
 msgid "Retro-convicted mail sits in inboxes too long - make sure retrospective verdicts trigger automatic remediation."
+msgstr ""
+
+#, python-brace-format
+msgid "Retro-convicted mail stays longer in inboxes: median {now} against {before} in the three months before."
 msgstr ""
 
 msgid "Retro-convicted messages"
@@ -1020,6 +1077,9 @@ msgstr ""
 msgid "Techniques and business risk"
 msgstr ""
 
+msgid "Techniques on the rise and in decline"
+msgstr ""
+
 msgid "Techniques seen against these people"
 msgstr ""
 
@@ -1027,6 +1087,10 @@ msgid "Tenant"
 msgstr ""
 
 msgid "Tenants"
+msgstr ""
+
+#, python-format
+msgid "Tenants with a rising threat rate (+20 % or more)"
 msgstr ""
 
 msgid "Text-only lures (possible callback)"
@@ -1046,11 +1110,28 @@ msgid ""
 " % of the weight assessed, no score or grade is given."
 msgstr ""
 
+#, python-brace-format, python-format
+msgid ""
+"The threat rate is {change} % higher than in the three months before: {now} against {before} threats per 10 000 "
+"messages."
+msgstr ""
+
+#, python-brace-format, python-format
+msgid ""
+"The threat rate is {change} % lower than in the three months before: {now} against {before} threats per 10 000 "
+"messages."
+msgstr ""
+
 #, python-brace-format
 msgid ""
 "The {threat_domains_checked} most frequent threat sender domains were checked in DNS. \"reject\" and \"quarantine\" "
 "are the policies these domains publish today. ETD does not include the SPF, DKIM or DMARC result of each message, and"
 " a policy may have changed since delivery, so this does not show that the messages passed authentication."
+msgstr ""
+
+msgid ""
+"There is not yet enough history for comparisons (six months with data). ETD provided 90 days back when the tenant was"
+" added, and the tool keeps collecting."
 msgstr ""
 
 msgid "This period"
@@ -1063,6 +1144,9 @@ msgid "Threat messages"
 msgstr ""
 
 msgid "Threat rate"
+msgstr ""
+
+msgid "Threat rate month by month"
 msgstr ""
 
 #, python-brace-format, python-format
@@ -1098,6 +1182,9 @@ msgstr ""
 msgid "Threats from senders the recipient normally talks to - often a compromised partner account."
 msgstr ""
 
+msgid "Threats per 10 000 messages, last three months"
+msgstr ""
+
 msgid "Threats remediated"
 msgstr ""
 
@@ -1119,6 +1206,15 @@ msgid "Threats with QR codes"
 msgstr ""
 
 msgid "Threats with Reply-To to another domain"
+msgstr ""
+
+msgid "Threats, last twelve months"
+msgstr ""
+
+msgid "Threats, twelve months"
+msgstr ""
+
+msgid "Three months before"
 msgstr ""
 
 msgid "Time"
@@ -1157,7 +1253,23 @@ msgstr ""
 msgid "Traffic by direction"
 msgstr ""
 
+msgid "Trend"
+msgstr ""
+
+msgid "Trends"
+msgstr ""
+
+msgid "Trends across tenants"
+msgstr ""
+
 msgid "Tunnels / IPFS"
+msgstr ""
+
+msgid "Twelve months"
+msgstr ""
+
+#, python-brace-format
+msgid "Twelve months · {first} – {last}"
 msgstr ""
 
 msgid "Type"
@@ -1205,6 +1317,9 @@ msgstr ""
 msgid "Verdicts"
 msgstr ""
 
+msgid "Verdicts and response month by month"
+msgstr ""
+
 msgid "Very Attacked People"
 msgstr ""
 
@@ -1231,6 +1346,9 @@ msgid "Web UI"
 msgstr ""
 
 msgid "What it means"
+msgstr ""
+
+msgid "What stands out"
 msgstr ""
 
 msgid "Who"
@@ -1292,6 +1410,14 @@ msgid "[ETD] Techniques and business risk - {tenant} - {period}"
 msgstr ""
 
 #, python-brace-format
+msgid "[ETD] Trends - {tenant} - {period}"
+msgstr ""
+
+#, python-brace-format
+msgid "[ETD] Trends across tenants - {period}"
+msgstr ""
+
+#, python-brace-format
 msgid "[ETD] Vendor risk - {tenant} - {period}"
 msgstr ""
 
@@ -1333,6 +1459,9 @@ msgid "domains auto-detected"
 msgstr ""
 
 msgid "error"
+msgstr ""
+
+msgid "falling"
 msgstr ""
 
 msgid "first seen this period"
@@ -1409,6 +1538,9 @@ msgstr ""
 msgid "no all mechanism"
 msgstr ""
 
+msgid "no comparison yet"
+msgstr ""
+
 msgid "no rua"
 msgstr ""
 
@@ -1453,6 +1585,9 @@ msgid "quarterly report for {period}"
 msgstr ""
 
 msgid "redirect"
+msgstr ""
+
+msgid "rising"
 msgstr ""
 
 msgid "senders:"
@@ -1502,6 +1637,10 @@ msgid ""
 msgstr ""
 
 #, python-brace-format
+msgid "{before} in the three months before"
+msgstr ""
+
+#, python-brace-format
 msgid ""
 "{callback_count} text-only lure(s) without a link look like callback phishing - teach finance and the service desk to"
 " verify phone numbers independently."
@@ -1523,6 +1662,10 @@ msgstr ""
 msgid ""
 "{compromised} possibly compromised counterpart(ies), {lookalikes} look-alike domain(s), {spoofed} spoof(s) of own "
 "domains"
+msgstr ""
+
+#, python-brace-format, python-format
+msgid "{count} month(s) have less than 80 % of their days collected; they are marked and left out of the comparisons."
 msgstr ""
 
 #, python-brace-format
@@ -1637,6 +1780,14 @@ msgid ""
 msgstr ""
 
 #, python-brace-format
+msgid "{months} month(s) with data"
+msgstr ""
+
+#, python-brace-format
+msgid "{month}: {now} threats per 10 000 messages, against {before} in {year_ago_month}."
+msgstr ""
+
+#, python-brace-format
 msgid "{new_techniques} new vs previous period"
 msgstr ""
 
@@ -1648,6 +1799,10 @@ msgstr ""
 
 #, python-brace-format, python-format
 msgid "{pct} % of the period's hours collected, {gap_count} gap(s)"
+msgstr ""
+
+#, python-brace-format
+msgid "{points} percentage points against the three months before"
 msgstr ""
 
 #, python-brace-format
@@ -1710,6 +1865,10 @@ msgstr ""
 
 #, python-brace-format
 msgid "{spoofed_count} threat(s) used one of your domains in the From: header ({verdicts})."
+msgstr ""
+
+#, python-brace-format
+msgid "{technique} is on the rise: {now} threats in the last three months against {before} before."
 msgstr ""
 
 #, python-brace-format

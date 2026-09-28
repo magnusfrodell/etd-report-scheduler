@@ -81,10 +81,11 @@ def test_run_report_failure_is_recorded(client):
 def test_registry_scopes():
     assert set(REPORTS) == {
         "executive_summary", "compromise_indicators", "health_check", "cross_tenant_rollup", "vap_index", "campaigns", "exposure",
-        "techniques", "vendor_risk", "auth_posture", "audit_compliance", "posture_effectiveness",
+        "techniques", "vendor_risk", "auth_posture", "audit_compliance", "posture_effectiveness", "trends", "trends_all",
     }
     assert REPORTS["posture_effectiveness"].period_kind == "quarterly"
     assert REPORTS["cross_tenant_rollup"].is_cross_tenant and not REPORTS["health_check"].is_cross_tenant
+    assert REPORTS["trends_all"].is_cross_tenant and not REPORTS["trends"].is_cross_tenant and REPORTS["trends"].period_kind == "monthly"
 
 
 def test_concurrent_runs_never_share_archive_files(client, tenant_id):

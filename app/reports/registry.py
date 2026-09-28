@@ -33,6 +33,7 @@ from app.reports import (
     health_check,
     posture_effectiveness,
     techniques,
+    trends,
     vap_index,
     vendor_risk,
 )
@@ -271,3 +272,38 @@ def tenant_reports() -> list[ReportDefinition]:
 
 def cross_tenant_reports() -> list[ReportDefinition]:
     return [r for r in REPORTS.values() if r.scope == SCOPE_ALL]
+
+
+register(
+    ReportDefinition(
+        key="trends",
+        name=N_("Trends"),
+        description="Twelve months of threat rate, verdict mix, retrospective verdicts, dwell time and remediation, with techniques on the rise and in decline and the latest month against the same month a year earlier.",
+        scope=SCOPE_TENANT,
+        period_kind="monthly",
+        default_cron="0 8 1 * *",
+        template="reports/trends.html",
+        build=trends.build,
+        subject=N_("[ETD] Trends - {tenant} - {period}"),
+        category="overview",
+        icon="pulse",
+        summary="Twelve months: better or worse, and where it is moving.",
+    )
+)
+
+register(
+    ReportDefinition(
+        key="trends_all",
+        name=N_("Trends across tenants"),
+        description="Every tenant's twelve-month threat rate side by side, largest increase first, and all tenants together month by month.",
+        scope=SCOPE_ALL,
+        period_kind="monthly",
+        default_cron="30 8 1 * *",
+        template="reports/trends_all.html",
+        build=trends.build_all,
+        subject=N_("[ETD] Trends across tenants - {period}"),
+        category="overview",
+        icon="layers",
+        summary="Which customers are getting worse - every tenant's trend on one page.",
+    )
+)

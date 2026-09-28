@@ -1,0 +1,45 @@
+{% extends "email/base_report.html" %}
+{% macro change(value) -%}
+  {% if value is none %}<span class="flat">{{ _("no comparison yet") }}</span>
+  {% elif value > 0 %}<span class="up">▲ {{ value|fmt_pct }}</span>
+  {% elif value < 0 %}<span class="down">▼ {{ value|fmt_pct }}</span>
+  {% else %}<span class="flat">±0</span>{% endif %}
+{%- endmacro %}
+{% block body %}
+<h2>{{ _("Twelve months · {first} – {last}", first=data.first_month, last=data.last_month) }}</h2>
+<table class="kpis"><tr>
+  <td class="kpi"><div class="v">{{ data.now.per_10k if data.now and data.now.per_10k is not none else '–' }}</div><div class="l">{{ _("Threats per 10 000 messages, last three months") }}</div><div class="d">{{ change(data.rate_change) }}</div></td>
+  <td class="kpi"><div class="v">{{ data.threats_12m|fmt_int }}</div><div class="l">{{ _("Threats, last twelve months") }}</div><div class="d"><span class="note">{{ _("{months} month(s) with data", months=data.months_with_data) }}</span></div></td>
+  <td class="kpi"><div class="v">{% if data.now and data.now.retro_share is not none %}{{ data.now.retro_share }} %{% else %}–{% endif %}</div><div class="l">{{ _("Convicted after delivery, last three months") }}</div><div class="d"><span class="note">{% if data.retro_points is not none %}{{ _("{points} percentage points against the three months before", points=('+' if data.retro_points > 0 else '') ~ (data.retro_points|dec)) }}{% else %}{{ _("no comparison yet") }}{% endif %}</span></div></td>
+  <td class="kpi"><div class="v">{{ data.dwell_now or '–' }}</div><div class="l">{{ _("Median dwell time (retro), last three months") }}</div><div class="d"><span class="note">{% if data.dwell_before %}{{ _("{before} in the three months before", before=data.dwell_before) }}{% else %}{{ _("no comparison yet") }}{% endif %}</span></div></td>
+</tr></table>
+
+{% if data.insights %}
+<h2>{{ _("What stands out") }}</h2>
+<ul>{% for line in data.insights %}<li>{{ line }}</li>{% endfor %}</ul>
+{% endif %}
+
+<h2>{{ _("Threat rate month by month") }}</h2>
+<table>
+  <tr><th>{{ _("Month") }}</th><th class="num">{{ _("Messages") }}</th><th class="num">{{ _("Threats") }}</th><th class="num">{{ _("Per 10,000") }}</th><th></th><th class="num">{{ _("Days with data") }}</th></tr>
+  {% for r in data.rows %}<tr><td>{{ r.month }}</td><td class="num">{{ r.messages|fmt_int }}</td><td class="num">{{ r.threats|fmt_int }}</td><td class="num">{{ r.per_10k if r.per_10k is not none else '–' }}</td><td style="width:30%"><div class="bar"><span style="width:{{ r.bar_pct|string }}%"></span></div></td><td class="num">{{ r.days }}/{{ r.expected }}{% if r.has_data and not r.complete %} <span class="warn-text">{{ _("incomplete") }}</span>{% endif %}</td></tr>{% endfor %}
+</table>
+
+<h2>{{ _("Verdicts and response month by month") }}</h2>
+<table>
+  <tr><th>{{ _("Month") }}</th><th class="num">BEC</th><th class="num">{{ _("Phishing") }}</th><th class="num">{{ _("Malicious") }}</th><th class="num">{{ _("Scam") }}</th><th class="num">{{ _("Unwanted") }}</th><th class="num">{{ _("Retro") }}</th><th class="num">{{ _("Median dwell") }}</th><th class="num">{{ _("Auto-remediated") }}</th></tr>
+  {% for r in data.rows %}<tr><td>{{ r.month }}</td><td class="num">{{ r.bec|fmt_int }}</td><td class="num">{{ r.phishing|fmt_int }}</td><td class="num">{{ r.malicious|fmt_int }}</td><td class="num">{{ r.scam|fmt_int }}</td><td class="num">{{ r.unwanted|fmt_int }}</td><td class="num">{% if r.retro_share is not none %}{{ r.retro_share }} %{% else %}–{% endif %}</td><td class="num">{{ r.dwell }}</td><td class="num">{% if r.auto_share is not none %}{{ r.auto_share }} %{% else %}–{% endif %}</td></tr>{% endfor %}
+</table>
+
+<h2>{{ _("Techniques on the rise and in decline") }}</h2>
+{% if data.rising or data.falling %}
+<table>
+  <tr><th>{{ _("Technique") }}</th><th>{{ _("Trend") }}</th><th class="num">{{ _("Three months before") }}</th><th class="num">{{ _("Last three months") }}</th></tr>
+  {% for r in data.rising %}<tr><td>{{ r.technique }}</td><td><span class="up">▲ {{ _("rising") }}</span></td><td class="num">{{ r.before }}</td><td class="num">{{ r.now }}</td></tr>{% endfor %}
+  {% for r in data.falling %}<tr><td>{{ r.technique }}</td><td><span class="down">▼ {{ _("falling") }}</span></td><td class="num">{{ r.before }}</td><td class="num">{{ r.now }}</td></tr>{% endfor %}
+</table>
+{% else %}<p class="note">{{ _("No technique changed markedly between the two periods.") }}</p>{% endif %}
+{% if data.new_techniques %}<p class="note">{{ _("New in the last three months, not seen in the nine months before: {techniques}.", techniques=data.new_techniques|join(", ")) }}</p>{% endif %}
+
+<p class="note">{{ _("Rates are threats per 10 000 scanned messages, so a busier month is not a worse one. A month with less than 80 % of its days collected is marked incomplete and left out of every comparison. History starts when the tenant was added (ETD provides 90 days back) and is kept for the retention period under Settings.") }}</p>
+{% endblock %}

@@ -31,10 +31,12 @@ Bundled reports:
 | Audit and compliance | per tenant | monthly | Who did what in ETD (API clients, policy and configuration, users, sign-ins), reclassifications and remediations per analyst with false-positive/negative proxies, failed actions, and how completely the audit log was collected (unreadable log lines are counted, not dropped) - kept beyond ETD's 30 days |
 | Posture and effectiveness | per tenant | quarterly | One page for management: posture score from weighted checks, effectiveness KPIs, six-month trend, prioritised gaps and the threat landscape in brief; no score or grade is given when too little of the data is available |
 | Cross-tenant roll-up | all tenants | weekly | All tenants ranked by threats with change, threat rate, spikes, errors and missing data |
+| Trends | per tenant | monthly | Twelve months of threats per 10 000 messages, verdict mix, retrospective verdicts, dwell time and automatic remediation; the last three months against the three before and the latest month against the same month a year earlier; techniques on the rise, in decline and new; what stands out, in plain words |
+| Trends across tenants | all tenants | monthly | Every tenant's twelve-month threat rate as a small chart, largest increase first, and all tenants together month by month |
 
 **Technology stack:** Python 3.12, FastAPI, SQLAlchemy 2 + Alembic (SQLite by default, PostgreSQL optional), APScheduler, Jinja2, WeasyPrint for PDF, httpx for the ETD API. Standalone application, delivered as a Docker image; no external services other than the ETD API and an SMTP relay.
 
-**Status:** 0.14.0, alpha. The collectors (including Log Export), scheduler, twelve reports (in English and Swedish) and the admin UI work end to end against a fake ETD API in the test-suite (`pytest`, 197 tests) and have been smoke-tested as a running application. Validation against production ETD tenants in all five regions is the next step - please open an issue with what you find. This is community sample code, not a Cisco product, and is not supported by Cisco TAC.
+**Status:** 0.15.0, alpha. The collectors (including Log Export), scheduler, fourteen reports (in English and Swedish) and the admin UI work end to end against a fake ETD API in the test-suite (`pytest`, 205 tests) and have been smoke-tested as a running application. Validation against production ETD tenants in all five regions is the next step - please open an issue with what you find. This is community sample code, not a Cisco product, and is not supported by Cisco TAC.
 
 <!-- Add a screenshot of the dashboard here once you run it against a real tenant: ![Dashboard](docs/dashboard.png) -->
 
@@ -64,7 +66,7 @@ docker run -d --name etd-demo -p 8080:8080 \
   -e DEMO_MODE=true -e ADMIN_PASSWORD=choose-a-password \
   -e SECRET_KEY="$(openssl rand -hex 32)" \
   -e ENCRYPTION_KEY="$(python3 -c 'import base64, os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())')" \
-  ghcr.io/magnusfrodell/etd-report-scheduler:0.14.0
+  ghcr.io/magnusfrodell/etd-report-scheduler:0.15.0
 ```
 
 Sign in at http://localhost:8080 as `admin`. Within a minute the demo has collected 90 days of history and filled the archive with the reports its schedules would have produced. Each tenant has a story:
@@ -95,7 +97,7 @@ Prerequisites: Docker 24+ with Compose, network access from the container to `ap
 A pre-built multi-arch image (amd64/arm64) is published for every release tag:
 
 ```bash
-docker pull ghcr.io/magnusfrodell/etd-report-scheduler:0.14.0
+docker pull ghcr.io/magnusfrodell/etd-report-scheduler:0.15.0
 ```
 
 To use it, set `image:` instead of `build:` in `docker-compose.yml` (the line is there, commented out). To build yourself instead:
@@ -280,6 +282,10 @@ Generated files are stored under `/data/reports/<tenant>/<report>/<timestamp>-ru
 
 ## Additional paragraphs
 
+### Trends
+
+The **Trends** reports need history. A new tenant starts with the 90 days ETD provides, so comparisons appear after six months with data; the tool keeps daily statistics and threat messages for 400 days (**Settings**), enough for twelve months and the same month a year earlier. Rates are threats per 10 000 scanned messages, so a busier month is not a worse one. A month with less than 80 % of its days collected is marked *incomplete* and left out of every comparison, and techniques are only called rising or falling when both periods have data - a gap in collection never looks like an improvement. The small charts in *Trends across tenants* are made of characters rather than images, so they survive every mail client.
+
 ### Report languages
 
 Reports, their PDFs and the report e-mails (subject included) are available in **English** and **Swedish**. The language is chosen in this order:
@@ -323,7 +329,7 @@ People can sign in with **Duo Single Sign-On** - or Entra ID, Okta or any OpenID
 `.github/workflows/ci.yml` runs ruff, the test-suite and an Alembic consistency check on every push and pull request. `.github/workflows/docker.yml` builds and publishes the container image to GitHub Container Registry when a `v*` tag is pushed:
 
 ```bash
-git tag v0.14.0 && git push origin v0.14.0
+git tag v0.15.0 && git push origin v0.15.0
 ```
 
 ### Architecture

@@ -65,7 +65,7 @@ def test_report_cards(logged_in):
     make_tenant("Cards-Co")  # per-tenant reports can only be run when there is a tenant to run them for
     logged_in.post("/select-tenant", data={"tenant": "all", "next": "/reports"}, follow_redirects=False)
     page = logged_in.get("/reports").text
-    assert page.count('<article class="report-card') == 12
+    assert page.count('<article class="report-card') == 14
     for label in ("Overview", "Threats", "Exposure and risk", "Operations and compliance"):
         assert f"<h2>{label}</h2>" in page
     assert 'href="/archive?report=vendor_risk"' in page and 'form="run-vendor_risk"' in page
